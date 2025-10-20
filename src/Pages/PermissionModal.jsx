@@ -1,85 +1,61 @@
-import React, { useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
 
-export default function PermissionModal({ visible, message, onClose, type = "error" }) {
-  const closeButtonRef = useRef(null);
 
-  // Focus automatique sur le bouton "Fermer"
-  useEffect(() => {
-    if (visible && closeButtonRef.current) {
-      closeButtonRef.current.focus();
-    }
-  }, [visible]);
-
-  // Couleur de l'icône selon le type de message
-  const iconColors = {
-    error: "bg-red-100 text-red-600",
-    warning: "bg-yellow-100 text-yellow-600",
-    info: "bg-blue-100 text-blue-600",
-  };
-  const iconClass = iconColors[type] || iconColors.error;
+export default function PermissionModal({ show, onClose, title, message }) {
+  if (!show) return null;
 
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[1000]"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose} // clic sur le fond ferme le modal
+    <div className="permission-modal-overlay" onClick={onClose}>
+      <div
+        className="permission-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2>🚫 {title || "Permission refusée"}</h2>
+        <p>{message || "Vous n'avez pas la permission nécessaire pour accéder à cette section."}</p>
+
+        <button
+          onClick={onClose}
+          className="btn btn-danger w-100 mt-3"
         >
-          <motion.div
-            className="bg-white p-6 rounded-xl shadow-xl max-w-md w-[90%] relative"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1, transition: { duration: 0.3, ease: "easeOut" } }}
-            exit={{ scale: 0.8, opacity: 0, transition: { duration: 0.2, ease: "easeIn" } }}
-            onClick={(e) => e.stopPropagation()} // empêche la fermeture si on clique sur le contenu
-          >
-            {/* Bouton fermeture */}
-            <button
-              ref={closeButtonRef}
-              onClick={onClose}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl focus:outline-none focus:ring-2 focus:ring-red-400 rounded"
-            >
-              &times;
-            </button>
+          <i className="fa-solid fa-xmark me-2"></i> Fermer
+        </button>
+      </div>
+        <style jsx="true">{`
+       .permission-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+}
 
-            {/* En-tête */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`w-10 h-10 flex items-center justify-center rounded-full ${iconClass}`}>
-                <i className="fa-solid fa-lock text-lg"></i>
-              </div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                {type === "error" ? "Accès refusé" : type === "warning" ? "Attention" : "Information"}
-              </h2>
-            </div>
+.permission-modal {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 6px 25px rgba(0,0,0,0.25);
+  animation: fadeInUp 0.3s ease-out;
+}
 
-            {/* Message principal */}
-            <p className="text-gray-600 leading-relaxed mb-3">
-              Vous n’avez pas la permission nécessaire pour effectuer cette action.
-            </p>
+.permission-modal h2 {
+  margin-bottom: 1rem;
+}
 
-            {/* Détails optionnels */}
-            {message && (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-700 mb-3">
-                <strong>Détails :</strong>
-                <p>{message}</p>
-              </div>
-            )}
+.permission-modal p {
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+}
 
-            {/* Bouton fermer */}
-            <div className="text-right">
-              <button
-                onClick={onClose}
-                className={`bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition focus:outline-none focus:ring-2 focus:ring-red-400`}
-              >
-                Fermer
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+      `}</style>
+    </div>
   );
 }

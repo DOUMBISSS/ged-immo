@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Blocks } from "react-loader-spinner";
 import toast, { Toaster } from "react-hot-toast";
 import { useUserContext } from "../contexts/UserContext";
+import PermissionModal from "./PermissionModal";
 
 export default function Archives() {
   const { user } = useUserContext();
@@ -15,50 +16,67 @@ export default function Archives() {
   const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("archiveSearchTerm") || "");
   const [currentPage, setCurrentPage] = useState(() => parseInt(localStorage.getItem("archiveCurrentPage")) || 1);
   const [loading, setLoading] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 15;
 
-  // Sauvegarde localStorage
+  // 🔹 Sauvegarde localStorage
   useEffect(() => { localStorage.setItem("archiveSearchProject", searchProject); }, [searchProject]);
   useEffect(() => { localStorage.setItem("archiveSearchTerm", searchTerm); }, [searchTerm]);
   useEffect(() => { localStorage.setItem("archiveCurrentPage", currentPage); }, [currentPage]);
 
-  // 🔹 Récupérer projets de l'admin
-  useEffect(() => {
-    if (!user?._id) return;
-    fetch(`http://localhost:4000/projects/admin/${user._id}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) setProjects(data.projects || []);
-      })
-      .catch(err => toast.error("Erreur récupération projets : " + err.message));
-  }, [user]);
+useEffect(() => {
+  if (!user) return; // pas encore chargé
 
-  // 🔹 Récupérer archives locataires
+  // Un admin a automatiquement tous les droits
+  const hasPermission = user.role === "admin" || (user.permissions?.includes("view_archives"));
+
+  if (!hasPermission) {
+    setShowPermissionModal(true);
+    toast.error("Vous n'êtes pas autorisé à accéder aux archives.");
+  }
+}, [user]);
+
+  // 🔹 Récupérer projets + archives pour l'admin connecté
   useEffect(() => {
-    if (!user?.token) return;
+    if (!user?._id || !user?.token) return;
+
+    const adminIdToFetch = user.role === 'admin' ? user._id : user.adminId;
+
+    if (!adminIdToFetch) {
+      toast.error("Impossible de récupérer les archives : aucun administrateur lié.");
+      setProjects([]);
+      setPersons([]);
+      return;
+    }
 
     const fetchArchives = async () => {
       try {
         setLoading(true);
-        const archivesUrl = searchProject
-          ? `http://localhost:4000/archives?projectId=${searchProject}`
-          : `http://localhost:4000/archives`;
+        const res = await fetch(`http://localhost:4000/archives/admin/${adminIdToFetch}`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        const data = await res.json();
 
-        const resPersons = await fetch(archivesUrl, { headers: { Authorization: `Bearer ${user.token}` } }).then(r => r.json());
-        setPersons(resPersons.success ? resPersons.archives : []);
-
-        if (!resPersons.success) toast.error(resPersons.message || "Aucun locataire archivé trouvé");
-
+        if (data.success) {
+          setProjects(data.projects || []);
+          setPersons(data.archives || []);
+        } else {
+          toast.error(data.message || "Erreur récupération archives");
+          setProjects([]);
+          setPersons([]);
+        }
       } catch (err) {
         toast.error("Erreur récupération archives : " + err.message);
+        setProjects([]);
+        setPersons([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchArchives();
-  }, [user, searchProject]);
+  }, [user]);
 
   // 🔹 Filtrage locataires
   const filteredPersons = useMemo(() => {
@@ -67,7 +85,7 @@ export default function Archives() {
       : persons;
   }, [persons, searchTerm]);
 
-  // Pagination
+  // 🔹 Pagination
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentPersons = filteredPersons.slice(indexOfFirstItem, indexOfLastItem);
@@ -176,6 +194,15 @@ export default function Archives() {
           )}
         </div>
       </div>
+
+      {/* 🔹 Modal permission */}
+      <PermissionModal
+        show={showPermissionModal}
+        onClose={() => setShowPermissionModal(false)}
+        title="Accès refusé"
+        message="Vous n'êtes pas autorisé à accéder aux archives."
+      />
+
       <Footer />
       <Toaster position="top-right" reverseOrder={false} />
 

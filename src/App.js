@@ -180,7 +180,7 @@ export default function App() {
             message={permissionMessage}
             onClose={() => setShowPermissionModal(false)}
           />
-          <button onClick={() => setShowPermissionModal(true)}>Test modal</button>
+         
         </UserMagasinProvider>
       </LocataireProvider>
     </UserProvider>

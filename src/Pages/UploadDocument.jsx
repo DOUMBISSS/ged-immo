@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import { useUserContext } from "../contexts/UserContext";
 
 export default function UploadDocumentModal({ personId, onClose }) {
   const [documents, setDocuments] = useState({});
@@ -7,17 +8,28 @@ export default function UploadDocumentModal({ personId, onClose }) {
   const [type, setType] = useState("");
   const [customType, setCustomType] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  const { user } = useUserContext();
 
-  const fetchDocuments = async () => {
-    try {
-      const res = await fetch(`http://localhost:4000/locataire/${personId}/documents`);
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message || "Impossible de récupérer les documents");
-      setDocuments(data.documents || {});
-    } catch (err) {
-      toast.error("Erreur serveur : " + err.message);
+const fetchDocuments = async () => {
+  try {
+    if (!user?.token) {
+      toast.error("Session expirée. Veuillez vous reconnecter.");
+      return;
     }
-  };
+
+    const res = await fetch(`http://localhost:4000/locataire/${personId}/documents`, {
+      headers: {
+        "Authorization": `Bearer ${user.token}`,
+      },
+    });
+
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "Impossible de récupérer les documents");
+    setDocuments(data.documents || {});
+  } catch (err) {
+    toast.error("Erreur serveur : " + err.message);
+  }
+};
 
   useEffect(() => {
     fetchDocuments();
@@ -26,11 +38,12 @@ export default function UploadDocumentModal({ personId, onClose }) {
   const currentType = type === "Autre" ? customType : type;
   const existingDoc = documents[currentType];
 
- const handleUpload = async (e) => {
+const handleUpload = async (e) => {
   e.preventDefault();
 
   if (!customType.trim()) return toast.error("Veuillez entrer un titre pour le document !");
   if (!file) return toast.error("Veuillez sélectionner un fichier PDF !");
+  if (!user?.token) return toast.error("Session expirée. Veuillez vous reconnecter.");
 
   // Vérifier le nombre de documents existants
   if (Object.keys(documents).length >= 3) {
@@ -44,8 +57,12 @@ export default function UploadDocumentModal({ personId, onClose }) {
   try {
     const res = await fetch(`http://localhost:4000/UploadDocument/${personId}`, {
       method: "POST",
+      headers: {
+        "Authorization": `Bearer ${user.token}`,
+      },
       body: formData,
     });
+
     const data = await res.json();
     if (!data.success) return toast.error(data.message);
 
@@ -63,35 +80,47 @@ export default function UploadDocumentModal({ personId, onClose }) {
     window.open(`http://localhost:4000/documents/download/${fileName}`, "_blank");
   };
 
-  const handleDelete = async (docId) => {
-    toast(
-      (t) => (
-        <span>
-          Voulez-vous vraiment supprimer ce document ?<br />
-          <button
-            className="btn-confirm"
-            onClick={async () => {
-              toast.dismiss(t.id);
-              try {
-                const res = await fetch(`http://localhost:4000/Document/${docId}`, { method: "DELETE" });
-                const data = await res.json();
-                if (!data.success) return toast.error(data.message);
+const handleDelete = async (docId) => {
+  toast(
+    (t) => (
+      <span>
+        Voulez-vous vraiment supprimer ce document ?<br />
+        <button
+          className="btn-confirm"
+          onClick={async () => {
+            toast.dismiss(t.id);
 
-                toast.success(data.message);
-                fetchDocuments();
-              } catch (err) {
-                toast.error("Erreur serveur : " + err.message);
+            try {
+              if (!user?.token) {
+                toast.error("Session expirée. Veuillez vous reconnecter.");
+                return;
               }
-            }}
-          >
-            Oui
-          </button>
-          <button className="btn-cancel" onClick={() => toast.dismiss(t.id)}>Annuler</button>
-        </span>
-      ),
-      { duration: 10000 }
-    );
-  };
+
+              const res = await fetch(`http://localhost:4000/Document/${docId}`, {
+                method: "DELETE",
+                headers: {
+                  "Authorization": `Bearer ${user.token}`,
+                },
+              });
+
+              const data = await res.json();
+              if (!data.success) return toast.error(data.message);
+
+              toast.success(data.message);
+              fetchDocuments();
+            } catch (err) {
+              toast.error("Erreur serveur : " + err.message);
+            }
+          }}
+        >
+          Oui
+        </button>
+        <button className="btn-cancel" onClick={() => toast.dismiss(t.id)}>Annuler</button>
+      </span>
+    ),
+    { duration: 10000 }
+  );
+};
 
   // Drag & Drop
   const handleDragOver = (e) => { e.preventDefault(); setDragActive(true); };

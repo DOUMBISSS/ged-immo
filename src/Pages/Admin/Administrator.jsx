@@ -68,7 +68,9 @@ const permissionLabels = {
 
   // Rapports / paramètres
   generate_reports: "Générer des rapports",
-  manage_settings: "Gérer les paramètres"
+  manage_settings: "Gérer les paramètres",
+
+  view_archives:"Voir les archives"
 };
 
 const fetchUsers = async () => {
@@ -227,11 +229,23 @@ const handleDeleteUser = (userId, name) => {
                         </span>
                       </td>
                       <td>
-                        {u.permissions?.length
+                        {/* {u.permissions?.length
                           ? u.permissions.map((perm) => permissionLabels[perm] || perm).join(", ")
-                          : "—"}
+                          : "—"} */}
+
+                           {u.permissions?.length ? (
+                          <ul>
+                            {u.permissions.map((perm) => (
+                              <li key={perm} className="list-permissions">
+                                {permissionLabels[perm] || perm}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          "—"
+                        )}
                       </td>
-                      <td style={{ display: "flex", gap: "8px" }} className="div__action__ad">
+                      <td >
                         <button
                           onClick={() => setEditUser(u)}
                           style={{
@@ -242,6 +256,7 @@ const handleDeleteUser = (userId, name) => {
                             borderRadius: "6px",
                             cursor: "pointer",
                             fontSize: "0.8rem",
+                            marginRight:"2rem"
                           }}>
                           <i className="fa-regular fa-pen-to-square"></i>
                         </button>
@@ -361,6 +376,107 @@ const handleDeleteUser = (userId, name) => {
           margin-right:1rem;
           box-shadow: 0 3px 10px rgba(37, 99, 235, 0.2);
         }
+          /* Conteneur du tableau */
+.table-container {
+  width: 100%;
+  overflow-x: auto; /* Scroll horizontal si petit écran */
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  background-color: #fff;
+  margin-top: 20px;
+}
+
+/* Tableau */
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px; /* garantit une largeur minimum */
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+}
+
+/* Entête du tableau */
+.user-table thead {
+  background-color: #f4f6f8;
+  color: #34495e;
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 2px solid #ddd;
+}
+
+.user-table th, 
+.user-table td {
+  padding: 12px 15px;
+  text-align: left;
+  vertical-align: middle;
+  word-break: break-word;
+}
+
+/* Lignes du tableau */
+.user-table tbody tr {
+  border-bottom: 1px solid #eee;
+  transition: background 0.2s ease;
+}
+
+.user-table tbody tr:hover {
+  background-color: #f0f4f8;
+}
+
+/* Boutons */
+.user-table button {
+  transition: all 0.2s ease;
+}
+.user-table button:hover {
+  opacity: 0.85;
+}
+
+/* Rôle badge */
+.role-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 500;
+  text-align: center;
+  display: inline-block;
+  font-size: 0.85rem;
+}
+.role-badge.admin { background-color: #dc2626; }
+.role-badge.user { background-color: #2563eb; }
+.role-badge.moderator { background-color: #f59e0b; }
+
+/* Liste des permissions */
+.list-permissions {
+  font-size: 0.85rem;
+  padding-left: 0;
+  margin: 2px 0;
+  list-style-type: disc;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .user-table th, 
+  .user-table td {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .user-table {
+    font-size: 0.85rem;
+    min-width: 600px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-table {
+    min-width: 500px;
+  }
+
+  .user-table td button {
+    padding: 4px 6px;
+    font-size: 0.75rem;
+  }
+}
       `}</style>
     </>
   );

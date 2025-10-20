@@ -1,133 +1,111 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { useUserContext } from "../../contexts/UserContext"; // Ajuste le chemin si nécessaire
+import { useUserContext } from "../../contexts/UserContext";
 
-// 🔹 Roles & permissions à jour
+// 🔹 Définition complète des rôles & permissions
 export const rolesPermissions = {
   admin: [
-    // 👤 Gestion des utilisateurs
-    "view_users",
-    "create_users",
-    "edit_users",
-    "delete_users",
-
-    // 📁 Gestion des documents
-    "view_documents",
-    "upload_documents",
-    "delete_documents",
-
-    // 🏗️ Gestion des projets
-    "create_projects",
-    "view_projects",
-    "edit_projects",
-    "delete_projects",
-
-    // 🏠 Gestion des maisons
-    "create_homes",
-    "view_homes",
-    "edit_homes",
-    "delete_homes",
-       "archive_homes",
-       
-    // 👥 Gestion des locataires
-    "create_tenants",
-    "view_tenants",
-    "edit_tenants",
-    "delete_tenants",
-    "archive_tenants",
-
-    // 💸 Gestion des loyers et paiements
-    "manage_rentals",
-    "manage_payments",
-    "view_payments",
-
-    // ⚙️ Administration générale
-    "generate_reports",
-    "manage_settings"
+    "view_users", "create_users", "edit_users", "delete_users",
+    "view_documents", "upload_documents", "delete_documents",
+    "create_projects", "view_projects", "edit_projects", "delete_projects",
+    "create_homes", "view_homes", "edit_homes", "delete_homes", "archive_homes",
+    "create_tenants", "view_tenants", "edit_tenants", "delete_tenants", "archive_tenants",
+    "manage_rentals", "manage_payments", "view_payments",
+    "generate_reports", "manage_settings", "view_archives"
   ],
 
   manager: [
-    // 👥 Gestion limitée des utilisateurs
     "view_users",
-
-    // 📁 Gestion des documents
-    "view_documents",
-    "upload_documents",
-
-    // 🏗️ Projets
-    "create_projects",
-    "view_projects",
-    "edit_projects",
-
-    // 🏠 Maisons
-    "create_homes",
-    "view_homes",
-    "edit_homes",
-
-    // 👥 Locataires
-    "create_tenants",
-    "view_tenants",
-    "edit_tenants",
-    "archive_tenants",
-
-     "manage_payments",
-    "edit_payments",
-    "view_payments",
-    "delete_payments",
-
-    // 📊 Rapports
+    "view_documents", "upload_documents",
+    "create_projects", "view_projects", "edit_projects",
+    "create_homes", "view_homes", "edit_homes",
+    "create_tenants", "view_tenants", "edit_tenants", "archive_tenants",
+    "manage_payments", "edit_payments", "view_payments", "delete_payments",
     "generate_reports"
   ],
 
   agent: [
-    // 📁 Documents
-    "view_documents",
-    "upload_documents",
-
-    // 🏗️ Projets & maisons
-    "view_projects",
-      "create_homes",
-    "view_homes",
-    "archive_homes",
-
-    // 👥 Locataires
-    "create_tenants",
-    "view_tenants",
-    "edit_tenants",
-
-     "manage_payments",
-    "edit_payments",
-    "view_payments",
-    "delete_payments",
+    "view_documents", "upload_documents", "view_archives",
+    "view_projects", "create_homes", "view_homes", "archive_homes",
+    "create_tenants", "view_tenants", "edit_tenants",
+    "manage_payments", 
+    // "edit_payments", 
+    // "view_payments",
+    //  "delete_payments"
   ],
 
   auditor: [
-    "view_projects",
-    "view_homes",
-    "view_tenants",
-    "view_documents",
-    "view_payments",
-    "generate_reports"
+    "view_projects", "view_homes", "view_tenants",
+    "view_documents", "view_payments", "generate_reports"
   ],
 };
-export default function EditPermissionsModal({ user, onClose, onUpdated, permissionLabels, allPermissions }) {
-  const { user: currentUser } = useUserContext(); // 🔹 Token de l'utilisateur connecté
+
+// 🔹 Libellés conviviaux
+export const permissionLabels = {
+  view_users: "Voir utilisateurs",
+  create_users: "Créer utilisateurs",
+  edit_users: "Modifier utilisateurs",
+  delete_users: "Supprimer utilisateurs",
+
+  view_documents: "Voir documents",
+  upload_documents: "Uploader documents",
+  delete_documents: "Supprimer documents",
+
+  create_projects: "Créer projets",
+  view_projects: "Voir projets",
+  edit_projects: "Modifier projets",
+  delete_projects: "Supprimer projets",
+
+  create_homes: "Créer maisons",
+  view_homes: "Voir maisons",
+  edit_homes: "Modifier maisons",
+  delete_homes: "Supprimer maisons",
+  archive_homes: "Archiver maisons",
+
+  create_tenants: "Créer locataires",
+  view_tenants: "Voir locataires",
+  edit_tenants: "Modifier locataires",
+  delete_tenants: "Supprimer locataires",
+  archive_tenants: "Archiver locataires",
+
+  manage_rentals: "Gérer loyers",
+  manage_payments: "Gérer paiements",
+  edit_payments: "Modifier paiements",
+  delete_payments: "Supprimer paiements",
+  view_payments: "Voir paiements",
+
+  generate_reports: "Générer rapports",
+  manage_settings: "Paramètres généraux",
+  view_archives: "Voir archives"
+};
+
+export default function EditPermissionsModal({ user, onClose, onUpdated }) {
+  const { user: currentUser } = useUserContext();
   const [permissions, setPermissions] = useState(user.permissions || []);
   const [role, setRole] = useState(user.role || "agent");
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Recalcul automatique des permissions selon le rôle sélectionné
+  // 🔹 Génère automatiquement la liste de TOUTES les permissions disponibles
+  const allPermissions = useMemo(() => {
+    const perms = new Set();
+    Object.values(rolesPermissions).forEach(roleList => {
+      roleList.forEach(p => perms.add(p));
+    });
+    return Array.from(perms).sort();
+  }, []);
+
+  // 🔹 Recalcule les permissions par défaut selon le rôle
   useEffect(() => {
-    if (role && rolesPermissions[role]) {
+    if (rolesPermissions[role]) {
       setPermissions(rolesPermissions[role]);
     }
   }, [role]);
 
   const handleToggle = (perm) => {
-    setPermissions((prev) =>
+    setPermissions(prev =>
       prev.includes(perm)
-        ? prev.filter((p) => p !== perm)
+        ? prev.filter(p => p !== perm)
         : [...prev, perm]
     );
   };
@@ -143,13 +121,9 @@ export default function EditPermissionsModal({ user, onClose, onUpdated, permiss
       const res = await axios.put(
         `http://localhost:4000/users/${user._id}/permissions`,
         { role, permissions },
-        {
-          headers: {
-            Authorization: `Bearer ${currentUser.token}`, // ✅ Utilisation du token connecté
-          },
-        }
+        { headers: { Authorization: `Bearer ${currentUser.token}` } }
       );
-      toast.success("Permissions et rôle mis à jour !");
+      toast.success("✅ Permissions mises à jour !");
       onUpdated(res.data.user);
       onClose();
     } catch (err) {
