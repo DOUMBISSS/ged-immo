@@ -16,6 +16,7 @@ export default function Archives() {
   const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("archiveSearchTerm") || "");
   const [currentPage, setCurrentPage] = useState(() => parseInt(localStorage.getItem("archiveCurrentPage")) || 1);
   const [loading, setLoading] = useState(false);
+    const [homes, setHomes] = useState([]);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   const itemsPerPage = 15;
@@ -66,8 +67,21 @@ useEffect(() => {
           setProjects([]);
           setPersons([]);
         }
+
+  const res2 = await fetch(`http://localhost:4000/homes/archives/${adminIdToFetch}`, {
+  headers: { Authorization: `Bearer ${user.token}` },
+});
+const data2 = await res2.json();
+if (data2.success) {
+  setHomes(data2.archivedHomes || []);
+}
+        
+           
+
+
       } catch (err) {
         toast.error("Erreur récupération archives : " + err.message);
+        toast.error("Erreur chargement archives : " + err.message);
         setProjects([]);
         setPersons([]);
       } finally {
@@ -141,46 +155,99 @@ useEffect(() => {
             <>
               {/* Locataires archivés */}
               <div className="tenant-section">
-                <h3>📌 Locataires archivés</h3>
-                {loading ? (
-                  <Blocks visible={true} height="80" width="100%" ariaLabel="loading" />
-                ) : (
-                  <div className="table-responsive">
-                    <table className="table">
-                      <thead>
-                        <tr>
-                          <th>Nom & Prénom(s)</th>
-                          <th>Contacts</th>
-                          <th>Bien</th>
-                          <th>Statut</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {currentPersons.length === 0 ? (
-                          <tr>
-                            <td colSpan="5" style={{ textAlign: "center" }}>Aucun locataire trouvé</td>
-                          </tr>
-                        ) : (
-                          currentPersons.map(person => (
-                            <tr key={person._id}>
-                              <td>{person.name} {person.lastname}</td>
-                              <td>{person.tel}</td>
-                              <td>{person.homeInfo?.categorie || "N/A"}</td>
-                              <td><span className="badge badge-archived">Archivé</span></td>
-                              <td>
-                                <Link to={`/detailArchivedUser/${person._id}`}>
-                                  <button className="btn-details">Détails</button>
-                                </Link>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+  <h3>📌 Locataires archivés</h3>
+  {loading ? (
+    <Blocks visible={true} height="80" width="100%" ariaLabel="loading" />
+  ) : (
+    <div className="table-responsive">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Nom & Prénom(s)</th>
+            <th>Contacts</th>
+            <th>Bien</th>
+            <th>Statut</th>
+            <th>Archivé(e) par</th>
+            <th>Date d’archivage</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {currentPersons.length === 0 ? (
+            <tr>
+              <td colSpan="7" style={{ textAlign: "center" }}>Aucun locataire trouvé</td>
+            </tr>
+          ) : (
+            currentPersons.map(person => (
+              <tr key={person._id}>
+                <td>{person.name} {person.lastname}</td>
+                <td>{person.tel}</td>
+                <td>{person.homeInfo?.categorie || "N/A"}</td>
+                <td><span className="badge badge-archived">Archivé</span></td>
+                <td>{person.archivedBy || "—"}</td>
+                <td>{person.dateArchived ? new Date(person.dateArchived).toLocaleDateString("fr-FR") : "—"}</td>
+                <td>
+                  <Link to={`/detailArchivedUser/${person._id}`}>
+                    <button className="btn-details">Détails</button>
+                  </Link>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
+
+              {/* 🔹 Maisons archivées */}
+<div className="tenant-section">
+  <h3>🏠 Maisons archivées</h3>
+  {loading ? (
+    <Blocks visible={true} height="80" width="100%" ariaLabel="loading" />
+  ) : (
+    <div className="table-responsive">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Nom de la maison</th>
+            <th>Adresse</th>
+            <th>Catégorie</th>
+            <th>Projet</th>
+            <th>Statut</th>
+            <th>Archivé(e) par</th>
+            <th>Date d’archivage</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {homes.length === 0 ? (
+            <tr>
+              <td colSpan="8" style={{ textAlign: "center" }}>Aucune maison archivée</td>
+            </tr>
+          ) : (
+            homes.map(home => (
+              <tr key={home._id}>
+                <td>{home.nameHome || "N/A"}</td>
+                <td>{home.addressHome || "N/A"}</td>
+                <td>{home.categorie || "N/A"}</td>
+                <td>{home.projectId?.name || "N/A"}</td>
+                <td><span className="badge badge-archived">Archivé</span></td>
+                <td>{home.archivedBy || "—"}</td>
+                <td>{home.dateArchived ? new Date(home.dateArchived).toLocaleDateString("fr-FR") : "—"}</td>
+                <td>
+                  <Link to={`/detailArchivedHome/${home._id}`}>
+                    <button className="btn-details">Détails</button>
+                  </Link>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
 
               {/* Pagination */}
               {totalPages > 1 && (

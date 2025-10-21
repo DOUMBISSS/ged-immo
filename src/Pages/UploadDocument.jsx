@@ -75,10 +75,11 @@ const handleUpload = async (e) => {
   }
 };
 
-  const handleDownload = (filePath) => {
-    const fileName = filePath.split("/").pop();
-    window.open(`http://localhost:4000/documents/download/${fileName}`, "_blank");
-  };
+const handleDownload = (filePath) => {
+  const filename = filePath.split("/").pop();
+  window.open(`http://localhost:4000/documents/${filename}/download`, "_blank");
+};
+
 
 const handleDelete = async (docId) => {
   toast(
@@ -173,8 +174,13 @@ const handleDelete = async (docId) => {
     {Object.entries(documents).map(([key, doc]) =>
       doc ? (
         <li key={doc._id}>
-          {doc.type} : {doc.filePath.split("/").pop()}
-          <button className="btn-secondary" onClick={() => handleDownload(doc.filePath)}>Télécharger</button>
+          {doc.type} : {
+            (() => {
+              const filename = doc.filePath.split("/").pop();
+              return filename.toLowerCase().endsWith(".pdf") ? filename : `${filename}.pdf`;
+            })()
+          }
+          <button className="btn-download" onClick={() => handleDownload(doc.filePath)}>⬇️ Télécharger</button>
           <button className="btn__sup" onClick={() => handleDelete(doc._id)}>Supprimer</button>
         </li>
       ) : null
@@ -198,7 +204,7 @@ const handleDelete = async (docId) => {
           background: #fff;
           border-radius: 16px;
           padding: 30px;
-          width: 600px;
+          width: 650px;
           max-height: 80vh;
           overflow-y: auto;
           box-shadow: 0px 10px 30px rgba(0,0,0,0.2);
@@ -268,6 +274,15 @@ const handleDelete = async (docId) => {
           border-radius: 8px;
           border: 1px solid #d1d5db;
           cursor: pointer;
+        }
+            .btn-download {
+          background: #f3f4f6;
+          padding: 0.5rem;
+          border-radius: 8px;
+          border: 1px solid #d1d5db;
+          cursor: pointer;
+          margin-right:0.7rem;
+          width:200px
         }
       `}</style>
     </div>

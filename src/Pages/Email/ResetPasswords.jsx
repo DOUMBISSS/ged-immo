@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast, Toaster } from "react-hot-toast";
-// import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 export default function ResetPasswords() {
   const { token } = useParams();
@@ -11,7 +11,7 @@ export default function ResetPasswords() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // --- Validation mot de passe ---
+  // --- Validation du mot de passe ---
   const validatePassword = (pwd) => {
     if (pwd.length < 6) {
       toast.error("Le mot de passe doit contenir au moins 6 caractères");
@@ -28,7 +28,7 @@ export default function ResetPasswords() {
     return true;
   };
 
-  // --- Submit réinitialisation ---
+  // --- Réinitialisation du mot de passe ---
   const handleReset = async () => {
     if (!newPassword || !confirmPassword) {
       toast.error("Tous les champs sont obligatoires");
@@ -47,22 +47,34 @@ export default function ResetPasswords() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: newPassword }),
       });
+
       const data = await res.json();
 
       if (res.ok) {
-        toast.success(data.message || "Mot de passe réinitialisé !", {
-          duration: 2500,
-          icon: "✅",
+        toast.success(data.message || "Mot de passe réinitialisé avec succès ✅", {
+          duration: 3000,
+          icon: "🔒",
           style: {
             background: "#2ecc71",
             color: "#fff",
             fontWeight: "bold",
           },
-          onClose: () => navigate("/login"),
         });
+
+        // ✅ Message de redirection
+        toast("Redirection vers l’accueil...", {
+          duration: 2000,
+          icon: "➡️",
+          style: { background: "#3498db", color: "#fff" },
+        });
+
+        // ✅ Redirection après 3 secondes
+        setTimeout(() => {
+          navigate("/");
+        }, 3000);
       } else {
         toast.error(data.message || "Erreur lors de la réinitialisation", {
-          duration: 2500,
+          duration: 3000,
           icon: "❌",
         });
       }
@@ -77,40 +89,53 @@ export default function ResetPasswords() {
   return (
     <div style={containerStyle}>
       <Toaster position="top-right" />
-      <div style={cardStyle}>
-        <h2 style={titleStyle}>🔑 Réinitialisation du mot de passe</h2>
 
-        <div style={inputContainer}>
-          <div style={passwordFieldStyle}>
+     
+
+        <div style={cardStyle}>
+           <div style={styles.loginBox}>
+        <img
+          src={`${process.env.PUBLIC_URL}/logo4 copie.jpg`}
+          alt="logo"
+          style={styles.logo}
+        />
+        <h2 style={styles.title}>GED IMMO</h2>
+          <h2 style={titleStyle}>🔑 Réinitialisation du mot de passe</h2>
+
+          <div style={inputContainer}>
+            <div style={passwordFieldStyle}>
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Nouveau mot de passe"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                style={inputStyle}
+              />
+              <span
+                onClick={() => setShowPassword(!showPassword)}
+                style={eyeIconStyle}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </span>
+            </div>
+
             <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Nouveau mot de passe"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              type="password"
+              placeholder="Confirmer mot de passe"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               style={inputStyle}
             />
-            <span onClick={() => setShowPassword(!showPassword)} style={eyeIconStyle}>
-
-            
-            </span>
           </div>
 
-          <input
-            type="password"
-            placeholder="Confirmer mot de passe"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            style={inputStyle}
-          />
+          <button
+            onClick={handleReset}
+            disabled={loading}
+            style={{ ...buttonStyle, opacity: loading ? 0.7 : 1 }}
+          >
+            {loading ? "Réinitialisation..." : "Réinitialiser le mot de passe"}
+          </button>
         </div>
-
-        <button
-          onClick={handleReset}
-          disabled={loading}
-          style={{ ...buttonStyle, opacity: loading ? 0.7 : 1 }}
-        >
-          {loading ? "Réinitialisation..." : "Réinitialiser le mot de passe"}
-        </button>
       </div>
     </div>
   );
@@ -122,16 +147,16 @@ const containerStyle = {
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  background: "linear-gradient(135deg, #4b00cc, #0a3a85)",
   fontFamily: "'Rajdhani', sans-serif",
   padding: "20px",
+  // background: "linear-gradient(135deg, #f0f4ff, #cce0ff)",
 };
 
 const cardStyle = {
   background: "#fff",
   borderRadius: "12px",
   padding: "40px 30px",
-  boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+  boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
   width: "420px",
   maxWidth: "100%",
   textAlign: "center",
@@ -187,4 +212,21 @@ const buttonStyle = {
   color: "#fff",
   cursor: "pointer",
   transition: "all 0.3s ease",
+};
+
+const styles = {
+  loginBox: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  logo: {
+    width: "80px",
+    height: "80px",
+    objectFit: "contain",
+  },
+  title: {
+    color: "#2c3e50",
+    marginBottom: "20px",
+  },
 };

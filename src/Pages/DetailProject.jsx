@@ -388,9 +388,9 @@ const totalPages = Math.ceil(filteredHomes.length / itemsPerPage);;
               ? `${parseInt(home.rent).toLocaleString()} F CFA`
               : "Prix non défini"}
           </p>
+              <p className="guarantee">Caution: {home.guarantee} FCFA</p>
           <p className="description">{home.description}</p>
           <p className="addresse">{home.addressHome}</p>
-          <p className="guarantee">Caution: {home.guarantee}</p>
 
           <button className="btn-duplicate"
             onClick={() => {

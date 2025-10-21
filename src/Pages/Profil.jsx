@@ -21,6 +21,66 @@ export default function Profil() {
 
   const token = user?.token;
 
+  // 🔹 États pour la mise à jour du profil
+const [editModalOpen, setEditModalOpen] = useState(false);
+const [editNumber, setEditNumber] = useState("");
+const [editAddress, setEditAddress] = useState("");
+const [password, setPassword] = useState("");
+const [confirmPassword, setConfirmPassword] = useState("");
+
+// 🔹 Ouvrir le modal avec les valeurs actuelles
+const openEditModal = () => {
+  if (roleType !== "admin") {
+    toast.error("Seul l’administrateur peut modifier son profil");
+    return;
+  }
+  setEditNumber(adminData.number || "");
+  setEditAddress(adminData.address || "");
+  setEditModalOpen(true);
+};
+
+// 🔹 Enregistrer la mise à jour du profil
+const handleUpdateProfile = async (e) => {
+  e.preventDefault();
+
+  if (password && password !== confirmPassword) {
+    toast.error("Les mots de passe ne correspondent pas");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/admin/${user._id}/update-profile`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        number: editNumber,
+        address: editAddress,
+        password: password || undefined,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.message || "Erreur lors de la mise à jour");
+
+    toast.success("Profil mis à jour avec succès ✅");
+    setAdminData((prev) => ({
+      ...prev,
+      number: editNumber,
+      address: editAddress,
+    }));
+    setEditModalOpen(false);
+    setPassword("");
+    setConfirmPassword("");
+  } catch (err) {
+    console.error("Erreur mise à jour profil:", err);
+    toast.error(err.message || "Erreur serveur");
+  }
+};
+
   // 🟢 Charger les données liées à l'utilisateur connecté
   useEffect(() => {
     if (!user?._id) return;
@@ -182,6 +242,8 @@ export default function Profil() {
         <Toaster position="top-right" />
         <h1>Mon Profil</h1>
 
+        
+
         {/* Informations Admin */}
         <div className="profil-card">
           <div className="profil-info">
@@ -223,6 +285,16 @@ export default function Profil() {
             )}
           </div>
         )}
+
+        {roleType === "admin" && (
+  <button
+    className="btn-save"
+    style={{ marginTop: "1rem", backgroundColor: "#4b00cc" }}
+    onClick={openEditModal}
+  >
+    ✏️ Mettre à jour le profil
+  </button>
+)}
 
         {/* 🎨 Gestion Signature */}
         <div className="signature-section">
@@ -300,7 +372,110 @@ export default function Profil() {
           )}
         </div>
 
+        {editModalOpen && (
+  <div className="modal-overlay">
+    <div className="modal-content">
+      <h2>🔧 Mettre à jour le profil</h2>
+      <form onSubmit={handleUpdateProfile}>
+        <div className="form-group">
+          <label>Téléphone</label>
+          <input
+            type="text"
+            value={editNumber}
+            onChange={(e) => setEditNumber(e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Adresse</label>
+          <input
+            type="text"
+            value={editAddress}
+            onChange={(e) => setEditAddress(e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Nouveau mot de passe (facultatif)</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Confirmer le mot de passe</label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+        </div>
+        <div className="modal-actions">
+          <button type="submit" className="btn-save">Enregistrer</button>
+          <button
+            type="button"
+            className="btn-cancel"
+            onClick={() => setEditModalOpen(false)}
+          >
+            Annuler
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
         <style>{`
+        .modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 10px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+.modal-content h2 {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+.form-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.form-group label {
+  font-weight: bold;
+  margin-bottom: 0.3rem;
+}
+.form-group input {
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+}
+.btn-cancel {
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-cancel:hover { background: #c0392b; }
                    .profil-container {
             max-width: 800px;
             margin: 2rem auto;

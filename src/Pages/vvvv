@@ -1489,7 +1489,6 @@ export default function Receipt({ admin }) {
 }
 
 
-// Archives.jsx
 import { Link } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
@@ -1502,6 +1501,7 @@ import PermissionModal from "./PermissionModal";
 export default function Archives() {
   const { user } = useUserContext();
   const [persons, setPersons] = useState([]);
+  const [homes, setHomes] = useState([]); // 🏠 maisons archivées
   const [projects, setProjects] = useState([]);
   const [searchProject, setSearchProject] = useState(() => localStorage.getItem("archiveSearchProject") || "");
   const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("archiveSearchTerm") || "");
@@ -1511,63 +1511,76 @@ export default function Archives() {
 
   const itemsPerPage = 15;
 
-  // Sauvegarde localStorage
+  // 🔹 Sauvegarde localStorage
   useEffect(() => { localStorage.setItem("archiveSearchProject", searchProject); }, [searchProject]);
   useEffect(() => { localStorage.setItem("archiveSearchTerm", searchTerm); }, [searchTerm]);
   useEffect(() => { localStorage.setItem("archiveCurrentPage", currentPage); }, [currentPage]);
 
-  // 🔹 Vérification automatique des permissions
   useEffect(() => {
-    const hasPermission = user?.permissions?.includes("view_archives"); // adapter selon ta logique
+    if (!user) return;
+    const hasPermission = user.role === "admin" || (user.permissions?.includes("view_archives"));
     if (!hasPermission) {
       setShowPermissionModal(true);
       toast.error("Vous n'êtes pas autorisé à accéder aux archives.");
     }
   }, [user]);
 
-  // 🔹 Récupération projets + archives
+  // 🔹 Récupérer projets + locataires archivés
   useEffect(() => {
     if (!user?._id || !user?.token) return;
+    const adminIdToFetch = user.role === "admin" ? user._id : user.adminId;
+    if (!adminIdToFetch) return toast.error("Aucun administrateur lié.");
 
-    const adminIdToFetch = user.role === 'admin' ? user._id : user.adminId;
-    if (!adminIdToFetch) return;
-
-    const fetchArchives = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:4000/archives/admin/${adminIdToFetch}`, {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
-        const data = await res.json();
 
-        if (data.success) {
-          setProjects(data.projects || []);
-          setPersons(data.archives || []);
-        } else {
-          setProjects([]);
-          setPersons([]);
-          toast.error(data.message || "Erreur récupération archives");
-        }
+        // 🔸 1. Locataires archivés
+        const res1 = await fetch(`http://localhost:4000/archives/admin/${adminIdToFetch}`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+        const data1 = await res1.json();
+
+        if (data1.success) {
+          setProjects(data1.projects || []);
+          setPersons(data1.locataireArchives || data1.archives || []);
+        } else toast.error(data1.message || "Erreur récupération locataires archivés");
+
+        // 🔸 2. Maisons archivées
+        const res2 = await fetch(`http://localhost:4000/homes/archives/${adminIdToFetch}`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+        const data2 = await res2.json();
+
+        if (data2.success) {
+          setHomes(data2.archivedHomes || []);
+        } else toast.error(data2.message || "Erreur récupération maisons archivées");
+
       } catch (err) {
-        setProjects([]);
-        setPersons([]);
-        toast.error("Erreur récupération archives : " + err.message);
+        toast.error("Erreur chargement archives : " + err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchArchives();
+    fetchData();
   }, [user]);
 
   // 🔹 Filtrage locataires
   const filteredPersons = useMemo(() => {
     return searchTerm
-      ? persons.filter(p => `${p.name || ""} ${p.lastname || ""}`.toLowerCase().includes(searchTerm.toLowerCase()))
+      ? persons.filter(p =>
+          `${p.personId?.name || ""} ${p.personId?.lastname || ""}`.toLowerCase().includes(searchTerm.toLowerCase())
+        )
       : persons;
   }, [persons, searchTerm]);
 
-  // Pagination
+  // 🔹 Filtrage maisons archivées selon projet
+  const filteredHomes = useMemo(() => {
+    return homes.filter(h => !searchProject || h.projectId?._id === searchProject);
+  }, [homes, searchProject]);
+
+  // 🔹 Pagination locataires
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentPersons = filteredPersons.slice(indexOfFirstItem, indexOfLastItem);
@@ -1582,7 +1595,7 @@ export default function Archives() {
         <div className="saas-card">
           <nav aria-label="breadcrumb" className="breadcrumb-custom">
             <ol>
-              <li><Link to='/Accueil'>Accueil</Link></li>
+              <li><Link to="/Accueil">Accueil</Link></li>
               <li className="active"><i className="fa-solid fa-box-archive"></i> Mes archives</li>
             </ol>
           </nav>
@@ -1599,8 +1612,8 @@ export default function Archives() {
               onChange={(e) => { setSearchProject(e.target.value); setCurrentPage(1); }}
             >
               <option value="">-- Sélectionner un projet --</option>
-              {projects.map((project) => (
-                <option key={project._id} value={project._id}>{project.name}</option>
+              {projects.map((p) => (
+                <option key={p._id} value={p._id}>{p.name}</option>
               ))}
             </select>
 
@@ -1621,6 +1634,7 @@ export default function Archives() {
             </p>
           ) : (
             <>
+              {/* 🔹 Locataires archivés */}
               <div className="tenant-section">
                 <h3>📌 Locataires archivés</h3>
                 {loading ? (
@@ -1639,15 +1653,13 @@ export default function Archives() {
                       </thead>
                       <tbody>
                         {currentPersons.length === 0 ? (
-                          <tr>
-                            <td colSpan="5" style={{ textAlign: "center" }}>Aucun locataire trouvé</td>
-                          </tr>
+                          <tr><td colSpan="5" style={{ textAlign: "center" }}>Aucun locataire trouvé</td></tr>
                         ) : (
-                          currentPersons.map(person => (
+                          currentPersons.map((person) => (
                             <tr key={person._id}>
-                              <td>{person.name} {person.lastname}</td>
-                              <td>{person.tel}</td>
-                              <td>{person.homeInfo?.categorie || "N/A"}</td>
+                              <td>{person.personId?.name} {person.personId?.lastname}</td>
+                              <td>{person.personId?.tel}</td>
+                              <td>{person.homeId?.categorie || "N/A"}</td>
                               <td><span className="badge badge-archived">Archivé</span></td>
                               <td>
                                 <Link to={`/detailArchivedUser/${person._id}`}>
@@ -1663,6 +1675,50 @@ export default function Archives() {
                 )}
               </div>
 
+              {/* 🔹 Maisons archivées */}
+              <div className="tenant-section">
+                <h3>🏠 Maisons archivées</h3>
+                {loading ? (
+                  <Blocks visible={true} height="80" width="100%" ariaLabel="loading" />
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Nom</th>
+                          <th>Adresse</th>
+                          <th>Catégorie</th>
+                          <th>Projet</th>
+                          <th>Statut</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredHomes.length === 0 ? (
+                          <tr><td colSpan="6" style={{ textAlign: "center" }}>Aucune maison archivée</td></tr>
+                        ) : (
+                          filteredHomes.map((home) => (
+                            <tr key={home._id}>
+                              <td>{home.nameHome || "N/A"}</td>
+                              <td>{home.addressHome || "N/A"}</td>
+                              <td>{home.categorie || "N/A"}</td>
+                              <td>{home.projectId?.name || "N/A"}</td>
+                              <td><span className="badge badge-archived">Archivé</span></td>
+                              <td>
+                                <Link to={`/detailArchivedHome/${home._id}`}>
+                                  <button className="btn-details">Détails</button>
+                                </Link>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="pagination-section">
                   <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>◀</button>
@@ -1675,12 +1731,12 @@ export default function Archives() {
         </div>
       </div>
 
-      {/* <PermissionModal
+      <PermissionModal
         show={showPermissionModal}
         onClose={() => setShowPermissionModal(false)}
         title="Accès refusé"
         message="Vous n'êtes pas autorisé à accéder aux archives."
-      /> */}
+      />
 
       <Footer />
       <Toaster position="top-right" reverseOrder={false} />

@@ -36,6 +36,15 @@ const handleArchive = () => {
     return;
   }
 
+  // 🚫 Vérifier si l'utilisateur a la permission
+  if (!user?.permissions?.includes("archive_homes") && user.role !== "admin") {
+    toast.error(
+      "⛔ Vous n’avez pas la permission d’archiver des maisons. Contactez votre administrateur.",
+      { duration: 8000 }
+    );
+    return;
+  }
+
   // ⚠️ Confirmation d’archivage
   toast((t) => (
     <div style={{ padding: "1rem", maxWidth: "320px" }}>
@@ -43,7 +52,13 @@ const handleArchive = () => {
         ⚠️ Attention ! Cette action va archiver la maison. 
         Êtes-vous sûr de continuer ?
       </p>
-      <div style={{ marginTop: "10px", display: "flex", justifyContent: "space-between" }}>
+      <div
+        style={{
+          marginTop: "10px",
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
         <button
           style={{
             backgroundColor: "#ef4444",
@@ -56,8 +71,9 @@ const handleArchive = () => {
             try {
               const res = await fetch(`http://localhost:4000/homes/${id}/archive`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json",
-                  "Authorization": `Bearer ${user.token}`
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${user.token}`,
                 },
               });
 
@@ -92,7 +108,6 @@ const handleArchive = () => {
       </div>
     </div>
   ), { duration: 50000 });
-
 };
 
 
@@ -197,6 +212,7 @@ const handleArchive = () => {
     <p><strong>Description :</strong> {rentHome.description || "Aucune description"}</p>
     <p><strong>Caution :</strong> {rentHome.guarantee || "N/A"}</p>
     <p><strong>État :</strong> {rentHome.state || "N/A"}</p>
+
   </div>
 </div>
 
@@ -238,6 +254,10 @@ const handleArchive = () => {
       minute: "2-digit",
     })}
   </p>
+        <p><strong>Restauré par :</strong> {rentHome.restoredBy || "Non restaurée"}</p>
+    <p><strong>Date de restauration :</strong> 
+      {rentHome.restoredAt ? new Date(rentHome.restoredAt).toLocaleString("fr-FR") : "—"}
+    </p>
 </div>
 
         {/* Tenant */}

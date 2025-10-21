@@ -1902,6 +1902,8 @@ iframe{
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    width: 320px;
+    height: 400px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -1917,7 +1919,7 @@ iframe{
 }
 
 .home-image {
-    height: 180px;
+    height: 300px;
     width: auto;
     object-fit: cover;
     margin-right: 5px;
@@ -1944,8 +1946,9 @@ iframe{
 }
 
 .renthome-card-content .info {
-    font-size: 13px;
+    font-size: 1rem;
     color: #9ca3af;
+    font-weight: bold;
 }
 
 .renthome-card-content .rent {
@@ -1960,7 +1963,8 @@ iframe{
 }
 
 .renthome-card-content .guarantee {
-    font-size: 13px;
+    font-size: 1rem;
+     font-weight: bold;
     color: #ef4444;
 }
 

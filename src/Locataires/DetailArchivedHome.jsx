@@ -4,12 +4,14 @@ import Navbar from "../Pages/Navbar";
 import Footer from "../Pages/Footer";
 import toast, { Toaster } from "react-hot-toast";
 import { Blocks } from "react-loader-spinner";
+import { useUserContext } from "../contexts/UserContext";
 
 export default function DetailArchivedHome() {
   const { id } = useParams();
   const [home, setHome] = useState({ archived: true, rentals: [] });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+    const { user,clearUser } = useUserContext();
 
   const fetchHomeData = async () => {
     setLoading(true);
@@ -39,19 +41,21 @@ const restoreHome = (homeId, projectId) => {
       Voulez-vous vraiment restaurer cette maison ?
       <div style={{ marginTop: "8px", display: "flex", gap: "10px" }}>
         <button
-          style={{ background: "#ef4444", color: "#fff", padding: "5px 10px", borderRadius: "5px" }}
+          style={{ background: "#10b981", color: "#fff", padding: "5px 10px", borderRadius: "5px" }}
           onClick={async () => {
             try {
               const res = await fetch(`http://localhost:4000/homes/${homeId}/restore`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${user.token}`, // ✅ Ajout du token
+                },
               });
+
               const data = await res.json();
-              if (!res.ok) throw new Error(data.message || "Erreur restauration");
+              if (!data.success) throw new Error(data.message || "Erreur restauration");
 
               toast.success("Maison restaurée avec succès !");
-              
-              // 🔹 Redirection vers le projet
               navigate('/Mes__archives');
             } catch (err) {
               console.error(err);
@@ -71,7 +75,7 @@ const restoreHome = (homeId, projectId) => {
         </button>
       </div>
     </span>
-  ), { duration: 50000 });
+  ), { duration: 10000 });
 };
 
   const formatDate = (dateStr) => {

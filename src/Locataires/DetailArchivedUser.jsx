@@ -411,9 +411,9 @@ export default function DetailArchivedUser({ user }) {
                   {/* Paiements */}
                   <div className="tenant-section paiement-section">
                     <h3 className="section-title">Détails des paiements</h3>
-                    <Link to={`/archivedetail/${person._id}`}>
+                    {/* <Link to={`/archivedetail/${person._id}`}>
                       <button className="btn-all">Voir tous les paiements &gt;&gt;</button>
-                    </Link>
+                    </Link> */}
                     <div ref={componentRef} className="table-responsive">
                       <table className="table">
                         <thead>

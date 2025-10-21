@@ -57,6 +57,7 @@ const [showUnauthorizedModal, setShowUnauthorizedModal] = useState(false);
 
 const openUnauthorizedModal = () => setShowUnauthorizedModal(true);
 const closeUnauthorizedModal = () => setShowUnauthorizedModal(false);
+const [showProfileMenu, setShowProfileMenu] = useState(false);
 
 const openLoginModal = () => setShowLoginModal(true);
 const closeLoginModal = () => {
@@ -120,33 +121,61 @@ const handleLoginSubmit = async (e) => {
         <div className="navbar--center"></div>
 
         <div className="navbar--right">
-       <button
+       {/* <button
   className="btn__admin"
   onClick={() => {
     if (user && user.role === "admin" && user.token) {
       navigate("/administrator");
     } else {
-      openUnauthorizedModal();
-    }
-  }}
->
+      openUnauthorizedModal();}}}>
   <i className="fa-solid fa-user"></i> Admin
-</button>
+</button> */}
             <button onClick={openAssistance} className="btn__assistance">Service Assistance</button>
-          <button className="btn__help" onClick={openHelp}>
-            <i className="fa-solid fa-circle-question"></i> Aides
+            {user ? (
+  <div className="user-dropdown-container">
+    <button
+      className="btn__profile"
+      onClick={() => setShowProfileMenu(!showProfileMenu)}
+    >
+      <i className="fa-solid fa-user-circle me-1"></i>
+      {user.username}
+      <i
+        className={`fa-solid fa-chevron-${showProfileMenu ? "up" : "down"} ms-2`}
+      ></i>
+    </button>
+
+    {showProfileMenu && (
+      <div className="user-dropdown">
+        <p><strong>Nom d’utilisateur :</strong> {user.username}</p>
+        {user.fullname && <p><strong>Nom complet :</strong> {user.fullname}</p>}
+        {user.email && <p><strong>Email :</strong> {user.email}</p>}
+        <p><strong>Rôle :</strong> {user.role || "Utilisateur"}</p>
+
+        <hr />
+
+        {/* Bouton Admin (visible seulement si role = admin) */}
+        {user.role === "admin" && (
+          <button
+            onClick={() => navigate("/administrator")}
+            className="dropdown-admin-btn"
+          >
+            <i className="fa-solid fa-user-shield me-2"></i> Accès Admin
           </button>
-          {user ? (
-            <>
-              <span>{user.username}</span>
-              <button onClick={logoutHandler} className="btn__logout">Logout</button>
-            
-            </>
-          ) : (
-            <Link to="/login" className="btn__login">
-              Login
-            </Link>
-          )}
+        )}
+
+        <button onClick={logoutHandler} className="dropdown-logout-btn">
+          <i className="fa-solid fa-right-from-bracket me-2"></i> Se déconnecter
+        </button>
+      </div>
+    )}
+  </div>
+) : (
+  <Link to="/login" className="btn__login">
+    Login
+  </Link>
+)}
+          <button className="btn__help" onClick={openHelp}><i className="fa-solid fa-circle-question"></i> Aides</button>
+
         </div>
       </header>
 
@@ -169,13 +198,15 @@ const handleLoginSubmit = async (e) => {
          <NavLink to="/Ma__comptabilite" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-calculator"></i> Ma comptabilité
         </NavLink>
-          <NavLink to="/Notifications" className={({ isActive }) => isActive ? 'active' : ''}>
+          {/* <NavLink to="/Notifications" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-box-archive"></i> Notifications
-        </NavLink>
+        </NavLink> */}
         <NavLink to="/mon-profil" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-user"></i> Profil
         </NavLink>
       </nav>
+
+      
 
       {/* --- Modal Assistance --- */}
       {toggleAssistance && (
@@ -639,6 +670,100 @@ const handleLoginSubmit = async (e) => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+ /* === Bouton Profil === */
+  .btn__profile {
+    background: transparent;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 15px;
+    color: #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+    margin-left:0.5rem;
+  }
+  .btn__profile:hover {
+    background: #f5f5f5;
+  }
+
+  /* === Conteneur dropdown === */
+  .user-dropdown-container {
+    position: relative;
+    display: inline-block;
+  }
+
+  /* === Menu déroulant === */
+  .user-dropdown {
+    position: absolute;
+    top: 110%;
+    right: 0;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    width: 230px;
+    padding: 12px;
+    z-index: 1000;
+    animation: fadeInDown 0.25s ease-out;
+  }
+
+  .user-dropdown p {
+    margin: 6px 0;
+    font-size: 14px;
+    color: #333;
+  }
+
+  .user-dropdown strong {
+    color: #111;
+  }
+
+  .user-dropdown hr {
+    margin: 10px 0;
+    border: none;
+    border-top: 1px solid #ddd;
+  }
+
+  .dropdown-logout-btn {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .dropdown-logout-btn:hover {
+    background: #b02a37;
+  }
+
+  @keyframes fadeInDown {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+    .dropdown-admin-btn {
+  background-color: #6C5DD3;
+  color: #fff;
+  border: none;
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.dropdown-admin-btn:hover {
+  background-color: #5a4acb;
 }
       `}</style>
     </div>

@@ -265,9 +265,10 @@ const deleteRent = async (rentId) => {
     return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
   };
 
-  const handleDownload = (publicId) => {
-    window.open(`http://localhost:4000/documents/${encodeURIComponent(publicId)}/download`, '_blank');
-  };
+const handleDownload = (filePath) => {
+  const filename = filePath.split("/").pop();
+  window.open(`http://localhost:4000/documents/${filename}/download`, "_blank");
+};
 
 const handleAdd = async () => {
   try {
@@ -588,48 +589,35 @@ const toggleYear = (year) => {
       <h3 className="section-title">Documents</h3>
 
       <div className="info-grid">
-     <ul className="doc-list">
-  {(!documents || Object.values(documents).every(doc => !doc)) ? (
-    <li style={{ padding: '10px', color: '#555', fontStyle: 'italic' }}>Aucun document</li>
-  ) : (
-    Object.entries(documents).map(([key, doc]) =>
-      doc ? (
-        <li
-          key={doc._id}
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '10px 15px',
-            marginBottom: '8px',
-            backgroundColor: '#f9f9f9',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}
-        >
-          <span style={{ flex: 1, marginRight: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            📄 {doc.type} : {doc.filePath.split("/").pop()}
-          </span>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              className="btn-secondary"
-              style={{
-                padding: '5px 12px',
-                borderRadius: '5px',
-                backgroundColor: '#2563eb',
-                color: '#fff',
-                fontSize: '0.9rem',
-                cursor: 'pointer'
-              }}
-              onClick={() => handleDownload(doc.filePath)}
-            >
-              Télécharger
-            </button>
-           
+<ul className="doc-list">
+  {Object.keys(documents).length === 0 && <li>Aucun document</li>}
+  {Object.entries(documents).map(([key, doc]) =>
+    doc ? (
+      <li key={doc._id} className="doc-item">
+        <div className="doc-info">
+          <i className="fa-regular fa-file-pdf pdf-icon"></i>
+          <div>
+            <strong>{doc.type}</strong>
+            <p className="doc-name">
+              {(() => {
+                const filename = doc.filePath.split("/").pop();
+                return filename.toLowerCase().endsWith(".pdf") ? filename : `${filename}.pdf`;
+              })()}
+            </p>
           </div>
-        </li>
-      ) : null
-    )
+        </div>
+
+        <div className="doc-actions">
+          {/* <button className="btn-view" onClick={() => window.open(doc.filePath, "_blank")}>
+            🔍 Voir
+          </button> */}
+          <button className="btn-secondary" onClick={() => handleDownload(doc.filePath)}>
+            ⬇️ Télécharger
+          </button>
+      
+        </div>
+      </li>
+    ) : null
   )}
 </ul>
 
@@ -637,7 +625,7 @@ const toggleYear = (year) => {
             className="btn-document"
             onClick={() => setShowDocumentModal(true)}
           >
-            <i className="fa-solid fa-file-upload"></i> Ajouter / Remplacer un document
+            <i className="fa-solid fa-file-upload"></i> Ajouter / Remplacer un document / Supprimer
           </button>
       </div>
     </div>
@@ -812,25 +800,25 @@ const toggleYear = (year) => {
               <div className="tenant-section">
                 <h3 className="section-title">Travaux maison</h3>
                 <div className="works-list">
-  {works.length === 0 ? (
-    <p>Aucun travail enregistré</p>
-  ) : (
-    works.map((work) => (
-      <div key={work._id} className="work-card">
-        <div className="work-header">
-          <p><strong>Titre :</strong> {work.title}</p>
-          <i
-            className="fa-solid fa-trash delete-icon"
-            onClick={() => confirmDeleteWork(work._id)}
-          ></i>
-        </div>
-        <p><strong>Description :</strong> {work.description}</p>
-        <p><strong>Coût :</strong> {work.cost ? `${work.cost} FCFA` : "N/A"}</p>
-        <p><strong>Date :</strong> {work.date ? new Date(work.date).toLocaleDateString("fr-FR") : "N/A"}</p>
-      </div>
-    ))
-  )}
-</div>
+                  {works.length === 0 ? (
+                    <p>Aucun travail enregistré</p>
+                  ) : (
+                    works.map((work) => (
+                      <div key={work._id} className="work-card">
+                        <div className="work-header">
+                          <p><strong>Titre :</strong> {work.title}</p>
+                          <i
+                            className="fa-solid fa-trash delete-icon"
+                            onClick={() => confirmDeleteWork(work._id)}
+                          ></i>
+                        </div>
+                        <p><strong>Description :</strong> {work.description}</p>
+                        <p><strong>Coût :</strong> {work.cost ? `${work.cost} FCFA` : "N/A"}</p>
+                        <p><strong>Date :</strong> {work.date ? new Date(work.date).toLocaleDateString("fr-FR") : "N/A"}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
                 <button className="btn-add" onClick={() => setShowWorkModal(true)}>
                   <i className="fa-solid fa-plus"></i> Ajouter un travail effectué
                 </button>
@@ -839,9 +827,9 @@ const toggleYear = (year) => {
   <h3 className="section-title">Détails des paiements</h3>
 
   <div className="paiement-actions">
-    <Link to={`/paiementDetail/${person._id}`}>
+    {/* <Link to={`/paiementDetail/${person._id}`}>
       <button className="btn-all">Voir tous les paiements &gt;&gt;</button>
-    </Link>
+    </Link> */}
 
     <button className="btn-add" onClick={() => setShowPaymentModal(true)}>
       <i className="fa-solid fa-money-check"></i> Ajouter un paiement
@@ -1479,6 +1467,49 @@ tr:hover .rent-cell {
 }
 .rent-row:hover {
   background-color: #f9fafb;
+}
+
+.doc-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.doc-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pdf-icon {
+  font-size: 1.5rem;
+  color: #dc2626;
+}
+
+.doc-name {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.doc-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-view {
+  background: #22c55e;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
 }
       `}</style>
     </div>

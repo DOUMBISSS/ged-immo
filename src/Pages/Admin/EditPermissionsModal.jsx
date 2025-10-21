@@ -29,10 +29,7 @@ export const rolesPermissions = {
     "view_documents", "upload_documents", "view_archives",
     "view_projects", "create_homes", "view_homes", "archive_homes",
     "create_tenants", "view_tenants", "edit_tenants",
-    "manage_payments", 
-    // "edit_payments", 
-    // "view_payments",
-    //  "delete_payments"
+    "manage_payments"
   ],
 
   auditor: [
@@ -47,34 +44,28 @@ export const permissionLabels = {
   create_users: "Créer utilisateurs",
   edit_users: "Modifier utilisateurs",
   delete_users: "Supprimer utilisateurs",
-
   view_documents: "Voir documents",
   upload_documents: "Uploader documents",
   delete_documents: "Supprimer documents",
-
   create_projects: "Créer projets",
   view_projects: "Voir projets",
   edit_projects: "Modifier projets",
   delete_projects: "Supprimer projets",
-
   create_homes: "Créer maisons",
   view_homes: "Voir maisons",
   edit_homes: "Modifier maisons",
   delete_homes: "Supprimer maisons",
   archive_homes: "Archiver maisons",
-
   create_tenants: "Créer locataires",
   view_tenants: "Voir locataires",
   edit_tenants: "Modifier locataires",
   delete_tenants: "Supprimer locataires",
   archive_tenants: "Archiver locataires",
-
   manage_rentals: "Gérer loyers",
   manage_payments: "Gérer paiements",
   edit_payments: "Modifier paiements",
   delete_payments: "Supprimer paiements",
   view_payments: "Voir paiements",
-
   generate_reports: "Générer rapports",
   manage_settings: "Paramètres généraux",
   view_archives: "Voir archives"
@@ -86,21 +77,22 @@ export default function EditPermissionsModal({ user, onClose, onUpdated }) {
   const [role, setRole] = useState(user.role || "agent");
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Génère automatiquement la liste de TOUTES les permissions disponibles
+  // 🔹 Toutes les permissions disponibles
   const allPermissions = useMemo(() => {
     const perms = new Set();
-    Object.values(rolesPermissions).forEach(roleList => {
-      roleList.forEach(p => perms.add(p));
-    });
+    Object.values(rolesPermissions).forEach(roleList => roleList.forEach(p => perms.add(p)));
     return Array.from(perms).sort();
   }, []);
 
-  // 🔹 Recalcule les permissions par défaut selon le rôle
-  useEffect(() => {
-    if (rolesPermissions[role]) {
-      setPermissions(rolesPermissions[role]);
-    }
-  }, [role]);
+  // 🔹 Lorsque le rôle change, on ajoute uniquement les permissions par défaut non présentes
+  const handleRoleChange = (newRole) => {
+    setRole(newRole);
+    const rolePerms = rolesPermissions[newRole] || [];
+    setPermissions(prev => {
+      const merged = new Set([...prev, ...rolePerms]);
+      return Array.from(merged);
+    });
+  };
 
   const handleToggle = (perm) => {
     setPermissions(prev =>
@@ -146,15 +138,15 @@ export default function EditPermissionsModal({ user, onClose, onUpdated }) {
 
         <div style={{ marginBottom: 10 }}>
           <label><strong>Rôle :</strong></label>
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
-            {Object.keys(rolesPermissions).map((r) => (
+          <select value={role} onChange={(e) => handleRoleChange(e.target.value)}>
+            {Object.keys(rolesPermissions).map(r => (
               <option key={r} value={r}>{r.replace('_', ' ')}</option>
             ))}
           </select>
         </div>
 
         <div className="permissions-list">
-          {allPermissions.map((perm) => (
+          {allPermissions.map(perm => (
             <label key={perm} className="perm-item">
               <input
                 type="checkbox"

@@ -224,7 +224,7 @@ const handleDeleteUser = (userId, name) => {
                         </span>
                       </td>
                       <td>
-                        <span className={`role-badge ${u.role?.toLowerCase() || "user"}`}>
+                        <span className={`role-badge ${u.role?.toLowerCase() || "agent"}`}>
                           {u.role || "Utilisateur"}
                         </span>
                       </td>
@@ -430,7 +430,6 @@ const handleDeleteUser = (userId, name) => {
   opacity: 0.85;
 }
 
-/* Rôle badge */
 .role-badge {
   padding: 4px 8px;
   border-radius: 12px;
@@ -440,9 +439,9 @@ const handleDeleteUser = (userId, name) => {
   display: inline-block;
   font-size: 0.85rem;
 }
-.role-badge.admin { background-color: #dc2626; }
-.role-badge.user { background-color: #2563eb; }
-.role-badge.moderator { background-color: #f59e0b; }
+.role-badge.admin { background-color: #dc2626; }       /* Rouge pour Admin */
+.role-badge.agent { background-color: #2563eb; }        /* Bleu pour User */
+.role-badge.moderator { background-color: #f59e0b; }   /* Orange pour Modérateur */
 
 /* Liste des permissions */
 .list-permissions {

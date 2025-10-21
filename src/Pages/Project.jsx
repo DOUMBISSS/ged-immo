@@ -18,7 +18,7 @@ export default function Project() {
   const [modalOpen, setModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
-  const itemsPerPage = 12;
+  const itemsPerPage = 15;
 
   const modalRef = useRef(null);
 
@@ -195,7 +195,62 @@ const handleNewProjectSubmit = async (e) => {
           </div>
 
           {/* Liste projets */}
-          <div className="project-grid">
+         {/* Liste des projets */}
+<div className="tenant-section">
+  <h3>📁 Mes projets</h3>
+
+  <div className="table-responsive">
+    <table className="table">
+      <thead>
+        <tr>
+          <th>Nom du projet</th>
+          <th>Description</th>
+          <th>Créé par</th>
+          <th>Date de création</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {currentProjects.length === 0 ? (
+          <tr>
+            <td colSpan="5" style={{ textAlign: "center" }}>
+              Aucun projet trouvé
+            </td>
+          </tr>
+        ) : (
+          currentProjects.map((project) => (
+            <tr key={project._id}>
+              <td>{project.name}</td>
+              <td>{project.description || "Aucune description"}</td>
+              <td>
+                {typeof project.createdBy === "string"
+                  ? project.createdBy
+                  : project.createdBy?.fullname || "Inconnu"}
+              </td>
+              <td>
+                {new Date(project.createdAt).toLocaleDateString("fr-FR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })}
+              </td>
+              <td>
+                <Link to={`/detail_projet/fr/${project._id}`}>
+                  <button className="btn-details">
+                    Détails
+                  </button>
+                </Link>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+      {/* Liste projets */}
+          {/* <div className="project-grid">
             {currentProjects.length > 0 ? (
               currentProjects.map(project => (
                 <div key={project._id} className="project-card">
@@ -206,7 +261,7 @@ const handleNewProjectSubmit = async (e) => {
                     )}
                   </div>
                   <div className="project-footer">
-                    <Link to={`/detail_projet/fr/${project._id}`}>
+                    <Link to={/detail_projet/fr/${project._id}}>
                       <button className="btn-details">
                         Voir détails <i className="fa-solid fa-arrow-right"></i>
                       </button>
@@ -219,7 +274,7 @@ const handleNewProjectSubmit = async (e) => {
                 Aucun projet trouvé
               </p>
             )}
-          </div>
+          </div> */}
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -362,6 +417,55 @@ const handleNewProjectSubmit = async (e) => {
           font-size: 1.3rem;
           margin-top: .5rem;
         }
+          .tenant-section {
+  margin-top: 2rem;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  border-radius: 10px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  background: #fff;
+}
+
+.table thead {
+  background-color: #f3f4f6;
+  font-weight: bold;
+}
+
+.table th, .table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.table tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.table tr:hover {
+  background-color: #f1f5f9;
+}
+
+.btn-details {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-details:hover {
+  background: #1e40af;
+}
         
       `}</style>
     </>
