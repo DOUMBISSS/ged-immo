@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import Navbar from "./Navbar";
 import { useState, useEffect, useMemo } from "react";
 import { TailSpin } from "react-loader-spinner";
-
+import * as XLSX from "xlsx";
 import Footer from "./Footer";
 import toast, { Toaster } from "react-hot-toast";
 import { useUserContext } from "../contexts/UserContext";
@@ -176,6 +176,79 @@ const filteredPersons = useMemo(() => {
     return acc;
   }, 0);
 
+    // --- Export Excel ---
+  const exportExcel = () => {
+    if (!filteredPersons.length) {
+      toast.error("Aucune donnée à exporter !");
+      return;
+    }
+
+    const projectName =
+      projects.find((p) => p._id === searchProject)?.name || "Tous les projets";
+
+    const header = [
+      [`Rapport Locataires - Projet : ${projectName}`],
+      [`Mois : ${searchMonth}`],
+      [""],
+      ["Nom & Prénom(s)", "Contact", "Bien", "Pièces", "Mois", "Statut", "Montant (FCFA)"],
+    ];
+
+    const body = filteredPersons.map((p) => {
+      const month = p.rentalForMonth
+        ? new Date(p.rentalForMonth.month).toLocaleString("fr-FR", {
+            month: "long",
+            year: "numeric",
+          })
+        : "N/A";
+
+      const statut = p.rentalForMonth?.status || "Impayé";
+
+      const montant =
+        p.homesArray?.[0]?.rent ||
+        p.rentalForMonth?.amount ||
+        0;
+
+      return [
+        `${p.name || ""} ${p.lastname || ""}`,
+        p.tel || "",
+        p.homesArray?.[0]?.categorie || "",
+        p.homesArray?.[0]?.NmbrePieces || "",
+        month,
+        statut,
+        montant,
+      ];
+    });
+
+    // ✅ Totaux à la fin
+    const footer = [
+      [""],
+      ["TOTAL LOCATAIRES", totalLocataires],
+      ["LOYERS PAYÉS", totalLoyersPayes],
+      ["LOYERS IMPAYÉS", totalLoyersImpayes],
+      ["TAUX DE PAIEMENT (%)", `${tauxPaiement}%`],
+      ["MONTANT PAYÉ (FCFA)", montantTotalPaye],
+      ["MONTANT IMPAYÉ (FCFA)", montantTotalImpayes],
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet([...header, ...body, ...footer]);
+
+    worksheet["!cols"] = [
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 20 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 20 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Locataires");
+
+    const monthLabel = searchMonth.replace("-", "_");
+    XLSX.writeFile(workbook, `Rapport_Locataires_${projectName}_${monthLabel}.xlsx`);
+  };
+
   // --- Affichage ---
   return (
     <div>
@@ -200,6 +273,25 @@ const filteredPersons = useMemo(() => {
               <h2>
                 <i className="fa-solid fa-chart-line"></i> Rapport & Statistiques
               </h2>
+
+               <button
+    className="btn-export excel"
+    onClick={exportExcel}
+    style={{
+      background: "#16a34a",
+      color: "#fff",
+      border: "none",
+      padding: ".5rem 1rem",
+      borderRadius: "6px",
+      cursor: "pointer",
+      fontWeight: 500,
+      display: "flex",
+      alignItems: "center",
+      gap: ".4rem",
+    }}
+  >
+    <i className="fa-solid fa-file-excel"></i> Export Excel
+  </button>
             </div>
 
           

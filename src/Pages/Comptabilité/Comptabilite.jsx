@@ -152,25 +152,42 @@ export default function ComptabiliteTendance() {
   };
 
   // --- Export Excel ---
+  // --- Export Excel ---
   const exportExcel = () => {
     const header = [
       [`Analyse Comptable - Mois : ${searchMonth}`],
       [""],
-      ["Projet", "Locataires", "Loyers Payés", "Loyers Impayés", "Taux Paiement (%)", "Revenus (FCFA)"],
+      ["Projet", "Locataires", "Loyers Payés", "Loyers Impayés", "Taux Paiement (%)", "Revenus (FCFA)", "Revenus Impayés (FCFA)"],
     ];
 
-    const body = projectStats.map((p) => [
-      p.projectName,
-      p.totalLocataires,
-      p.loyersPayes,
-      p.loyersImpayes,
-      p.tauxPaiement,
-      p.revenus,
-    ]);
+    const body = projectStats.map((p) => {
+      const revenusImpayes = ((p.revenus / p.loyersPayes) * p.loyersImpayes) || 0;
+      return [
+        p.projectName,
+        p.totalLocataires,
+        p.loyersPayes,
+        p.loyersImpayes,
+        p.tauxPaiement,
+        p.revenus,
+        revenusImpayes,
+      ];
+    });
 
-    const worksheet = XLSX.utils.aoa_to_sheet([...header, ...body]);
+    // ✅ Ligne de total général
+    const totalRow = [
+      "TOTAL GÉNÉRAL",
+      "",
+      "",
+      "",
+      "",
+      totalGlobal,
+      totalImpayesRevenus,
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet([...header, ...body, [""], totalRow]);
+
     worksheet["!cols"] = [
-      { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 18 },
+      { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 20 }, { wch: 22 },
     ];
 
     const workbook = XLSX.utils.book_new();
