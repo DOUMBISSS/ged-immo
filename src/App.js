@@ -61,8 +61,14 @@ import ListeMagasin from './Pages/Magasin/ListeMagasin';
 import DetailProjectMagasin from './Pages/Magasin/DetailProjectMagasin';
 import Tracabilite from './Pages/Tracabilite';
 
+import { GedProvider } from './contexts/GedContext';
+import DetailAdminGed from './Pages/Plateforme/DetailAdminGed';
+
 // Middleware
 import ProtectedRoute from './middlewares/ProtectedRoute';
+import LoginGED from './Pages/Plateforme/LoginGED';
+import RegisterGED from './Pages/Plateforme/RegisterGED';
+import AdminsGED from './Pages/Plateforme/AdminsGED';
 
 // ✅ Wrapper pour accéder à UserContext
 function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
@@ -101,6 +107,11 @@ function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
   return (
     <>
       <Routes>
+
+        <Route path="/login/ged/admin" element={<LoginGED />} />
+        <Route path="/ged/register" element={<RegisterGED />} />
+        <Route path="/ged/admin/:id" element={<DetailAdminGed />} />
+            <Route path="/ged/admins" element={<AdminsGED />} />
         {/* --- ROUTES PUBLIQUES --- */}
         <Route path="/" element={<Home />} />
         <Route path="/confirm/:token" element={<ConfirmEmail />} />
@@ -167,7 +178,8 @@ export default function App() {
 
   return (
     <UserProvider>
-      <LocataireProvider>
+     <GedProvider>
+       <LocataireProvider>
         <UserMagasinProvider>
           <AppRoutes
             setShowPermissionModal={setShowPermissionModal}
@@ -183,6 +195,7 @@ export default function App() {
          
         </UserMagasinProvider>
       </LocataireProvider>
+     </GedProvider>
     </UserProvider>
   );
 }

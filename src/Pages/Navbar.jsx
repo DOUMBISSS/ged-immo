@@ -153,6 +153,12 @@ const handleLoginSubmit = async (e) => {
 
         <hr />
 
+         <button
+            onClick={() => navigate("/mon-profil")}
+            className="dropdown-admin-btn" >
+            <i className="fa-solid fa-user"></i> Profil
+          </button>
+
         {/* Bouton Admin (visible seulement si role = admin) */}
         {user.role === "admin" && (
           <button
@@ -201,9 +207,9 @@ const handleLoginSubmit = async (e) => {
           {/* <NavLink to="/Notifications" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-box-archive"></i> Notifications
         </NavLink> */}
-        <NavLink to="/mon-profil" className={({ isActive }) => isActive ? 'active' : ''}>
+        {/* <NavLink to="/mon-profil" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-user"></i> Profil
-        </NavLink>
+        </NavLink> */}
       </nav>
 
       

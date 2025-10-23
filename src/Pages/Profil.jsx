@@ -242,8 +242,7 @@ const handleUpdateProfile = async (e) => {
         <Toaster position="top-right" />
         <h1>Mon Profil</h1>
 
-        
-
+    
         {/* Informations Admin */}
         <div className="profil-card">
           <div className="profil-info">
@@ -267,6 +266,16 @@ const handleUpdateProfile = async (e) => {
             )}
           </div>
         </div>
+
+        {roleType === "admin" && adminData && (
+  <div className="subscription-info" style={{ marginTop: "1rem", padding: "1rem", background: "#f0f0ff", borderRadius: 8 }}>
+    <h3>📦 Abonnement</h3>
+    <p><strong>Type :</strong> {adminData.subscriptionType || "Non défini"}</p>
+    <p><strong>Début :</strong> {adminData.subscriptionStart ? new Date(adminData.subscriptionStart).toLocaleDateString() : "Non démarré"}</p>
+    <p><strong>Fin :</strong> {adminData.subscriptionEnd ? new Date(adminData.subscriptionEnd).toLocaleDateString() : "Non défini"}</p>
+    <p><strong>Actif :</strong> {adminData.active ? "✅ Oui" : "❌ Non"}</p>
+  </div>
+)}
 
         {/* Liste des utilisateurs */}
         {roleType === "admin" && (
