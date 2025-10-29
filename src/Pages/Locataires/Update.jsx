@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import Navbar from "../Pages/Navbar";
-import Footer from "../Pages/Footer";
+import Navbar from "../Navbar";
+import Footer from "../Footer";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -34,7 +34,7 @@ export default function Update() {
 
   // Charger les infos du locataire
   useEffect(() => {
-    fetch(`http://localhost:4000/detail/person/${id}`)
+    fetch(`https://backend-ged-immo.onrender.com/detail/person/${id}`)
       .then(res => res.json())
       .then(data => {
         setPerson(data);
@@ -63,7 +63,7 @@ export default function Update() {
 
   // Charger les logements disponibles
   useEffect(() => {
-    fetch('http://localhost:4000/homes')
+    fetch('https://backend-ged-immo.onrender.com/homes')
       .then(res => res.json())
       .then(data => setRentHomes(data))
       .catch(err => console.error(err));
@@ -94,7 +94,7 @@ export default function Update() {
     };
 
     try {
-      const res = await fetch(`http://localhost:4000/person/${id}`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/person/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataUpdate),

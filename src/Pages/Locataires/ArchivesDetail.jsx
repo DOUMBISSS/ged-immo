@@ -3,8 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import { TailSpin } from "react-loader-spinner";
 import { toast } from "react-toastify";
-import Navbar from "../Pages/Navbar";
-import Footer from "../Pages/Footer";
+import Navbar from "../Navbar";
+import Footer from "../Footer";
 
 export default function ArchivesDetail() {
   const { id } = useParams();
@@ -14,7 +14,7 @@ export default function ArchivesDetail() {
   const fetchArchiveData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/archives/locataire/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/archives/locataire/${id}`);
       if (!res.ok) throw new Error("Erreur récupération archive");
 
       const data = await res.json();

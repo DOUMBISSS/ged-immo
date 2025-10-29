@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import { QRCodeCanvas } from "qrcode.react";
 
-const API = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
+const API ="https://backend-ged-immo.onrender.com";
 
 export default function ReceiptPage() {
   const { token } = useParams();

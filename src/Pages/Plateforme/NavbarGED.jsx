@@ -9,7 +9,7 @@ export default function NavbarGED() {
 
   const logoutHandler = () => {
     logoutGed();
-    window.location.href = "/"; // ou navigate si tu veux react-router
+    window.location.href = "/login/ged/admin"; // ou navigate si tu veux react-router
   };
 
   return (

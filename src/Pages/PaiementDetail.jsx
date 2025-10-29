@@ -15,7 +15,7 @@ export default function PaiementDetail() {
   const fetchPersonData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/detail/person/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/detail/person/${id}`);
       if (!res.ok) throw new Error("Erreur récupération locataire");
 
       const text = await res.text();
@@ -23,7 +23,7 @@ export default function PaiementDetail() {
       setPerson(data);
 
       // Récupération documents
-      const docRes = await fetch(`http://localhost:4000/persons/${id}/documents`);
+      const docRes = await fetch(`https://backend-ged-immo.onrender.com/persons/${id}/documents`);
       if (docRes.ok) {
         const docData = await docRes.json();
         if (docData.success && docData.documents) {

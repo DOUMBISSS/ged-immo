@@ -22,11 +22,11 @@ export function UpdateHomeModal({ home, onClose, onUpdated, token }) {
 
   const [img, setImg] = useState(null);
   const [imgPreview, setImgPreview] = useState(
-    home.img ? `http://localhost:4000/${home.img}` : null
+    home.img ? `https://backend-ged-immo.onrender.com/${home.img}` : null
   );
 
   const [existingImages, setExistingImages] = useState(
-    home.images ? home.images.map((img) => `http://localhost:4000/${img}`) : []
+    home.images ? home.images.map((img) => `https://backend-ged-immo.onrender.com/${img}`) : []
   );
 
   const [images, setImages] = useState([]);

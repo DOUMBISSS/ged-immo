@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useReactToPrint } from "react-to-print";
 import NavbarLoc from "./NavbarLoc";
-import Footer from "../Pages/Footer";
+import Footer from "../Footer";
 
 export default function DetailLocataire() {
   const { id } = useParams();
@@ -22,7 +22,7 @@ export default function DetailLocataire() {
   // 🔹 Récupération loyers payés
   const fetchRents = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/rents/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/rents/${id}`);
       const data = await res.json();
       if (res.ok && data.success) {
         setPerson((prev) => ({
@@ -42,13 +42,13 @@ export default function DetailLocataire() {
   const fetchPersonData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/detail/locataire/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/detail/locataire/${id}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : { homeId: {}, rentals: [] };
       setPerson(data);
 
       // Documents
-      const docRes = await fetch(`http://localhost:4000/locataire/${id}/documents`);
+      const docRes = await fetch(`https://backend-ged-immo.onrender.com/locataire/${id}/documents`);
       if (docRes.ok) {
         const docData = await docRes.json();
         if (docData.success && docData.documents) setDocuments(docData.documents);
@@ -70,7 +70,7 @@ export default function DetailLocataire() {
   // 🔹 Travaux liés au locataire
   const fetchWorks = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/works/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/works/${id}`);
       const data = await res.json();
       if (res.ok && data.success) setWorks(data.works || []);
     } catch (err) {

@@ -9,7 +9,7 @@ import Footer from "./Footer";
 import { Blocks } from "react-loader-spinner";
 import { useUserContext } from "../contexts/UserContext";
 
-const API_BASE = "http://localhost:4000";
+const API_BASE = "https://backend-ged-immo.onrender.com";
 
 export default function Accueil() {
   const { user } = useUserContext();

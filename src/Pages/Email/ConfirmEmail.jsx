@@ -7,7 +7,7 @@ export default function ConfirmEmail() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch(`http://localhost:4000/confirm/${token}`)
+    fetch(`https://backend-ged-immo.onrender.com/confirm/${token}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {

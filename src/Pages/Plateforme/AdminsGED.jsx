@@ -31,7 +31,7 @@ export default function AdminsGED() {
     e.preventDefault();
     try {
       const payload = { fullname, email, phone, password, company };
-      const res = await fetch("http://localhost:4000/ged/admins", {
+      const res = await fetch("https://backend-ged-immo.onrender.com/ged/admins", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -60,7 +60,7 @@ export default function AdminsGED() {
   const handleDelete = async (id) => {
     if (!window.confirm("Supprimer cet administrateur ?")) return;
     try {
-      const res = await fetch(`http://localhost:4000/ged/admins/${id}`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/ged/admins/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -162,52 +162,51 @@ export default function AdminsGED() {
       </tr>
     ) : (
       filteredAdmins.map((a) => {
-        const now = new Date();
-        const expired = a.subscriptionEnd && new Date(a.subscriptionEnd) < now;
-        const status = a.suspended
-          ? "suspendu"
-          : expired
-          ? "expiré"
-          : a.active
-          ? "actif"
-          : "inactif";
+  const now = new Date();
+  let status = "inactif";
 
-        return (
-          <tr key={a._id}>
-            <td>{a.fullname}</td>
-            <td>{a.email}</td>
-            <td>{a.number || "—"}</td>
-            <td>{a.company || "—"}</td>
-            <td>{new Date(a.createdAt).toLocaleDateString("fr-FR")}</td>
+  if (a.suspended) {
+    status = "suspendu";
+  } else if (a.subscriptionEnd && new Date(a.subscriptionEnd) < now) {
+    status = "expiré";
+  } else if (a.active || (a.subscriptionEnd && new Date(a.subscriptionEnd) >= now)) {
+    status = "actif";
+  }
 
-            {/* ✅ Badge statut dynamique */}
-            <td>
-              <span
-                className={`status-badge ${
-                  status === "suspendu"
-                    ? "badge-suspended"
-                    : status === "expiré"
-                    ? "badge-expired"
-                    : status === "actif"
-                    ? "badge-active"
-                    : "badge-inactive"
-                }`}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </span>
-            </td>
+  return (
+    <tr key={a._id}>
+      <td>{a.fullname}</td>
+      <td>{a.email}</td>
+      <td>{a.number || "—"}</td>
+      <td>{a.company || "—"}</td>
+      <td>{new Date(a.createdAt).toLocaleDateString("fr-FR")}</td>
 
-            <td>
-              <Link to={`/ged/admin/${a._id}`}>
-                <button className="btn-details">  <i className="fa-solid fa-eye"></i> Voir</button>
-              </Link>
-              {/* <button className="btn-delete" onClick={() => handleDelete(a._id)}>
-                <i className="fa-solid fa-trash"></i>Supprimer
-              </button> */}
-            </td>
-          </tr>
-        );
-      })
+      <td>
+        <span
+          className={`status-badge ${
+            status === "suspendu"
+              ? "badge-suspended"
+              : status === "expiré"
+              ? "badge-expired"
+              : status === "actif"
+              ? "badge-active"
+              : "badge-inactive"
+          }`}
+        >
+          {status.charAt(0).toUpperCase() + status.slice(1)}
+        </span>
+      </td>
+
+      <td>
+        <Link to={`/ged/admin/${a._id}`}>
+          <button className="btn-details">
+            <i className="fa-solid fa-eye"></i> Voir
+          </button>
+        </Link>
+      </td>
+    </tr>
+  );
+})
     )}
   </tbody>
     </table>

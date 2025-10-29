@@ -54,7 +54,7 @@ useEffect(() => {
     const fetchArchives = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:4000/archives/admin/${adminIdToFetch}`, {
+        const res = await fetch(`https://backend-ged-immo.onrender.com/archives/admin/${adminIdToFetch}`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         const data = await res.json();
@@ -68,17 +68,13 @@ useEffect(() => {
           setPersons([]);
         }
 
-  const res2 = await fetch(`http://localhost:4000/homes/archives/${adminIdToFetch}`, {
+  const res2 = await fetch(`https://backend-ged-immo.onrender.com/homes/archives/${adminIdToFetch}`, {
   headers: { Authorization: `Bearer ${user.token}` },
 });
 const data2 = await res2.json();
 if (data2.success) {
   setHomes(data2.archivedHomes || []);
 }
-        
-           
-
-
       } catch (err) {
         toast.error("Erreur récupération archives : " + err.message);
         toast.error("Erreur chargement archives : " + err.message);

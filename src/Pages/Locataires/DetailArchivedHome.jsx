@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import Navbar from "../Pages/Navbar";
-import Footer from "../Pages/Footer";
+import Navbar from "../Navbar";
+import Footer from "../Footer";
 import toast, { Toaster } from "react-hot-toast";
 import { Blocks } from "react-loader-spinner";
-import { useUserContext } from "../contexts/UserContext";
+import { useUserContext } from "../../contexts/UserContext";
 
 export default function DetailArchivedHome() {
   const { id } = useParams();
@@ -44,7 +44,7 @@ const restoreHome = (homeId, projectId) => {
           style={{ background: "#10b981", color: "#fff", padding: "5px 10px", borderRadius: "5px" }}
           onClick={async () => {
             try {
-              const res = await fetch(`http://localhost:4000/homes/${homeId}/restore`, {
+              const res = await fetch(`https://backend-ged-immo.onrender.com/homes/${homeId}/restore`, {
                 method: "PATCH",
                 headers: {
                   "Content-Type": "application/json",

@@ -44,7 +44,7 @@ export default function UpdateProfil() {
     };
 
     try {
-      const response = await fetch(`http://localhost:4000/updateUser/${id}`, {
+      const response = await fetch(`https://backend-ged-immo.onrender.com/updateUser/${id}`, {
         method: "PUT",
         headers: { 'Content-Type': "application/json" },
         body: JSON.stringify(dataUpdate)

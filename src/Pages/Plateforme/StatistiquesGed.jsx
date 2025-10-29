@@ -26,7 +26,7 @@ export default function StatistiquesGed() {
     const fetchGedOverview = async () => {
       try {
         setLoading(true);
-        const res = await fetch("http://localhost:4000/superadmin/overview", {
+        const res = await fetch("https://backend-ged-immo.onrender.com/superadmin/overview", {
           headers: { Authorization: `Bearer ${user.token}` },
         });
         const data = await res.json();

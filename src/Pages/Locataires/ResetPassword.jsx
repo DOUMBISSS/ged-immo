@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import "../Locataires/Locataire.css";
+import "./Locataire.css";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export default function ResetPassword() {
   useEffect(() => {
     const fetchPerson = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/persons/${id}`);
+        const res = await fetch(`https://backend-ged-immo.onrender.com/persons/${id}`);
         const data = await res.json();
         if (res.ok) setFirstLogin(data.firstLogin);
       } catch (err) {
@@ -41,7 +41,7 @@ export default function ResetPassword() {
         ? { newPassword } // pas besoin de l'ancien mot de passe
         : { oldPassword, newPassword };
 
-      const res = await fetch(`http://localhost:4000/persons/${id}/change-password`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/persons/${id}/change-password`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

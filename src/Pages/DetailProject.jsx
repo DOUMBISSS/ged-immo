@@ -5,7 +5,10 @@ import Footer from "./Footer";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useUserContext } from "../contexts/UserContext";
-import DuplicateHomeModal from "./Maison/DuplicateHomeModal";
+import DuplicateHomeProjectModal from "./Maison/DuplicateHomeProjectModal"
+import DuplicateHomeModal from "./Magasin/DuplicateHomeModal";
+
+const API = "http://localhost:4000"
 
 export default function DetailProject() {
   const { id: projectId } = useParams(); // ID du projet depuis l'URL
@@ -40,6 +43,8 @@ const [filterPieces, setFilterPieces] = useState("");
   const [works, setWorks] = useState("");
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [selectedHome, setSelectedHome] = useState(null);
+  const [duplicateHomeModalOpen, setDuplicateModalOpen] = useState(false);
+
 
   const piecesOptions = {
     Appartement: ["2","3","4", "5", "6","7", "8", "9","10"],
@@ -81,7 +86,7 @@ const handleSubmit = async (e) => {
     if (img) formData.append("img", img);
     if (images.length > 0) Array.from(images).forEach(file => formData.append("images", file));
 
-    const response = await fetch(`http://localhost:4000/newHome/${projectId}`, {
+    const response = await fetch(`https://backend-ged-immo.onrender.com/newHome/${projectId}`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${user?.token}` },
       body: formData
@@ -127,7 +132,7 @@ const handleSubmit = async (e) => {
 useEffect(() => {
   if (!user?.token) return;
 
-  fetch(`http://localhost:4000/projects/${projectId}`, {
+  fetch(`https://backend-ged-immo.onrender.com/projects/${projectId}`, {
     headers: {
       Authorization: `Bearer ${user.token}`
     }
@@ -227,6 +232,9 @@ const totalPages = Math.ceil(filteredHomes.length / itemsPerPage);;
                   <button className="btn-archives" style={{ height: "40px" }} onClick={() => navigate("/Mes__archives")}>
                     <i className="fa-solid fa-archive"></i> Voir archives
                   </button>
+                  
+                  {/* <button onClick={() => setDuplicateModalOpen(true)}>📋 Dupliquer</button> */}
+
                 </div>
               </div>
 
@@ -320,6 +328,13 @@ const totalPages = Math.ceil(filteredHomes.length / itemsPerPage);;
 </select>
     </div>
 
+        
+       {(filterCategorie || filterPieces) && (
+      <button className="btn-reset-filter" onClick={handleResetFilters}>
+        <i className="fa-solid fa-rotate-right"></i> Réinitialiser
+      </button>
+    )}
+
   </div>
 </div>
 <div className="renthome-cards-container">
@@ -337,7 +352,7 @@ const totalPages = Math.ceil(filteredHomes.length / itemsPerPage);;
                     src={
                       home.img.startsWith("http")
                         ? home.img
-                        : `http://localhost:4000/${home.img}`
+                        : `https://backend-ged-immo.onrender.com/${home.img}`
                     }
                     alt={home.nameHome}
                     className="home-image"
@@ -352,7 +367,7 @@ const totalPages = Math.ceil(filteredHomes.length / itemsPerPage);;
                     src={
                       url.startsWith("http")
                         ? url
-                        : `http://localhost:4000/${url}`
+                        : `https://backend-ged-immo.onrender.com/${url}`
                     }
                     alt={`Home ${index}`}
                     className="home-image"
@@ -552,6 +567,17 @@ const totalPages = Math.ceil(filteredHomes.length / itemsPerPage);;
           onDuplicated={(newHome) => setHomes((prev) => [...prev, newHome])}
         />
       )}
+
+{/* ✅ Modal duplication du projet entier */}
+{/* {duplicateHomeModalOpen && (
+  <DuplicateHomeProjectModal
+    isOpen={duplicateHomeModalOpen}
+    onClose={() => setDuplicateModalOpen(false)}
+    projectId={projectId}
+    user={user}
+    API={API}
+  />
+)} */}
 
       <style>{`
         .modal-overlay {

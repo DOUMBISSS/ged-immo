@@ -18,7 +18,7 @@ export default function DetailHome() {
      const { user } = useUserContext(); // ✅ récupération de l’admin connecté
 
   useEffect(() => {
-    fetch(`http://localhost:4000/api/homes/${id}`)
+    fetch(`https://backend-ged-immo.onrender.com/api/homes/${id}`)
       .then((res) => res.json())
       .then((data) => setRentHome(data))
       .catch((err) => console.log(err));
@@ -69,7 +69,7 @@ const handleArchive = () => {
           }}
           onClick={async () => {
             try {
-              const res = await fetch(`http://localhost:4000/homes/${id}/archive`, {
+              const res = await fetch(`https://backend-ged-immo.onrender.com/homes/${id}/archive`, {
                 method: "PATCH",
                 headers: {
                   "Content-Type": "application/json",
@@ -152,46 +152,117 @@ const handleArchive = () => {
 
         {/* Main content */}
 <div style={styles.imagesSection}>
-  {/* Grande image principale */}
+  {/* 🖼️ Grande image principale */}
   <div style={styles.mainImage}>
     {selectedImage ? (
       <img
-        src={selectedImage.startsWith("http") ? selectedImage : `http://localhost:4000/${selectedImage}`}
-        alt="Image sélectionnée" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "10px" }}/>
+        src={
+          selectedImage.startsWith("http")
+            ? selectedImage
+            : `https://backend-ged-immo.onrender.com/${selectedImage}`
+        }
+        alt="Image sélectionnée"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          borderRadius: "10px",
+        }}
+      />
+    ) : rentHome?.img ? (
+      <img
+        src={
+          rentHome.img.startsWith("http")
+            ? rentHome.img
+            : `https://backend-ged-immo.onrender.com/${rentHome.img}`
+        }
+        alt="Image principale"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          borderRadius: "10px",
+        }}
+      />
     ) : (
-      rentHome.img && (
-        <img
-          src={rentHome.img.startsWith("http") ? rentHome.img : `http://localhost:4000/${rentHome.img}`}
-          alt="Principale" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "10px" }}/>
-      )
+      // 🔹 Image par défaut si aucune image n'est disponible
+      <img
+        src="/logo4 copie.jpg"
+        alt="Aucune image disponible"
+        style={{
+          width: "70%",
+          height: "70%",
+          objectFit: "contain",
+          background: "#f9fafb",
+          borderRadius: "10px",
+          // border: "1px solid #e5e7eb",
+          padding: "20px",
+        }}
+      />
     )}
   </div>
 
-  {/* Miniatures cliquables (inclut l’image principale) */}
+  {/* 🔹 Miniatures cliquables (inclut l’image principale si dispo) */}
   <div style={styles.thumbnailGallery}>
-    {[rentHome.img, ...(rentHome.images || [])].map((img, index) => {
-      if (!img) return null;
-      const imagePath = img.path || img;
-      const imageURL = imagePath.startsWith("http")
-        ? imagePath
-        : `http://localhost:4000/${imagePath}`;
-      const isSelected = selectedImage
-        ? selectedImage === imagePath
-        : index === 0; // l'image principale est sélectionnée par défaut
-      return (
-        <div
-          key={index}
+    {rentHome?.img || (rentHome?.images && rentHome.images.length > 0) ? (
+      [rentHome.img, ...(rentHome.images || [])].map((img, index) => {
+        if (!img) return null;
+        const imagePath = img.path || img;
+        const imageURL = imagePath.startsWith("http")
+          ? imagePath
+          : `https://backend-ged-immo.onrender.com/${imagePath}`;
+        const isSelected = selectedImage
+          ? selectedImage === imagePath
+          : index === 0; // par défaut : première image sélectionnée
+        return (
+          <div
+            key={index}
+            style={{
+              ...styles.thumbnailBox,
+              border: isSelected ? "2px solid #2563eb" : "1px solid #e5e7eb",
+              transform: isSelected ? "scale(1.05)" : "scale(1)",
+              transition: "all 0.2s ease",
+            }}
+            onClick={() => setSelectedImage(imagePath)}
+          >
+            <img
+              src={imageURL}
+              alt={`Image ${index}`}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                borderRadius: "8px",
+                cursor: "pointer",
+              }}
+            />
+          </div>
+        );
+      })
+    ) : (
+      // 🔸 Si aucune miniature, on affiche aussi la miniature par défaut
+      <div
+        style={{
+          ...styles.thumbnailBox,
+          border: "1px solid #e5e7eb",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          background: "#f9fafb",
+        }}
+      >
+        <img
+          src="/logo4 copie.jpg"
+          alt="Pas d'image"
           style={{
-            ...styles.thumbnailBox,
-            border: isSelected ? "2px solid #2563eb" : "1px solid #e5e7eb",
-            transform: isSelected ? "scale(1.05)" : "scale(1)",
-            transition: "all 0.2s ease",
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            borderRadius: "8px",
           }}
-          onClick={() => setSelectedImage(imagePath)}>
-          <img src={imageURL}alt={`Image ${index}`}style={{width: "100%",height: "100%",objectFit: "cover",borderRadius: "8px",cursor: "pointer",}}/>
-        </div>
-      );
-    })}
+        />
+      </div>
+    )}
   </div>
 </div>
 
@@ -300,14 +371,14 @@ const handleArchive = () => {
       </div>
 
            {/* Modal de mise à jour */}
-      {showUpdateModal && (
+      {/* {showUpdateModal && (
         <UpdateHomeModal
           home={rentHome}
           onClose={() => setShowUpdateModal(false)}
           onUpdated={(updated) => setRentHome(updated)}
           token={user?.token}
         />
-      )}
+      )} */}
 
        {showUpdateModal && (
         <UpdateHomeModal

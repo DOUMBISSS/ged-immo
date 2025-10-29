@@ -1,9 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { useLocataire } from "../contexts/LocataireContext";
+import { useLocataire } from "../../contexts/LocataireContext";
 import toast from "react-hot-toast";
 
-const API = "http://localhost:4000"; // <-- Remplace par ton API réelle
+const API = "https://backend-ged-immo.onrender.com"; // <-- Remplace par ton API réelle
 
 export default function NavbarLoc() {
   const [toggleHelp, setToggleHelp] = useState(false);

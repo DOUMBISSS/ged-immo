@@ -36,7 +36,7 @@ export default function RegisterGED() {
 
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:4000/admin/register", {
+      const res = await fetch("https://backend-ged-immo.onrender.com/admin/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

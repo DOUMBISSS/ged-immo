@@ -75,7 +75,7 @@ const handleLoginSubmit = async (e) => {
   setLoginError("");
 
   try {
-    const res = await fetch("http://localhost:4000/admin/login", {
+    const res = await fetch("https://backend-ged-immo.onrender.com/admin/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -186,14 +186,14 @@ const handleLoginSubmit = async (e) => {
       </header>
 
       <nav className="navbar-menu">
-        <NavLink to="/Accueil" className={({ isActive }) => isActive ? 'active' : ''}>
+        {/* <NavLink to="/Accueil" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-boxes-stacked me-2"></i> Accueil
-        </NavLink>
-        <NavLink to="/users" className={({ isActive }) => isActive ? 'active' : ''}>
-          <i className="fa-solid fa-users"></i> Locataires
-        </NavLink>
+        </NavLink> */}
         <NavLink to="/Mes__projet/fr/" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-house"></i> Mes propriétés
+        </NavLink>
+            <NavLink to="/users" className={({ isActive }) => isActive ? 'active' : ''}>
+          <i className="fa-solid fa-users"></i> Locataires
         </NavLink>
         <NavLink to="/statistiques" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-chart-line"></i> Statistiques

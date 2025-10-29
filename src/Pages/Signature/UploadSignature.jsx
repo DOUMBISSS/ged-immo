@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 
-const API = "http://localhost:4000"; // adapte selon ton backend
+const API = "https://backend-ged-immo.onrender.com"; // adapte selon ton backend
 
 export default function UploadSignature({ adminId }) {
   const [file, setFile] = useState(null);

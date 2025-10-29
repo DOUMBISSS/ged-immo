@@ -41,7 +41,12 @@ export default function Statistiques() {
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:4000/data/${user._id}`);
+        const res = await fetch(`https://backend-ged-immo.onrender.com/data/${user._id}`,{
+           headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${user?.token}`, // ✅ envoi du token
+        },
+      });
         const data = await res.json();
   
         if (!res.ok) {
@@ -69,7 +74,12 @@ export default function Statistiques() {
   useEffect(() => {
     if (!user?._id) return;
     setLoading(true);
-    fetch(`http://localhost:4000/projects/admin/${user._id}`)
+    fetch(`https://backend-ged-immo.onrender.com/projects/admin/${user._id}`,{
+           headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${user?.token}`, // ✅ envoi du token
+        },
+      })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) setProjects(data.projects || []);
@@ -81,7 +91,12 @@ export default function Statistiques() {
   useEffect(() => {
     if (!user?._id) return;
     setLoading(true);
-    fetch(`http://localhost:4000/locataire/${user._id}`)
+    fetch(`https://backend-ged-immo.onrender.com/locataire/${user._id}`,{
+           headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${user?.token}`, // ✅ envoi du token
+        },
+      })
       .then((res) => res.json())
       .then((data) => setPersons(data || []))
       .catch((err) => toast.error("Erreur récupération locataires : " + err.message))

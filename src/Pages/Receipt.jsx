@@ -53,45 +53,46 @@ export default function Receipt({ admin }) {
   };
 
   // 🔹 Récupération du paiement + locataire
-  useEffect(() => {
-    const fetchRental = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`${API}/rents/receipt/${rentId}`);
-        if (!res.ok) throw new Error("Impossible de récupérer les données.");
-        const data = await res.json();
+useEffect(() => {
+  const fetchRental = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API}/rents/receipt/${rentId}`);
+      if (!res.ok) throw new Error("Impossible de récupérer les données.");
+      const data = await res.json();
 
-        setRental(data.rental || data);
-        setPerson(data.person || null);
+      setRental(data.rental || data);
+      setPerson(data.person || null);
 
-        // ⚡ Récupérer aussi les infos complètes du locataire (loyer inclus)
-        if (data.person?._id) {
-          await fetchPersonData(data.person._id);
-        }
-
-       if (data.rental?.adminId) {
-  // S'assurer que c'est une string
-  const adminIdStr = typeof data.rental.adminId === "string"
-    ? data.rental.adminId
-    : data.rental.adminId._id;
-
-  const sigRes = await fetch(`${API}/admin/${adminIdStr}/signature`);
-  if (sigRes.ok) {
-    const sigData = await sigRes.json();
-    setAdminSignature(sigData.signature || null);
-  }
-}
-      } catch (err) {
-        console.error(err);
-        setError(err.message);
-        toast.error("Erreur lors de la récupération du reçu.");
-      } finally {
-        setLoading(false);
+      // ⚡ Récupérer aussi les infos complètes du locataire (loyer inclus)
+      if (data.person?._id) {
+        await fetchPersonData(data.person._id);
       }
-    };
-    fetchRental();
-  }, [rentId]);
+
+      // 🔹 Ancienne récupération de signature admin (désactivée)
+      // if (data.rental?.adminId) {
+      //   const adminIdStr = typeof data.rental.adminId === "string"
+      //     ? data.rental.adminId
+      //     : data.rental.adminId._id;
+      //
+      //   const sigRes = await fetch(`${API}/admin/${adminIdStr}/signatures`);
+      //   if (sigRes.ok) {
+      //     const sigData = await sigRes.json();
+      //     setAdminSignature(sigData.signature || null);
+      //   }
+      // }
+
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+      toast.error("Erreur lors de la récupération du reçu.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchRental();
+}, [rentId]);
 
   // --- Charger les signatures de l’admin depuis le backend ---
   useEffect(() => {
@@ -276,77 +277,152 @@ const handleDeleteSignature = async (index) => {
 
   const home = person.homeId || {};
 
-  const handleSendWhatsapp = async ({
-    rentIdParam = rentId,
-    personParam = person,
-    adminParam = user,
-    apiBase = API,
-    defaultCountryCode = "+225",
-    openInNewTab = true,
-  } = {}) => {
-    try {
-      if (!rentIdParam) return toast.error("ID du reçu manquant.");
-      if (!personParam) return toast.error("Données du locataire manquantes.");
+const handleSendWhatsapp = async ({
+  rentIdParam = rentId,
+  personParam = person,
+  adminParam = user,
+  apiBase = API,
+  defaultCountryCode = "+225",
+  openInNewTab = true,
+} = {}) => {
+  try {
+    if (!rentIdParam) return toast.error("ID du reçu manquant.");
+    if (!personParam) return toast.error("Données du locataire manquantes.");
 
-      const normalizePhone = (raw, defaultCC = "+225") => {
-        if (!raw) return "";
-        let digits = (raw + "").trim().replace(/\D/g, "");
-        if (digits.startsWith("00")) digits = digits.replace(/^00/, "");
-        const defaultDigits = defaultCC.replace(/\D/g, "");
-        if (/^0/.test(digits)) digits = defaultDigits + digits.replace(/^0+/, "");
-        if (!digits.startsWith("+")) digits = "+" + digits;
-        if (digits.length > 15) digits = digits.slice(0, 15);
-        return digits;
-      };
+    // 🔹 Fonction de normalisation du numéro AVEC LOGS
+    const normalizePhone = (raw, defaultCC = "+225") => {
+      if (!raw) return "";
 
-      const locataireRaw = personParam.tel || personParam.number || personParam.contact || "";
-      const locataireDigits = normalizePhone(locataireRaw, defaultCountryCode);
-      if (!locataireDigits || locataireDigits.length < 8 || locataireDigits.length > 15) {
-        return toast.error("Numéro du locataire invalide / mal formaté.");
+      console.group("📞 Normalisation du numéro WhatsApp");
+      console.log("Numéro brut reçu :", raw);
+
+      let phone = raw.trim().replace(/\s+/g, "").replace(/[^\d+]/g, "");
+      const variants = new Set();
+
+      // ✅ 1. Format brut s’il commence par +
+      if (phone.startsWith("+")) {
+        variants.add(phone);
+        variants.add(phone.replace(/^(\+\d{1,3})0+/, "$1")); // sans 0 après indicatif
       }
 
-      const res = await fetch(`${apiBase}/rents/${rentIdParam}/temp-link`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!res.ok) throw new Error("Impossible de générer le lien temporaire.");
-      const { tempUrl } = await res.json();
-      if (!tempUrl) throw new Error("Le serveur n'a pas retourné de tempUrl.");
-
-      const ensureAbsoluteUrl = (u) => {
-        try { return new URL(u).href; } catch (e) { return window.location.origin.replace(/\/$/, "") + "/" + u.replace(/^\//, ""); }
-      };
-      const finalTempUrl = ensureAbsoluteUrl(tempUrl);
-
-      const messageLines = [
-        `Bonjour ${personParam.name || personParam.nom || ""} ${personParam.prenom || ""}`.trim(),
-        "",
-        `Votre reçu de paiement est disponible ici :`,
-        finalTempUrl,
-        "",
-        "Si le lien ne s'ouvre pas, copiez-collez-le dans votre navigateur."
-      ];
-      const message = messageLines.filter(Boolean).join("\n");
-      const whatsappUrl = `https://web.whatsapp.com/send?phone=${locataireDigits.replace(/\+/g, '')}&text=${encodeURIComponent(message)}`;
-
-      const opened = window.open(whatsappUrl, openInNewTab ? "_blank" : "_self", "noopener,noreferrer");
-      if (!opened) {
-        try {
-          await navigator.clipboard.writeText(message);
-          toast.success("Impossible d'ouvrir WhatsApp (pop-up bloqué). Le message a été copié dans le presse-papier.");
-        } catch (e) {
-          console.log("Temp link:", finalTempUrl);
-          toast.error("Impossible d'ouvrir WhatsApp automatiquement. Lien affiché dans la console.");
-        }
-      } else {
-        toast.success("WhatsApp ouvert — vérifiez l'onglet et cliquez sur Envoyer.");
+      // ✅ 2. Format 00 → +
+      if (phone.startsWith("00")) {
+        const v = "+" + phone.slice(2);
+        variants.add(v);
+        variants.add(v.replace(/^(\+\d{1,3})0+/, "$1"));
       }
-    } catch (err) {
-      console.error("handleSendWhatsapp error:", err);
-      toast.error(err.message || "Erreur envoi du reçu WhatsApp.");
+
+      // ✅ 3. Format commençant par 0 → ajouter indicatif
+      if (phone.startsWith("0")) {
+        const cc = defaultCC.replace(/\D/g, "");
+        variants.add(`+${cc}${phone.replace(/^0+/, "")}`);
+      }
+
+      // ✅ 4. Format sans indicatif
+      if (!phone.startsWith("+") && !phone.startsWith("00")) {
+        const cc = defaultCC.replace(/\D/g, "");
+        variants.add(`+${cc}${phone}`);
+      }
+
+      console.log("🔍 Variantes générées :", Array.from(variants));
+
+      // On choisit la plus longue (souvent la bonne)
+      const final = Array.from(variants).sort((a, b) => b.length - a.length)[0];
+      console.log("✅ Variante choisie :", final);
+      console.groupEnd();
+
+      return final;
+    };
+
+    // 🔹 Extraction du numéro du locataire
+    const locataireRaw =
+      personParam.tel || personParam.number || personParam.contact || "";
+
+    const locataireDigits = normalizePhone(locataireRaw, defaultCountryCode);
+
+    console.log("✅ Numéro final normalisé :", locataireDigits);
+
+    // 🔹 Validation du format final
+    if (!/^\+\d{8,15}$/.test(locataireDigits)) {
+      console.warn("❌ Numéro rejeté (format invalide WhatsApp) :", locataireDigits);
+      return toast.error("Numéro du locataire invalide pour WhatsApp.");
     }
-  };
+
+    // 🔹 Génération du lien temporaire
+    const res = await fetch(`${apiBase}/rents/${rentIdParam}/temp-link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) throw new Error("Impossible de générer le lien temporaire.");
+    const { tempUrl } = await res.json();
+    if (!tempUrl) throw new Error("Le serveur n'a pas retourné de tempUrl.");
+
+    // 🔹 Correction de l'URL absolue
+    const ensureAbsoluteUrl = (u) => {
+      try {
+        return new URL(u).href;
+      } catch {
+        return (
+          window.location.origin.replace(/\/$/, "") +
+          "/" +
+          u.replace(/^\//, "")
+        );
+      }
+    };
+
+    const finalTempUrl = ensureAbsoluteUrl(tempUrl);
+
+    // 🔹 Message WhatsApp
+   const message = [
+  `Bonjour ${personParam.name || personParam.nom || ""} ${personParam.prenom || ""}`.trim(),
+  "",
+  "Votre reçu de paiement est disponible ici :",
+  "",
+  finalTempUrl, // bien séparé sur une ligne seule
+  "",
+  "Si le lien ne s'ouvre pas, copiez-collez-le dans votre navigateur."
+].filter(Boolean).join("\n");
+
+    // ✅ Correction ici : on n’encode pas entièrement l’URL pour la garder cliquable
+    const encodedMessage = message
+      .split(finalTempUrl)
+      .map((part) => encodeURIComponent(part))
+      .join(finalTempUrl);
+
+    // 🔹 Détection mobile / desktop
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const baseUrl = isMobile
+      ? "https://api.whatsapp.com/send"
+      : "https://web.whatsapp.com/send";
+
+    const whatsappUrl = `${baseUrl}?phone=${locataireDigits.replace(
+      /\+/g,
+      ""
+    )}&text=${encodedMessage}`;
+
+    console.log("🌍 URL WhatsApp générée :", whatsappUrl);
+
+    // 🔹 Ouverture de WhatsApp
+    const opened = window.open(
+      whatsappUrl,
+      openInNewTab ? "_blank" : "_self",
+      "noopener,noreferrer"
+    );
+
+    if (!opened) {
+      await navigator.clipboard.writeText(message);
+      toast.success(
+        "WhatsApp n'a pas pu s'ouvrir (pop-up bloquée). Le message a été copié."
+      );
+    } else {
+      toast.success("WhatsApp ouvert — cliquez sur Envoyer.");
+    }
+  } catch (err) {
+    console.error("❌ handleSendWhatsapp error:", err);
+    toast.error(err.message || "Erreur lors de l'envoi via WhatsApp.");
+  }
+};
 
   const handleSendEmail = async () => {
     try {
@@ -459,10 +535,10 @@ const handleDeleteSignature = async (index) => {
           </div>
 
           {/* ✅ Ajout du QR Code */}
-          <div className="receipt-xxl-qr">
+          {/* <div className="receipt-xxl-qr">
             <h5>Vérification du reçu</h5>
             <QRCodeCanvas value={`${API}/receipt/${rental._id}`} size={120} />
-          </div>
+          </div> */}
 
           <div className="receipt-legal">
             <p>Ce reçu est généré électroniquement par <strong>{user?.fullname || "l'Administrateur"}</strong>.</p>

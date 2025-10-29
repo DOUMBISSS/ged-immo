@@ -59,7 +59,7 @@ export default function UpdateRent({ modalUpdate, setModalUpdate }) {
 
     const handleUpdate = () => {
         const dataForm = { date_of_payment, month, status, time, mode };
-        fetch((`http://localhost:4000/updateRent/${id}`), {
+        fetch((`https://backend-ged-immo.onrender.com/updateRent/${id}`), {
             method: "PUT",
             headers: { 'Accept': "application/json", 'Content-Type': "application/json" },
             body: JSON.stringify(dataForm)

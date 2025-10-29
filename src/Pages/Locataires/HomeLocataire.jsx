@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
-import { useLocataire } from "../contexts/LocataireContext";
+import { useLocataire } from "../../contexts/LocataireContext";
 
 export default function HomeLocataire() {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ export default function HomeLocataire() {
     setLoading(true); // ⏳ Début du chargement
 
     try {
-      const res = await fetch("http://localhost:4000/locataire/login", {
+      const res = await fetch("https://backend-ged-immo.onrender.com/locataire/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

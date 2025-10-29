@@ -15,38 +15,32 @@ import { Toaster } from 'react-hot-toast';
 import Home from './Pages/Home';
 import Accueil from './Pages/Accueil';
 import User from './Pages/User';
-import Ajout from './Pages/Ajout';
 import Profil from './Pages/Profil';
-import Update from './Locataires/Update';
-import RentHome from './Pages/RentHome';
-import Paiement from './Pages/Paiement';
+import Update from './Pages/Locataires/Update';
 import DetailUser from './Pages/DetailUser';
 import DetailHome from './Pages/DetailHome';
 import Receipt from './Pages/Receipt';
-import Help from './Pages/Help';
 import PaiementDetail from './Pages/PaiementDetail';
 import Statistiques from './Pages/Statistiques';
 import Inscription from './Pages/Inscription';
-import AddHome from './Pages/AddHome';
 import Project from './Pages/Project';
 import DetailProject from './Pages/DetailProject';
-import NewProject from './Pages/NewProject';
-import HomeLocataire from './Locataires/HomeLocataire';
-import DetailLocataire from './Locataires/DetailLocataire';
-import ResetPassword from './Locataires/ResetPassword';
+import HomeLocataire from './Pages/Locataires/HomeLocataire';
+import DetailLocataire from './Pages/Locataires/DetailLocataire';
+import ResetPassword from './Pages/Locataires/ResetPassword';
 import Archives from './Pages/Archives';
 import UploadDocument from './Pages/UploadDocument';
-import DetailArchivedUser from './Locataires/DetailArchivedUser';
-import DetailArchivedHome from './Locataires/DetailArchivedHome';
+import DetailArchivedUser from './Pages/Locataires/DetailArchivedUser';
+import DetailArchivedHome from './Pages/Locataires/DetailArchivedHome';
 import NotFoundPage from './Pages/NotFoundPage';
 import ConfirmEmail from './Pages/Email/ConfirmEmail';
 import ReceiptPage from './Pages/Receipt/ReceiptPage';
 import ResetPasswords from './Pages/Email/ResetPasswords';
 import Notifications from './Pages/Notifications';
-import ArchivesDetail from './Locataires/ArchivesDetail';
+import ArchivesDetail from './Pages/Locataires/ArchivesDetail';
 import Administrator from './Pages/Admin/Administrator';
 import Comptabilite from './Pages/Comptabilité/Comptabilite';
-import ReceiptLocataire from './Locataires/ReceiptLocataire';
+import ReceiptLocataire from './Pages/Locataires/ReceiptLocataire';
 import { authorize } from './middlewares/authorize';
 
 // Magasin pages
@@ -75,34 +69,34 @@ function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
   const { user } = useUserContext();
   const currentAdminId = user?.adminId || user?._id || null;
 
-  useEffect(() => {
-    // 🔒 Interception globale des erreurs fetch
-    const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
-      try {
-        const response = await originalFetch(...args);
+  // useEffect(() => {
+  //   // 🔒 Interception globale des erreurs fetch
+  //   const originalFetch = window.fetch;
+  //   window.fetch = async (...args) => {
+  //     try {
+  //       const response = await originalFetch(...args);
 
-        // Si erreur 401 ou 403 -> affiche la modale
-        if (response.status === 401 || response.status === 403) {
-          let errorText = "";
-          try {
-            const data = await response.clone().json();
-            errorText = data.message || "Accès refusé";
-          } catch {
-            errorText = "Accès refusé";
-          }
+  //       // Si erreur 401 ou 403 -> affiche la modale
+  //       if (response.status === 401 || response.status === 403) {
+  //         let errorText = "";
+  //         try {
+  //           const data = await response.clone().json();
+  //           errorText = data.message || "Accès refusé";
+  //         } catch {
+  //           errorText = "Accès refusé";
+  //         }
 
-          setPermissionMessage(errorText);
-          setShowPermissionModal(true);
-        }
+  //         setPermissionMessage(errorText);
+  //         setShowPermissionModal(true);
+  //       }
 
-        return response;
-      } catch (err) {
-        toast.error("Erreur de connexion au serveur");
-        throw err;
-      }
-    };
-  }, [setPermissionMessage, setShowPermissionModal]);
+  //       return response;
+  //     } catch (err) {
+  //       toast.error("Erreur de connexion au serveur");
+  //       throw err;
+  //     }
+  //   };
+  // }, [setPermissionMessage, setShowPermissionModal]);
 
   return (
     <>
@@ -126,7 +120,7 @@ function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
         <Route path="/My__dash" element={<DashMagasin />} />
         <Route path="/DetailMagasin/:id" element={<DetailMagasin />} />
         <Route path="/Mon/profil" element={<ProfilOwner />} />
-        <Route path="/Mon__recu/fr/:id" element={<ReceiptMagasin />} />
+        {/* <Route path="/Mon__recu/fr/:id" element={<ReceiptMagasin />} /> */}
         <Route path="/liste/fr/" element={<ListeMagasin />} />
         <Route path="/detailProject/fr/:id" element={<DetailProjectMagasin />} />
 
@@ -137,23 +131,18 @@ function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
 
         {/* --- ROUTES PROTÉGÉES --- */}
         <Route path="/Accueil" element={<ProtectedRoute authRequired={true}><Accueil /></ProtectedRoute>} />
+            <Route path="/DetailMagasin/:id" element={<ProtectedRoute authRequired={true}><DetailMagasin /></ProtectedRoute>} />
         <Route path="/Actions" element={<ProtectedRoute authRequired={true}><Tracabilite /></ProtectedRoute>} />
-        <Route path="/helps" element={<ProtectedRoute authRequired={true}><Help /></ProtectedRoute>} />
         <Route path="/mon-profil" element={<ProtectedRoute authRequired={true}><Profil /></ProtectedRoute>} />
         <Route path="/users" element={<ProtectedRoute authRequired={true} allowedRoles={['user','admin']} adminId={currentAdminId}><User /></ProtectedRoute>} />
-        <Route path="/ajouter/locataire" element={<ProtectedRoute authRequired={true}><Ajout /></ProtectedRoute>} />
         <Route path="/update/:id" element={<ProtectedRoute authRequired={true}><Update /></ProtectedRoute>} />
-        <Route path="/renthome" element={<ProtectedRoute authRequired={true}><RentHome /></ProtectedRoute>} />
-        <Route path="/paiement/:id" element={<ProtectedRoute authRequired={true}><Paiement /></ProtectedRoute>} />
         <Route path="/detailUser/:id" element={<ProtectedRoute authRequired={true}><DetailUser /></ProtectedRoute>} />
         <Route path="/detailHome/:id" element={<ProtectedRoute authRequired={true}><DetailHome /></ProtectedRoute>} />
         <Route path="/receipt/:rentId" element={<ProtectedRoute authRequired={true}><Receipt /></ProtectedRoute>} />
         <Route path="/paiementDetail/:id" element={<ProtectedRoute authRequired={true}><PaiementDetail /></ProtectedRoute>} />
         <Route path="/statistiques" element={<ProtectedRoute authRequired={true}><Statistiques /></ProtectedRoute>} />
-        <Route path="/add-home/:projectId" element={<ProtectedRoute authRequired={true}><AddHome /></ProtectedRoute>} />
         <Route path="/Mes__projet/fr/" element={<ProtectedRoute authRequired={true}><Project /></ProtectedRoute>} />
         <Route path="/detail_projet/fr/:id" element={<ProtectedRoute authRequired={true}><DetailProject /></ProtectedRoute>} />
-        <Route path="/NewProject" element={<ProtectedRoute authRequired={true}><NewProject /></ProtectedRoute>} />
         <Route path="/reset-password/:id" element={<ProtectedRoute authRequired={true}><ResetPassword /></ProtectedRoute>} />
         <Route path="/Mes__archives" element={<ProtectedRoute authRequired={true}><Archives /></ProtectedRoute>} />
         <Route path="/detailArchivedUser/:id" element={<ProtectedRoute authRequired={true}><DetailArchivedUser /></ProtectedRoute>} />

@@ -42,7 +42,7 @@ export default function ResetPasswords() {
 
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/reset/${token}`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/reset/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: newPassword }),

@@ -53,7 +53,7 @@ export default function LoginGED() {
           display: flex;
           justify-content: center;
           align-items: center;
-          background: linear-gradient(135deg, #2563eb, #1e3a8a);
+          // background: linear-gradient(135deg, #2563eb, #1e3a8a);
         }
         .login-card {
           background: white;

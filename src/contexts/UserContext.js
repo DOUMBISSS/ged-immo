@@ -54,16 +54,26 @@ export function UserProvider({ children }) {
     startSessionTimer(); // Démarre la session
   };
 
-  // ✅ Déconnexion
-  const logout = () => {
-    clearSessionTimers();
-    setUser(null);
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    setShowLogoutModal(false);
-    setShowSessionWarning(false);
-    toast.success("Déconnexion réussie 👋");
-  };
+// ✅ Déconnexion simple avec redirection vers la home
+const logout = () => {
+  clearSessionTimers();
+  setUser(null);
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  setShowLogoutModal(false);
+  setShowSessionWarning(false);
+
+  // Optionnel : toast pour informer l'utilisateur
+  toast.success("Déconnexion réussie 👋", {
+    id: "logout-success",
+    duration: 3000,
+    position: "top-right",
+    style: { zIndex: 9999 }
+  });
+
+  // Redirection vers la page d'accueil
+  window.location.href = "/";
+};
 
   // ✅ Ouvrir / Fermer la modal
   const openLogoutModal = () => setShowLogoutModal(true);
@@ -150,8 +160,8 @@ export function UserProvider({ children }) {
     try {
       const endpoint =
         role === "admin"
-          ? "http://localhost:4000/admin/login"
-          : "http://localhost:4000/user/login";
+          ? "https://backend-ged-immo.onrender.com/admin/login"
+          : "https://backend-ged-immo.onrender.com/user/login";
 
       const body =
         role === "admin"
@@ -179,7 +189,9 @@ export function UserProvider({ children }) {
       login({ ...data.user, token: data.token, role });
       localStorage.setItem("token", data.token);
 
-      toast.success(`Bienvenue, ${data.user.fullname || data.user.name || "Utilisateur"} 👋`);
+      toast.success(`Bienvenue, ${data.user.fullname || data.user.name || "Utilisateur"} 👋`,)
+
+
       navigate(role === "admin" ? "/administrator" : "/");
       return data.user;
     } catch (error) {
@@ -246,7 +258,7 @@ export function UserProvider({ children }) {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .logout-modal-overlay {
           position: fixed;
           top: 0; left: 0;

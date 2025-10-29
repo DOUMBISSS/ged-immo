@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import Navbar from "../Pages/Navbar";
-import Footer from "../Pages/Footer";
+import Navbar from "../Navbar";
+import Footer from "../Footer";
 import toast, { Toaster } from "react-hot-toast";
 import { useReactToPrint } from "react-to-print";
 import { Blocks } from "react-loader-spinner";
@@ -70,7 +70,7 @@ export default function DetailArchivedUser({ user }) {
   const fetchPersonData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/archives/locataire/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/archives/locataire/${id}`);
       if (!res.ok) throw new Error("Erreur récupération locataire");
       const data = await res.json();
       setPerson(data);
@@ -92,7 +92,7 @@ export default function DetailArchivedUser({ user }) {
     if (!user?._id) return;
     const fetchProjects = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/projects/admin/${user._id}`);
+        const res = await fetch(`https://backend-ged-immo.onrender.com/projects/admin/${user._id}`);
         const data = await res.json();
         if (data.success) setProjects(data.projects || []);
       } catch (err) {
@@ -106,7 +106,7 @@ export default function DetailArchivedUser({ user }) {
   useEffect(() => {
     if (!user?._id) return;
     setLoading(true);
-    fetch(`http://localhost:4000/locataire/${user._id}`)
+    fetch(`https://backend-ged-immo.onrender.com/locataire/${user._id}`)
       .then(res => res.json())
       .then(data => setPersons(data))
       .catch(err => toast.error("Erreur récupération locataires : " + err.message))
@@ -121,7 +121,7 @@ export default function DetailArchivedUser({ user }) {
     }
     const fetchHomes = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/projects/${selectedProject}`);
+        const res = await fetch(`https://backend-ged-immo.onrender.com/projects/${selectedProject}`);
         if (!res.ok) throw new Error(`Erreur HTTP ${res.status}`);
         const data = await res.json();
         const availableHomes = Array.isArray(data.homes)
@@ -152,7 +152,7 @@ export default function DetailArchivedUser({ user }) {
             style={{ background: "#2563eb", color: "#fff", padding: "5px 10px", borderRadius: "5px" }}
             onClick={async () => {
               try {
-                const res = await fetch(`http://localhost:4000/persons/${personId}/duplicate`, {
+                const res = await fetch(`https://backend-ged-immo.onrender.com/persons/${personId}/duplicate`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ adminId: person.adminId || person._id }),
@@ -192,7 +192,7 @@ export default function DetailArchivedUser({ user }) {
             style={{ background: "#ef4444", color: "#fff", padding: "5px 10px", borderRadius: "5px" }}
             onClick={async () => {
               try {
-                const res = await fetch(`http://localhost:4000/persons/${personId}/restore`, {
+                const res = await fetch(`https://backend-ged-immo.onrender.com/persons/${personId}/restore`, {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                 });
@@ -247,7 +247,7 @@ export default function DetailArchivedUser({ user }) {
         situation,
         city,
       };
-      const res = await fetch("http://localhost:4000/NewLocataire", {
+      const res = await fetch("https://backend-ged-immo.onrender.com/NewLocataire", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

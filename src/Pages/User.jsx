@@ -97,31 +97,29 @@ useEffect(() => {
     return;
   }
 
-  const fetchHomes = async () => {
-    try {
-      const res = await fetch(`http://localhost:4000/projects/${selectedProject}`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${user?.token}`, // ✅ envoi du token
-        },
-      });
+ const fetchHomes = async () => {
+  try {
+    const res = await fetch(`http://localhost:4000/projects/${selectedProject}/homes`, {
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${user?.token}`,
+      },
+    });
 
-      if (!res.ok) {
-        throw new Error(`Erreur HTTP ${res.status}`);
-      }
+    const data = await res.json();
 
-      const data = await res.json();
-
-      const availableHomes = Array.isArray(data.homes)
-        ? data.homes.filter(home => !home.personId || home.personId.length === 0)
-        : [];
-
-      setHomes(availableHomes);
-    } catch (err) {
-      console.error("Erreur récupération biens :", err);
-      setHomes([]);
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || `Erreur HTTP ${res.status}`);
     }
-  };
+
+    // Filtrer les maisons libres
+    const availableHomes = data.homes.filter((home) => !home.personId || home.personId.length === 0);
+    setHomes(availableHomes);
+  } catch (err) {
+    console.error("Erreur récupération biens :", err);
+    setHomes([]);
+  }
+};
 
   fetchHomes();
 }, [selectedProject, user?.token]);
@@ -179,82 +177,72 @@ function generateRandomString(length = 8) {
 // ⚡ Nouvelle state pour afficher l'erreur dans le modal
   const [modalError, setModalError] = useState("");
 
+const handleAddLocataire = async (e) => {
+  e.preventDefault();
+  setModalError("");
 
- const handleAddLocataire = async (e) => {
-    e.preventDefault();
-    setModalError(""); // reset avant chaque tentative
+  if (!selectedProject) return setModalError("Sélectionnez un projet.");
+  if (!selectedHome) return setModalError("Sélectionnez un bien.");
+  if (!user || !user._id) return setModalError("Vous devez être connecté.");
 
-    if (!selectedProject) return setModalError("Sélectionnez un projet.");
-    if (!selectedHome) return setModalError("Sélectionnez un bien.");
-    if (!user || !user._id) return setModalError("Vous devez être connecté.");
+  try {
+    const adminId = user.adminId || user._id;
+    const generatedUsername = `${(name || 'user').toLowerCase().replace(/\s+/g, '')}_${generateRandomString(4)}`;
+    const generatedPassword = generateRandomString(10);
 
-    try {
-      const adminId = user.adminId || user._id;
-      const generatedUsername = `${(name || 'user').toLowerCase().replace(/\s+/g, '')}_${generateRandomString(4)}`;
-      const generatedPassword = generateRandomString(10);
+    const payload = {
+      name, lastname, email,
+      username: generatedUsername,
+      password: generatedPassword,
+      homes: selectedHome._id || selectedHome,
+      adminId,
+      userId: user._id,
+      birth, lieu, nationality, sexe,
+      tel: `${countryCode}${tel}`,
+      tel_urgency, profession, address,
+      pieces, date_entrance, date_emission, date_expiration,
+      situation, city,
+      projectId: selectedProject
+    };
 
-      const payload = {
-        name: name || "",
-        lastname: lastname || "",
-        email: email || "",
-        username: generatedUsername,
-        password: generatedPassword,
-        homes: selectedHome._id || selectedHome,
-        adminId,
-        userId: user._id,
-        birth: birth || "",
-        lieu: lieu || "",
-        nationality: nationality || "",
-        sexe: sexe || "",
-        tel: `${countryCode}${tel}`,
-        tel_urgency: tel_urgency || "",
-        profession: profession || "",
-        address: address || "",
-        pieces: pieces || "",
-        date_entrance: date_entrance || "",
-        date_emission: date_emission || "",
-        date_expiration: date_expiration || "",
-        situation: situation || "",
-        city: city || "",
-        projectId: selectedProject || ""
-      };
+    const res = await fetch("http://localhost:4000/New/Locataire", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${user?.token}` 
+      },
+      body: JSON.stringify(payload),
+    });
 
-      const res = await fetch("http://localhost:4000/New/Locataire", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", 
-          "Authorization": `Bearer ${user?.token}` },
-        body: JSON.stringify(payload),
-      });
+    const result = await res.json();
 
-      const result = await res.json();
-
-      if (!res.ok) {
-        setModalError(result?.message || result?.error || "Erreur serveur");
-        return;
-      }
-
-      if (!result.success) {
-        setModalError(result.message || "Échec de l'ajout du locataire.");
-        return;
-      }
-
-      setShowAddModal(false);
-      try {
-        const refresh = await fetch(`http://localhost:4000/data/${adminId}`, {
-          headers: { "Authorization": `Bearer ${user?.token}` }
-        });
-        const refreshData = await refresh.json();
-        if (refresh.ok && refreshData.success) setPersons(refreshData.persons || []);
-        else if (result.person) setPersons(prev => [result.person, ...prev]);
-      } catch (refreshErr) {
-        if (result.person) setPersons(prev => [result.person, ...prev]);
-      }
-
-      resetForm();
-    } catch (err) {
-      setModalError("Erreur serveur : " + err.message);
+    if (!res.ok || !result.success) {
+      setModalError(result.message || "Échec de l'ajout du locataire.");
+      return;
     }
-  };
+
+    toast.success("Locataire ajouté avec succès ✅");
+    setShowAddModal(false);
+
+    // ✅ Recharger proprement la liste des locataires
+    const refresh = await fetch(`http://localhost:4000/data/${adminId}`, {
+      headers: { "Authorization": `Bearer ${user?.token}` }
+    });
+
+    const refreshData = await refresh.json();
+    if (refresh.ok && refreshData.success) {
+      setPersons(refreshData.persons || []);
+    } else if (result.person) {
+      // fallback
+      setPersons(prev => [result.person, ...prev]);
+    }
+
+    resetForm();
+
+  } catch (err) {
+    setModalError("Erreur serveur : " + err.message);
+  }
+};
 
 // 🔹 Réinitialiser automatiquement si l'utilisateur change
 useEffect(() => {
@@ -280,11 +268,28 @@ useEffect(() => {
 
           {/* Filtres */}
           <div className="filter-section">
+
+             {/* <label>Type de projet</label> */}
+          <select className="select-field">
+            <option value="">Sélectionner un type</option>
+            <option value="immobilier">Immobilier</option>
+            <option value="magasin">Magasin</option>
+          </select>
+
+            {/* <select
+              value={searchProject}
+              onChange={(e) => { setSearchProject(e.target.value); setCurrentPage(1); }}
+              className="select-field">
+              <option value="">Sélectionner une propriété</option>
+              {projects.map(project => (
+                <option key={project._id} value={project._id}>{project.name}</option>
+              ))}
+            </select> */}
+
             <select
               value={searchProject}
               onChange={(e) => { setSearchProject(e.target.value); setCurrentPage(1); }}
-              className="select-field"
-            >
+              className="select-field">
               <option value="">Sélectionner une propriété</option>
               {projects.map(project => (
                 <option key={project._id} value={project._id}>{project.name}</option>

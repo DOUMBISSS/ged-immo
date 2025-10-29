@@ -11,7 +11,7 @@ export const rolesPermissions = {
     "create_homes", "view_homes", "edit_homes", "delete_homes", "archive_homes",
     "create_tenants", "view_tenants", "edit_tenants", "delete_tenants", "archive_tenants",
     "manage_rentals", "manage_payments", "view_payments",
-    "generate_reports", "manage_settings", "view_archives"
+    "generate_reports", "manage_settings", "view_archives","allow_signatures"
   ],
 
   manager: [
@@ -67,7 +67,8 @@ export const permissionLabels = {
   view_payments: "Voir paiements",
   generate_reports: "Générer rapports",
   manage_settings: "Paramètres généraux",
-  view_archives: "Voir archives"
+  view_archives: "Voir archives",
+  allow_signatures:"Autoriser les signatures"
 };
 
 const allPermissions = Array.from(new Set(Object.values(rolesPermissions).flat()));

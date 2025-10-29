@@ -1,75 +1,109 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 
 export default function RenewSubscriptionModal({ isOpen, onClose, admin, onRenew }) {
   const [loading, setLoading] = useState(false);
   const [subscriptionType, setSubscriptionType] = useState(admin.subscriptionType || "mensuel");
-  const [actionLoading, setActionLoading] = useState(false);
+  const [suspendBtnLoading, setSuspendBtnLoading] = useState(false);
+  const [suspended, setSuspended] = useState(admin.suspended || false);
+
+  // Mettre à jour le type d'abonnement si admin change
+  useEffect(() => {
+    setSubscriptionType(admin.subscriptionType || "gratuit");
+    setSuspended(admin.suspended || false);
+  }, [admin]);
 
   if (!isOpen) return null;
-const handleRenew = async () => {
-  try {
-    setLoading(true);
-    const token = localStorage.getItem("gedToken");
 
-    const res = await fetch(`http://localhost:4000/ged/admin/${admin._id}/renew`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ subscriptionType }),
-    });
+  // 🔹 Renouveler l'abonnement
+  const handleRenew = async () => {
+    try {
+      setLoading(true);
 
-    const data = await res.json();
-    if (!res.ok) return toast.error(data.message || "Erreur lors de l'ajout de l'abonnement");
+      if (!admin || !admin._id) {
+        return toast.error("Admin non défini ou ID manquant.");
+      }
 
-    toast.success(`Nouvel abonnement ${subscriptionType} ajouté avec succès ✅`);
+      const token = localStorage.getItem("gedToken");
+      if (!token) return toast.error("Token manquant, reconnectez-vous.");
 
-    onRenew(data.subscription.subscriptionEnd); // Mettre à jour la date
-    onClose();
+      const allowedTypes = ["gratuit", "standard", "premium", "test"];
+      if (!subscriptionType || !allowedTypes.includes(subscriptionType)) {
+        return toast.error(`Type d'abonnement invalide : "${subscriptionType}"`);
+      }
 
-    // 🔄 Recharge la page après un petit délai (pour laisser le toast s'afficher)
-    setTimeout(() => {
-      window.location.reload();
-    }, 1200);
-    
-  } catch (err) {
-    toast.error("Erreur serveur : " + err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+      const res = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL || "http://localhost:4000"}/ged/admin/${admin._id}/renew`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ subscriptionType }),
+        }
+      );
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) {
+        return toast.error(data?.message || "Erreur serveur lors du renouvellement.");
+      }
+
+      toast.success(`Abonnement "${subscriptionType}" renouvelé jusqu'au ${new Date(data.subscription.subscriptionEnd).toLocaleDateString()} ✅`);
+      onRenew(data.subscription.subscriptionEnd);
+      onClose();
+
+      // Recharge la page pour actualiser
+      setTimeout(() => window.location.reload(), 500);
+
+    } catch (err) {
+      console.error("Erreur handleRenew :", err);
+      toast.error("Erreur inattendue : " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔹 Suspendre / Réactiver l'abonnement
   const handleSuspend = async () => {
     try {
-      setActionLoading(true);
+      setSuspendBtnLoading(true);
+
       const token = localStorage.getItem("gedToken");
+      if (!token) return toast.error("Token manquant, reconnectez-vous.");
 
-      const res = await fetch(`http://localhost:4000/ged/admin/${admin._id}/suspend`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({ suspend: !admin.suspended }), // toggle suspend
-      });
-
-      const data = await res.json();
-      if (!res.ok) return toast.error(data.message || "Erreur lors de la mise à jour de l'abonnement");
-
-      toast.success(
-        `Abonnement de ${admin.fullname} ${data.subscription.suspended ? "suspendu" : "réactivé"} ✅`
+      const res = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL || "http://localhost:4000"}/ged/admin/${admin._id}/suspend`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-      onRenew(data.subscription.subscriptionEnd); // garder la date de fin inchangée
-      onClose();
-      // 🔄 Recharge la page après un petit délai (pour laisser le toast s'afficher)
-    setTimeout(() => {
-      window.location.reload();
-    }, 1200);
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.subscription) {
+        return toast.error(data?.message || "Erreur lors de la mise à jour de l'abonnement");
+      }
+
+      const newStatus = data.subscription.suspended;
+      setSuspended(newStatus);
+      toast.success(`Abonnement de ${admin.fullname} ${newStatus ? "suspendu" : "réactivé"} ✅`);
+
+      if (data.subscription.subscriptionEnd) {
+        onRenew(data.subscription.subscriptionEnd);
+      }
+
+      // 🔹 Recharge la page après suspension / réactivation
+      setTimeout(() => window.location.reload(), 500);
+
     } catch (err) {
-      toast.error("Erreur serveur : " + err.message);
+      console.error(err);
+      toast.error("Erreur serveur : " + (err.message || err));
     } finally {
-      setActionLoading(false);
+      setSuspendBtnLoading(false);
     }
   };
 
@@ -77,36 +111,29 @@ const handleRenew = async () => {
     <div className="modal-overlay--subscription">
       <div className="modal-container--subscription">
         <h2>Gérer l'abonnement</h2>
-        <p>
-          Administrateur : <strong>{admin.fullname}</strong>
-        </p>
+        <p>Administrateur : <strong>{admin.fullname}</strong></p>
 
         <label>
           Type d’abonnement :
-          <select
-            value={subscriptionType}
-            onChange={(e) => setSubscriptionType(e.target.value)}
-          >
-            <option value="mensuel">Mensuel (30 jours)</option>
-            <option value="annuel">Annuel (1 an)</option>
+          <select value={subscriptionType} onChange={(e) => setSubscriptionType(e.target.value)}>
+            <option value="gratuit">Gratuit (3 mois)</option>
+            <option value="standard">Standard (1 an)</option>
             <option value="premium">Premium (2 ans)</option>
             <option value="test">Test</option>
           </select>
         </label>
 
         <div className="modal-actions">
-          <button onClick={onClose} disabled={loading || actionLoading}>
-            Annuler
-          </button>
+          <button onClick={onClose} disabled={loading || suspendBtnLoading}>Annuler</button>
           <button onClick={handleRenew} disabled={loading}>
             {loading ? "Chargement..." : "Renouveler"}
           </button>
-          <button onClick={handleSuspend} disabled={actionLoading}>
-            {actionLoading
+          <button onClick={handleSuspend} disabled={suspendBtnLoading}>
+            {suspendBtnLoading
               ? "Chargement..."
-              : admin.suspended
-              ? "Réactiver l’abonnement"
-              : "Suspendre l’abonnement"}
+              : suspended
+                ? "Réactiver l’abonnement"
+                : "Suspendre l’abonnement"}
           </button>
         </div>
       </div>
@@ -147,17 +174,9 @@ const handleRenew = async () => {
           border: none;
           cursor: pointer;
         }
-        .modal-actions button:first-child {
-          background: #e5e7eb;
-        }
-        .modal-actions button:nth-child(2) {
-          background: #2563eb;
-          color: white;
-        }
-        .modal-actions button:last-child {
-          background: #f87171;
-          color: white;
-        }
+        .modal-actions button:first-child { background: #e5e7eb; }
+        .modal-actions button:nth-child(2) { background: #2563eb; color: white; }
+        .modal-actions button:last-child { background: #f87171; color: white; }
       `}</style>
     </div>
   );

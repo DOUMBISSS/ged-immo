@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 import { useUserContext } from "../../contexts/UserContext";
 
 
-const API = "http://localhost:4000"; // ou ton URL de backend
+const API = "https://backend-ged-immo.onrender.com"; // ou ton URL de backend
 
 export default function EmailModal({ isOpen, onClose, rentId }) {
 

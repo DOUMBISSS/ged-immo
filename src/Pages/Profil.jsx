@@ -27,6 +27,7 @@ const [editNumber, setEditNumber] = useState("");
 const [editAddress, setEditAddress] = useState("");
 const [password, setPassword] = useState("");
 const [confirmPassword, setConfirmPassword] = useState("");
+const [subscription, setSubscription] = useState(null);
 
 // 🔹 Ouvrir le modal avec les valeurs actuelles
 const openEditModal = () => {
@@ -82,35 +83,40 @@ const handleUpdateProfile = async (e) => {
 };
 
   // 🟢 Charger les données liées à l'utilisateur connecté
-  useEffect(() => {
-    if (!user?._id) return;
+useEffect(() => {
+  if (!user?._id) return;
 
-    const fetchData = async () => {
-      try {
-        const res = await fetch(`${API}/account/${user._id}/linked-data`);
-        const data = await res.json();
+  const fetchData = async () => {
+    try {
+      const res = await fetch(`${API}/account/${user._id}/linked-data`);
+      const data = await res.json();
 
-        if (!res.ok) {
-          toast.error(data.message || "Erreur de chargement");
-          return;
-        }
-
-        setRoleType(data.type);
-
-        if (data.type === "admin") {
-          setAdminData(data.admin);
-          setLinkedUsers(data.users || []);
-        } else {
-          setAdminData(data.admin);
-        }
-      } catch (err) {
-        console.error("Erreur récupération profil :", err);
-        toast.error("Erreur serveur");
+      if (!res.ok) {
+        toast.error(data.message || "Erreur de chargement");
+        return;
       }
-    };
 
-    fetchData();
-  }, [user]);
+      setRoleType(data.type);
+
+      if (data.type === "admin") {
+        setAdminData(data.admin);
+        setLinkedUsers(data.users || []);
+
+        // ✅ Nouveau : stocke le dernier abonnement
+        if (data.subscription) {
+          setSubscription(data.subscription);
+        }
+      } else if (data.type === "user") {
+        setAdminData(data.admin);
+      }
+    } catch (err) {
+      console.error("Erreur récupération profil :", err);
+      toast.error("Erreur serveur");
+    }
+  };
+
+  fetchData();
+}, [user]);
 
   // 🟢 Charger les signatures de l’admin
   useEffect(() => {
@@ -267,13 +273,20 @@ const handleUpdateProfile = async (e) => {
           </div>
         </div>
 
-        {roleType === "admin" && adminData && (
+  {roleType === "admin" && subscription && (
   <div className="subscription-info" style={{ marginTop: "1rem", padding: "1rem", background: "#f0f0ff", borderRadius: 8 }}>
     <h3>📦 Abonnement</h3>
-    <p><strong>Type :</strong> {adminData.subscriptionType || "Non défini"}</p>
-    <p><strong>Début :</strong> {adminData.subscriptionStart ? new Date(adminData.subscriptionStart).toLocaleDateString() : "Non démarré"}</p>
-    <p><strong>Fin :</strong> {adminData.subscriptionEnd ? new Date(adminData.subscriptionEnd).toLocaleDateString() : "Non défini"}</p>
-    <p><strong>Actif :</strong> {adminData.active ? "✅ Oui" : "❌ Non"}</p>
+    <p><strong>Type :</strong> {subscription.subscriptionType}</p>
+    <p><strong>Début :</strong> {new Date(subscription.subscriptionStart).toLocaleDateString("fr-FR")}</p>
+    <p><strong>Fin :</strong> {new Date(subscription.subscriptionEnd).toLocaleDateString("fr-FR")}</p>
+    <p><strong>Statut paiement :</strong> {subscription.paymentStatus}</p>
+    <p><strong>État :</strong> 
+      {subscription.suspended
+        ? "⏸️ Suspendu"
+        : new Date(subscription.subscriptionEnd) < new Date()
+        ? "❌ Expiré"
+        : "✅ Actif"}
+    </p>
   </div>
 )}
 

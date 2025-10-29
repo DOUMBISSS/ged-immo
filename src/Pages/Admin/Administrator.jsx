@@ -77,7 +77,7 @@ const fetchUsers = async () => {
   if (!adminId || !user?.token) return;
 
   try {
-    const res = await fetch(`http://localhost:4000/admin/${adminId}/users`, {
+    const res = await fetch(`https://backend-ged-immo.onrender.com/admin/${adminId}/users`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${user.token}`, // <-- ici on envoie le token
@@ -118,7 +118,7 @@ const handleDeleteUser = (userId, name) => {
           onClick={async () => {
             closeToast();
             try {
-              const res = await fetch(`http://localhost:4000/admin/${adminId}/users/${userId}`, {
+              const res = await fetch(`https://backend-ged-immo.onrender.com/admin/${adminId}/users/${userId}`, {
                 method: "DELETE",
               });
               const data = await res.json();

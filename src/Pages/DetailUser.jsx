@@ -9,7 +9,7 @@ import { Blocks } from "react-loader-spinner";
 import { useUserContext } from "../contexts/UserContext";
 import UploadDocument from "./UploadDocument";
 import ContractModal from "./Contrat/ContractModal";
-import UpdateProfilModal from "../Locataires/UpdateProfilModal";
+import UpdateProfilModal from "./Locataires/UpdateProfilModal";
 
 
 export default function DetailUser() {
@@ -25,6 +25,7 @@ export default function DetailUser() {
     const [showEditModal, setShowEditModal] = useState(false);
 const [selectedRent, setSelectedRent] = useState(null);
 const [loadingContract, setLoadingContract] = useState(true);
+const [isOpen, setIsOpen] = useState(false); 
 
   // Paiement
   const [date_of_payment, setDate] = useState("");
@@ -62,7 +63,7 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
   // 🔹 Récupération loyers payés
   const fetchRents = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/rents/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/rents/${id}`);
       if (!res.ok) throw new Error("Erreur récupération loyers");
 
       const data = await res.json();
@@ -85,7 +86,7 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
     setLoading(true);
     try {
       // 🔹 Récupération locataire
-      const res = await fetch(`http://localhost:4000/detail/locataire/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/detail/locataire/${id}`);
       if (!res.ok) throw new Error("Erreur récupération locataire");
 
       const text = await res.text();
@@ -93,7 +94,7 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
       setPerson(data);
 
       // 🔹 Récupération documents
-      const docRes = await fetch(`http://localhost:4000/locataire/${id}/documents`);
+      const docRes = await fetch(`https://backend-ged-immo.onrender.com/locataire/${id}/documents`);
       if (docRes.ok) {
         const docData = await docRes.json();
         if (docData.success && docData.documents) {
@@ -118,7 +119,7 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
  // 🔹 Charger les travaux existants du locataire
   const fetchWorks = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/works/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/works/${id}`);
       const data = await res.json();
       if (res.ok && data.success) {
         setWorks(data.works || []);
@@ -163,7 +164,7 @@ const handleArchive = async (id) => {
           }}
           onClick={async () => {
             try {
-              const res = await fetch(`http://localhost:4000/locataire/${id}/archive`, {
+              const res = await fetch(`https://backend-ged-immo.onrender.com/locataire/${id}/archive`, {
                 method: "PATCH",
                 headers: {
                   "Content-Type": "application/json",
@@ -229,7 +230,7 @@ const deleteRent = async (rentId) => {
   }
 
   try {
-    const res = await fetch(`http://localhost:4000/rents/${rentId}`, {
+    const res = await fetch(`https://backend-ged-immo.onrender.com/rents/${rentId}`, {
       method: "DELETE",
       headers: {
         "Authorization": `Bearer ${user.token}`,
@@ -267,7 +268,7 @@ const deleteRent = async (rentId) => {
 
 const handleDownload = (filePath) => {
   const filename = filePath.split("/").pop();
-  window.open(`http://localhost:4000/documents/${filename}/download`, "_blank");
+  window.open(`https://backend-ged-immo.onrender.com/documents/${filename}/download`, "_blank");
 };
 
 const handleAdd = async () => {
@@ -306,7 +307,7 @@ const handleAdd = async () => {
     };
 
     // 🔹 Appel API sécurisé avec token
-    const res = await fetch("http://localhost:4000/NewRents", {
+    const res = await fetch("https://backend-ged-immo.onrender.com/NewRents", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -350,7 +351,7 @@ const handleAdd = async () => {
     }
 
     try {
-      const res = await fetch(`http://localhost:4000/works`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/works`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -399,7 +400,7 @@ const confirmDeleteWork = (workId) => {
           }}
           onClick={async () => {
             try {
-              const res = await fetch(`http://localhost:4000/works/${workId}`, {
+              const res = await fetch(`https://backend-ged-immo.onrender.com/works/${workId}`, {
                 method: "DELETE",
               });
               const data = await res.json();
@@ -441,7 +442,7 @@ const confirmDeleteWork = (workId) => {
   // 🔹 Récupération documents
   const fetchDocuments = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/locataire/${id}/documents`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/locataire/${id}/documents`);
       const data = await res.json();
       if (!data.success) throw new Error(data.message || "Impossible de récupérer les documents");
       setDocuments(data.documents || {});
@@ -456,7 +457,7 @@ const confirmDeleteWork = (workId) => {
 
 const refreshContract = async (personId) => {
   try {
-    const res = await fetch(`http://localhost:4000/contracts/${personId}`); // id = locataire
+    const res = await fetch(`https://backend-ged-immo.onrender.com/contracts/${personId}`); // id = locataire
 
     if (!res.ok) {
       if (res.status === 404) {
@@ -486,7 +487,7 @@ const refreshContract = async (personId) => {
     // 📎 Téléchargement du contrat
   const handleDownloadContract = async (filePath) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/${filePath}`);
+      const response = await fetch(`https://backend-ged-immo.onrender.com/${filePath}`);
       if (!response.ok) throw new Error("Fichier introuvable");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -759,7 +760,7 @@ const toggleYear = (year) => {
                         <div className="home-images" style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                           {person.homeId.img && (
                             <img
-                              src={person.homeId.img.startsWith("http") ? person.homeId.img : `http://localhost:4000/${person.homeId.img}`}
+                              src={person.homeId.img.startsWith("http") ? person.homeId.img : `https://backend-ged-immo.onrender.com/${person.homeId.img}`}
                               alt="Home principale"
                               className="home-image"
                               style={{ width: "150px", height: "150px", objectFit: "cover" }}
@@ -768,7 +769,7 @@ const toggleYear = (year) => {
                           {Array.isArray(person.homeId.images) && person.homeId.images.length > 0 && person.homeId.images.map((url, idx) => (
                             <img
                               key={idx}
-                              src={url.startsWith("http") ? url : `http://localhost:4000/${url}`}
+                              src={url.startsWith("http") ? url : `https://backend-ged-immo.onrender.com/${url}`}
                               alt={`Home secondaire ${idx}`}
                               className="home-image"
                               style={{ width: "150px", height: "150px", objectFit: "cover" }}
@@ -796,33 +797,6 @@ const toggleYear = (year) => {
                     )}
                   </div>
 
-              {/* travaux */}
-              <div className="tenant-section">
-                <h3 className="section-title">Travaux maison</h3>
-                <div className="works-list">
-                  {works.length === 0 ? (
-                    <p>Aucun travail enregistré</p>
-                  ) : (
-                    works.map((work) => (
-                      <div key={work._id} className="work-card">
-                        <div className="work-header">
-                          <p><strong>Titre :</strong> {work.title}</p>
-                          <i
-                            className="fa-solid fa-trash delete-icon"
-                            onClick={() => confirmDeleteWork(work._id)}
-                          ></i>
-                        </div>
-                        <p><strong>Description :</strong> {work.description}</p>
-                        <p><strong>Coût :</strong> {work.cost ? `${work.cost} FCFA` : "N/A"}</p>
-                        <p><strong>Date :</strong> {work.date ? new Date(work.date).toLocaleDateString("fr-FR") : "N/A"}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <button className="btn-add" onClick={() => setShowWorkModal(true)}>
-                  <i className="fa-solid fa-plus"></i> Ajouter un travail effectué
-                </button>
-              </div>
 <div className="tenant-section paiement-section">
   <h3 className="section-title">Détails des paiements</h3>
 
@@ -1010,6 +984,73 @@ const toggleYear = (year) => {
       </button>
     </div>
   )}
+</div>
+
+{/* travaux */}
+<div className="tenant-section">
+  <h3 className="section-title">Travaux maison</h3>
+
+  <div className="works-list">
+    {works.length === 0 ? (
+      <p>Aucun travail enregistré</p>
+    ) : (
+      works.map((work) => {
+        // chaque travail a son propre état
+
+        return (
+          <div key={work._id} className="work-card">
+            {/* --- En-tête cliquable --- */}
+            <div
+              className="work-header"
+              onClick={() => setIsOpen(!isOpen)}
+              style={{ cursor: "pointer" }}
+            >
+              <p>
+                <strong>Titre :</strong> {work.title}
+              </p>
+
+              <div className="work-actions">
+                <i
+                  className={`fa-solid ${
+                    isOpen ? "fa-chevron-up" : "fa-chevron-down"
+                  } toggle-icon`}
+                ></i>
+                <i
+                  className="fa-solid fa-trash delete-icon"
+                  title="Supprimer"
+                  onClick={(e) => {
+                    e.stopPropagation(); // évite d’ouvrir le dépliant
+                    confirmDeleteWork(work._id);
+                  }}
+                ></i>
+              </div>
+            </div>
+
+            {/* --- Contenu dépliant --- */}
+            <div className={`accordion-content ${isOpen ? "open" : ""}`}>
+              <p>
+                <strong>Description :</strong> {work.description || "N/A"}
+              </p>
+              <p>
+                <strong>Coût :</strong>{" "}
+                {work.cost ? `${work.cost.toLocaleString()} FCFA` : "N/A"}
+              </p>
+              <p>
+                <strong>Date :</strong>{" "}
+                {work.date
+                  ? new Date(work.date).toLocaleDateString("fr-FR")
+                  : "N/A"}
+              </p>
+            </div>
+          </div>
+        );
+      })
+    )}
+  </div>
+
+  <button className="btn-add" onClick={() => setShowWorkModal(true)}>
+    <i className="fa-solid fa-plus"></i> Ajouter un travail effectué
+  </button>
 </div>
                 </div>
 
@@ -1329,8 +1370,7 @@ const toggleYear = (year) => {
   person={person}          // passer l'objet complet
   isOpen={isModalOpen}
   onClose={() => setIsModalOpen(false)}
-  onUpdate={() => console.log("Rafraîchir la liste après update")}
-/>
+  onUpdate={() => console.log("Rafraîchir la liste après update")}/>
 
       <style>{`
         .saas-container { padding: 2rem; background: #f8fafc; min-height: 100vh; }
@@ -1510,6 +1550,66 @@ tr:hover .rent-cell {
   border: none;
   cursor: pointer;
   font-size: 0.85rem;
+}
+  /* --- Styles pour le dépliant des travaux --- */
+.work-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.work-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.work-header:hover {
+  background: #f3f4f6;
+}
+
+.work-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle-icon {
+  color: #6b7280;
+  font-size: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.delete-icon {
+  color: #ef4444;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.delete-icon:hover {
+  color: #dc2626;
+  transform: scale(1.2);
+}
+
+.accordion-content {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0 16px;
+  transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
+  background: #fff;
+}
+
+.accordion-content.open {
+  max-height: 500px;
+  opacity: 1;
+  padding: 12px 16px;
 }
       `}</style>
     </div>

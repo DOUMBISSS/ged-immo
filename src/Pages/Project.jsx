@@ -18,6 +18,7 @@ export default function Project() {
   const [modalOpen, setModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
+  const [newProjectType, setNewProjectType] = useState("");
   const itemsPerPage = 15;
 
   const modalRef = useRef(null);
@@ -31,7 +32,7 @@ export default function Project() {
     if (!user?._id) return;
     const fetchData = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/data/${user._id}`);
+        const res = await fetch(`https://backend-ged-immo.onrender.com/data/${user._id}`);
         const data = await res.json();
 
         if (data.success) {
@@ -88,6 +89,7 @@ const handleNewProjectSubmit = async (e) => {
     console.log("Création projet : envoi des données au backend", {
       name: newProjectName,
       description: newProjectDescription,
+       type: newProjectType,
       adminId: user._id,
     });
 
@@ -99,6 +101,7 @@ const handleNewProjectSubmit = async (e) => {
       body: JSON.stringify({
         name: newProjectName.trim(),
         description: newProjectDescription?.trim(),
+        type:newProjectType,
         adminId: user._id,
       }),
     });
@@ -130,6 +133,7 @@ const handleNewProjectSubmit = async (e) => {
     setModalOpen(false);
     setNewProjectName("");
     setNewProjectDescription("");
+      setNewProjectType("");
     console.log("Projet ajouté localement :", data.project);
 
   } catch (err) {
@@ -196,7 +200,7 @@ const handleNewProjectSubmit = async (e) => {
 
           {/* Liste projets */}
          {/* Liste des projets */}
-<div className="tenant-section">
+{/* <div className="tenant-section">
   <h3>📁 Mes projets</h3>
 
   <div className="table-responsive">
@@ -205,6 +209,7 @@ const handleNewProjectSubmit = async (e) => {
         <tr>
           <th>Nom du projet</th>
           <th>Description</th>
+          <th>Type</th>
           <th>Créé par</th>
           <th>Date de création</th>
           <th>Actions</th>
@@ -222,6 +227,7 @@ const handleNewProjectSubmit = async (e) => {
             <tr key={project._id}>
               <td>{project.name}</td>
               <td>{project.description || "Aucune description"}</td>
+               <td>{project.type || "Aucune description"}</td>
               <td>
                 {typeof project.createdBy === "string"
                   ? project.createdBy
@@ -238,6 +244,70 @@ const handleNewProjectSubmit = async (e) => {
                 <Link to={`/detail_projet/fr/${project._id}`}>
                   <button className="btn-details">
                     Détails
+                  </button>
+                </Link>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</div> */}
+
+<div className="tenant-section">
+  <h3>📁 Mes projets</h3>
+
+  <div className="table-responsive">
+    <table className="table">
+      <thead>
+        <tr>
+          <th>Nom du projet</th>
+          <th>Description</th>
+          <th>Type</th>
+          <th>Créé par</th>
+          <th>Date de création</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {currentProjects.length === 0 ? (
+          <tr>
+            <td colSpan="6" style={{ textAlign: "center" }}>
+              Aucun projet trouvé
+            </td>
+          </tr>
+        ) : (
+          currentProjects.map((project) => (
+            <tr key={project._id}>
+              <td>{project.name}</td>
+              <td>{project.description || "Aucune description"}</td>
+              <td style={{ textTransform: "capitalize" }}>
+                {project.type || "Non spécifié"}
+              </td>
+              <td>
+                {typeof project.createdBy === "string"
+                  ? project.createdBy
+                  : project.createdBy?.fullname || "Inconnu"}
+              </td>
+              <td>
+                {new Date(project.createdAt).toLocaleDateString("fr-FR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })}
+              </td>
+              <td>
+                {/* ✅ Redirection conditionnelle selon le type */}
+                <Link
+                  to={
+                    project.type === "magasin"
+                      ? `/detailMagasin/${project._id}`
+                      : `/detail_projet/fr/${project._id}`
+                  }
+                >
+                  <button className="btn-details">
+                    <i className="fa-solid fa-eye"></i> Détails
                   </button>
                 </Link>
               </td>
@@ -302,40 +372,59 @@ const handleNewProjectSubmit = async (e) => {
       <Footer />
 
       {/* 🔹 Modal création projet */}
-      {modalOpen && (
-        <div className="modal-overlay-project">
-          <div className="modal-project">
-            <button className="modal-close-btn" onClick={() => setModalOpen(false)}>
-              &times;
-            </button>
-            <h2>Nouveau projet</h2>
-            <form onSubmit={handleNewProjectSubmit}>
-              <div className="form-group">
-                <label>Nom du projet</label>
-                <input
-                  type="text"
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  placeholder="Nom du projet"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Description (optionnelle)</label>
-                <textarea
-                  value={newProjectDescription}
-                  onChange={(e) => setNewProjectDescription(e.target.value)}
-                  placeholder="Description du projet"
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="submit" className="btn-add-home">Créer</button>
-                <button type="button" className="btn-cancel" onClick={() => setModalOpen(false)}>Annuler</button>
-              </div>
-            </form>
-          </div>
+     {modalOpen && (
+  <div className="modal-overlay-project">
+    <div className="modal-project">
+      <button className="modal-close-btn" onClick={() => setModalOpen(false)}>
+        &times;
+      </button>
+      <h2>Nouveau projet</h2>
+      <form onSubmit={handleNewProjectSubmit}>
+        <div className="form-group">
+          <label>Nom du projet</label>
+          <input
+            type="text"
+            value={newProjectName}
+            onChange={(e) => setNewProjectName(e.target.value)}
+            placeholder="Nom du projet"
+            required
+          />
         </div>
-      )}
+
+        {/* 🔹 Nouveau champ Type */}
+        <div className="form-group">
+          <label>Type de projet</label>
+          <select
+  value={newProjectType}
+  onChange={(e) => setNewProjectType(e.target.value)}
+  required
+>
+  <option value="">Sélectionner un type</option>
+  <option value="immobilier">Immobilier</option>
+  <option value="magasin">Magasin</option>
+  <option value="bureau">Bureau</option>
+  <option value="entrepot">Entrepôt</option>
+  <option value="terrain">Terrain</option>
+</select>
+        </div>
+
+        <div className="form-group">
+          <label>Description (optionnelle)</label>
+          <textarea
+            value={newProjectDescription}
+            onChange={(e) => setNewProjectDescription(e.target.value)}
+            placeholder="Description du projet"
+          />
+        </div>
+
+        <div className="modal-actions">
+          <button type="submit" className="btn-add-home">Créer</button>
+          <button type="button" className="btn-cancel" onClick={() => setModalOpen(false)}>Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
 
       {/* --- CSS intégré --- */}
       <style>{`
