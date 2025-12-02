@@ -67,45 +67,95 @@ export default function ComptabiliteTendance() {
     }
   }, [projects]);
 
-  // --- Calcul analytique par projet ---
-  const projectStats = useMemo(() => {
-    const formattedMonth = searchMonth || currentMonth;
+// --- Calcul analytique par projet (corrigé avec periodStart / periodEnd) ---
+// --- Calcul analytique par projet (Version finale : identique à filteredPersons) ---
+const projectStats = useMemo(() => {
+  if (!projects.length || !persons.length) return [];
 
-    return projects
-      .filter(p => !selectedType || (p.categorie || p.type || "autre") === selectedType)
-      .map((proj) => {
-        const locs = persons.filter((p) => {
-          const homesArray = Array.isArray(p.homes) ? p.homes : p.homeId ? [p.homeId] : [];
-          return homesArray.some(h => h && String(h.projectId || h.project) === String(proj._id));
+  const formattedMonth = searchMonth || currentMonth;
+
+  // Bornes du mois sélectionné
+  const [year, month] = formattedMonth.split("-");
+  const monthStart = new Date(Number(year), Number(month) - 1, 1, 0, 0, 0, 0);
+  const monthEnd = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
+
+  return projects
+    .filter(p => !selectedType || (p.categorie || p.type || "autre") === selectedType)
+    .map((proj) => {
+
+      // --- 1) Locataires appartenant à ce projet (correct & simple)
+      const locsDuProjet = persons.filter(p =>
+        p.projectId && String(p.projectId) === String(proj._id)
+      );
+
+      // --- 2) Filtrer les locataires actifs dans ce mois EXACTEMENT comme filteredPersons
+      const locsActifs = locsDuProjet.filter(p => {
+
+        let start =
+          p.periodStart ? new Date(p.periodStart) :
+          p.date_entrance ? new Date(p.date_entrance) :
+          p.dateEntrance ? new Date(p.dateEntrance) :
+          p.createdAt ? new Date(p.createdAt) :
+          new Date(0);
+
+        let end =
+          p.periodEnd ? new Date(p.periodEnd) :
+          p.dateArchived ? new Date(p.dateArchived) :
+          p.release_date ? new Date(p.release_date) :
+          (p.archived ? (p.updatedAt ? new Date(p.updatedAt) : new Date()) : null);
+
+        if (!end) end = new Date(9999, 11, 31, 23, 59, 59, 999);
+
+        if (isNaN(start.getTime())) start = new Date(0);
+        if (isNaN(end.getTime())) end = new Date(9999, 11, 31, 23, 59, 59, 999);
+
+        return start <= monthEnd && end >= monthStart;
+      });
+
+      const totalLocataires = locsActifs.length;
+
+      // --- 3) Loyer du mois
+      const locsWithRent = locsActifs.map((p) => {
+        const rentalForMonth = (p.rentalIds || []).find((rent) => {
+          if (!rent?.month) return false;
+          const rentMonth = typeof rent.month === "string"
+            ? rent.month.slice(0, 7)
+            : new Date(rent.month).toISOString().slice(0, 7);
+          return rentMonth === formattedMonth;
         });
+        return { ...p, rentalForMonth };
+      });
 
-        const totalLocataires = locs.length;
+      // --- 4) Calculs comptables
+      const loyersPayes = locsWithRent.filter(p => p.rentalForMonth?.status === "Payé").length;
+      const loyersImpayes = totalLocataires - loyersPayes;
 
-        const locsWithRent = locs.map((p) => {
-          const rentalForMonth = p.rentalIds?.find((rent) => {
-            if (!rent.month) return false;
-            const rentMonth = typeof rent.month === "string"
-              ? rent.month.slice(0, 7)
-              : new Date(rent.month).toISOString().slice(0, 7);
-            return rentMonth === formattedMonth;
-          });
-          return { ...p, rentalForMonth };
-        });
+      const revenus = locsWithRent.reduce((acc, p) => {
+        if (p.rentalForMonth?.status === "Payé") {
+          return acc + (Number(p.rentalForMonth.amount) || 0);
+        }
+        return acc;
+      }, 0);
 
-        const loyersPayes = locsWithRent.filter((p) => p.rentalForMonth?.status === "Payé").length;
-        const loyersImpayes = totalLocataires - loyersPayes;
+      const tauxPaiement =
+        totalLocataires > 0
+          ? ((loyersPayes / totalLocataires) * 100).toFixed(1)
+          : 0;
 
-        const revenus = locsWithRent.reduce((acc, p) => {
-          if (p.rentalForMonth?.status === "Payé") return acc + (p.rentalForMonth.amount || 0);
-          return acc;
-        }, 0);
+      return {
+        projectName: proj.name,
+        totalLocataires,
+        loyersPayes,
+        loyersImpayes,
+        tauxPaiement,
+        revenus
+      };
+    })
 
-        const tauxPaiement = totalLocataires > 0 ? ((loyersPayes / totalLocataires) * 100).toFixed(1) : 0;
+    // --- Si aucun locataire actif → ne pas afficher le projet
+    .filter((p) => p.totalLocataires > 0);
 
-        return { projectName: proj.name, totalLocataires, loyersPayes, loyersImpayes, tauxPaiement, revenus };
-      })
-      .filter((p) => p.totalLocataires > 0);
-  }, [projects, persons, searchMonth, selectedType, currentMonth]);
+}, [projects, persons, searchMonth, selectedType, currentMonth]);
 
   const totalGlobal = projectStats.reduce((acc, p) => acc + p.revenus, 0);
   const totalLocataires = projectStats.reduce((acc, p) => acc + p.totalLocataires, 0);

@@ -65,53 +65,100 @@ export default function Statistiques() {
     }
   }, [projects]);
 
-  // --- Projets filtrés selon le type sélectionné ---
-  const filteredProjects = selectedType
-    ? projects.filter(p => (p.categorie || p.type || "autre").toLowerCase() === selectedType.toLowerCase())
-    : projects;
 
-  // --- Filtrage des locataires corrigé pour periodEnd ---
- const filteredPersons = useMemo(() => {
-  const [year, month] = searchMonth.split("-");
+
+// --- Filtrage des locataires ---
+// --- Projets filtrés selon le type sélectionné ---
+const filteredProjects = selectedType
+  ? projects.filter(p => (p.categorie || p.type || "autre").toLowerCase() === selectedType.toLowerCase())
+  : projects;
+
+// --- Filtrage des locataires ---
+// --- Filtrage des locataires final & robuste ---
+const filteredPersons = useMemo(() => {
+  if (!persons || persons.length === 0) return [];
+
+  // Déterminer bornes du mois sélectionné (local time)
+  const [year, month] = (searchMonth || new Date().toISOString().slice(0,7)).split("-");
   const monthStart = new Date(Number(year), Number(month) - 1, 1, 0, 0, 0, 0);
   const monthEnd = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
 
   return persons
     .filter(p => {
-      const start = p.periodStart ? new Date(p.periodStart) : new Date(0);
+      // --- Normaliser start (priorité) ---
+      let start =
+        p.periodStart ? new Date(p.periodStart) :
+        p.date_entrance ? new Date(p.date_entrance) :
+        p.dateEntrance ? new Date(p.dateEntrance) : // alternative casing
+        p.createdAt ? new Date(p.createdAt) :
+        new Date(0);
 
-      // 🔹 Prend periodEnd si défini, sinon dateArchived si archivé, sinon max date
-      let end;
-      if (p.periodEnd) {
-        end = new Date(p.periodEnd);
-      } else if (p.archived && p.dateArchived) {
-        end = new Date(p.dateArchived);
-      } else {
-        end = new Date(9999, 11, 31, 23, 59, 59, 999); // locataires en cours
+      // --- Normaliser end (priorité) ---
+      let end =
+        p.periodEnd ? new Date(p.periodEnd) :
+        p.dateArchived ? new Date(p.dateArchived) :
+        p.release_date ? new Date(p.release_date) :
+        (p.archived ? (p.updatedAt ? new Date(p.updatedAt) : new Date()) : null);
+
+      if (!end) {
+        // pas de fin => considéré actif indéfiniment
+        end = new Date(9999, 11, 31, 23, 59, 59, 999);
       }
 
-      return start <= monthEnd && end >= monthStart;
+      // si dates invalides, corriger
+      if (isNaN(start.getTime())) start = new Date(0);
+      if (isNaN(end.getTime())) end = new Date(9999, 11, 31, 23, 59, 59, 999);
+
+      // Locataire actif si sa période recouvre le mois sélectionné
+      const isActive = start <= monthEnd && end >= monthStart;
+
+      // DEBUG temporaire (décommente si besoin)
+      // console.debug('person', p._id, { start: start.toISOString(), end: end.toISOString(), monthStart: monthStart.toISOString(), monthEnd: monthEnd.toISOString(), isActive });
+
+      return isActive;
     })
     .filter(p => {
-      const matchProject = !searchProject || String(p.projectId) === searchProject;
+      // Filtre par projet
+      const matchProject = !searchProject || String(p.projectId) === String(searchProject);
+
+      // Filtre par type via le projet
       const projectOfPerson = projects.find(pr => String(pr._id) === String(p.projectId));
-      const matchType = !selectedType || (projectOfPerson && (projectOfPerson.categorie || projectOfPerson.type || "").toLowerCase() === selectedType.toLowerCase());
+      const matchType = !selectedType || (projectOfPerson && ((projectOfPerson.categorie || projectOfPerson.type || "").toLowerCase() === selectedType.toLowerCase()));
+
       return matchProject && matchType;
     })
-    .filter(p => searchTerm === "" || `${p.name || ""} ${p.lastname || ""}`.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter(p => {
+      // filtre recherche texte
+      if (!searchTerm) return true;
+      const full = `${p.name || ""} ${p.lastname || ""}`.toLowerCase();
+      return full.includes(searchTerm.toLowerCase());
+    })
     .map(p => {
-      const homesArray = Array.isArray(p.homes) 
-        ? p.homes.filter(Boolean) 
-        : p.homeId 
-          ? [p.homeId] 
-          : [];
+      // Normalisation homes
+      const homesArray = Array.isArray(p.homes) ? p.homes.filter(Boolean) : (p.homeId ? [p.homeId] : []);
 
-      const rentalForMonth = p.rentalIds?.find(rent => {
-        if (!rent?.month) return false;
-        const rentMonth = typeof rent.month === "string" 
-          ? rent.month.slice(0, 7) 
-          : new Date(rent.month).toISOString().slice(0, 7);
-        return rentMonth === searchMonth;
+      // Trouver rental du mois (normaliser différents formats de rent.month)
+      const rentalForMonth = (p.rentalIds || []).find(rent => {
+        if (!rent) return false;
+        // rent.month peut être : "2025-11" ou "2025-11-01T..." ou Date object
+        let rentMonthStr = null;
+        if (typeof rent.month === "string") {
+          // si format "YYYY-MM" ou "YYYY-MM-DD" on prend les 7 premiers chars
+          rentMonthStr = rent.month.slice(0,7);
+        } else if (rent.month instanceof Date) {
+          rentMonthStr = rent.month.toISOString().slice(0,7);
+        } else if (rent.month && typeof rent.month === "object" && rent.month.$date) {
+          // cas MongoDB stringified
+          rentMonthStr = new Date(rent.month.$date).toISOString().slice(0,7);
+        } else if (rent.month) {
+          // fallback : toString puis slice
+          try {
+            rentMonthStr = new Date(rent.month).toISOString().slice(0,7);
+          } catch (err) {
+            rentMonthStr = null;
+          }
+        }
+        return rentMonthStr === searchMonth;
       });
 
       return { ...p, rentalForMonth, homesArray };
