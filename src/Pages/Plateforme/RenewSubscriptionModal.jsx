@@ -16,53 +16,63 @@ export default function RenewSubscriptionModal({ isOpen, onClose, admin, onRenew
   if (!isOpen) return null;
 
   // 🔹 Renouveler l'abonnement
-  const handleRenew = async () => {
-    try {
-      setLoading(true);
+const handleRenew = async () => {
+  try {
+    setLoading(true);
 
-      if (!admin || !admin._id) {
-        return toast.error("Admin non défini ou ID manquant.");
-      }
-
-      const token = localStorage.getItem("gedToken");
-      if (!token) return toast.error("Token manquant, reconnectez-vous.");
-
-      const allowedTypes = ["gratuit", "standard", "premium", "test"];
-      if (!subscriptionType || !allowedTypes.includes(subscriptionType)) {
-        return toast.error(`Type d'abonnement invalide : "${subscriptionType}"`);
-      }
-
-      const res = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL || "http://localhost:4000"}/ged/admin/${admin._id}/renew`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ subscriptionType }),
-        }
-      );
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data) {
-        return toast.error(data?.message || "Erreur serveur lors du renouvellement.");
-      }
-
-      toast.success(`Abonnement "${subscriptionType}" renouvelé jusqu'au ${new Date(data.subscription.subscriptionEnd).toLocaleDateString()} ✅`);
-      onRenew(data.subscription.subscriptionEnd);
-      onClose();
-
-      // Recharge la page pour actualiser
-      setTimeout(() => window.location.reload(), 500);
-
-    } catch (err) {
-      console.error("Erreur handleRenew :", err);
-      toast.error("Erreur inattendue : " + err.message);
-    } finally {
-      setLoading(false);
+    if (!admin || !admin._id) {
+      return toast.error("Admin non défini ou ID manquant.");
     }
-  };
+
+    const token = localStorage.getItem("gedToken");
+    if (!token) return toast.error("Token manquant, reconnectez-vous.");
+
+    const allowedTypes = ["gratuit", "standard", "premium", "test"];
+    if (!subscriptionType || !allowedTypes.includes(subscriptionType)) {
+      return toast.error(`Type d'abonnement invalide : "${subscriptionType}"`);
+    }
+
+    const res = await fetch(
+      `${process.env.REACT_APP_BACKEND_URL || "http://localhost:4000"}/ged/admin/${admin._id}/renew`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ subscriptionType }),
+      }
+    );
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok || !data) {
+      return toast.error(data?.message || "Erreur serveur lors du renouvellement.");
+    }
+
+    // 🔹 Toast spécifique pour abonnement programmé
+    if (data.subscription.scheduledStart) {
+      const scheduledDate = new Date(data.subscription.scheduledStart).toLocaleDateString("fr-FR");
+      toast(`🕒 Abonnement "${subscriptionType}" programmé pour le ${scheduledDate}`, { icon: '⏳' });
+    } else {
+      const endDate = new Date(data.subscription.subscriptionEnd).toLocaleDateString("fr-FR");
+      toast.success(`✅ Abonnement "${subscriptionType}" renouvelé jusqu'au ${endDate}`);
+    }
+
+    // Callback éventuel pour mise à jour parent
+    if (typeof onRenew === "function") onRenew(data.subscription);
+    if (typeof onClose === "function") onClose();
+
+    // Recharge la page pour actualiser les données
+    setTimeout(() => window.location.reload(), 500);
+
+  } catch (err) {
+    console.error("Erreur handleRenew :", err);
+    toast.error("Erreur inattendue : " + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // 🔹 Suspendre / Réactiver l'abonnement
   const handleSuspend = async () => {
@@ -78,7 +88,7 @@ export default function RenewSubscriptionModal({ isOpen, onClose, admin, onRenew
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            "Authorization": `Bearer ${token}`,
           },
         }
       );
@@ -117,8 +127,8 @@ export default function RenewSubscriptionModal({ isOpen, onClose, admin, onRenew
           Type d’abonnement :
           <select value={subscriptionType} onChange={(e) => setSubscriptionType(e.target.value)}>
             <option value="gratuit">Gratuit (3 mois)</option>
-            <option value="standard">Standard (1 an)</option>
-            <option value="premium">Premium (2 ans)</option>
+            <option value="standard">Standard (6 mois)</option>
+            <option value="premium">Premium (1 an)</option>
             <option value="test">Test</option>
           </select>
         </label>

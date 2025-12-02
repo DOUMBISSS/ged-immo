@@ -3,7 +3,8 @@ import { useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import { QRCodeCanvas } from "qrcode.react";
 
-const API = "https://backend-ged-immo.onrender.com";
+const API = "http://localhost:4000";
+// const API = "https://backend-ged-immo.onrender.com";
 
 export default function ReceiptLocataire() {
   const { rentId } = useParams();
@@ -71,6 +72,17 @@ export default function ReceiptLocataire() {
     return date.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
   };
 
+// Déterminer le logo admin
+const adminLogo = admin?.logo;
+
+// Déterminer le watermark (logo admin ou par défaut)
+const watermarkLogo =
+  adminLogo && adminLogo.startsWith("http")
+    ? adminLogo
+    : adminLogo
+    ? `${API}/${adminLogo}`
+    : "/logo4 copie.jpg";
+
   return (
     <div className="receipt-xxl-container">
       <div className="receipt-xxl-card" ref={componentRef}>
@@ -129,13 +141,13 @@ export default function ReceiptLocataire() {
 
         {/* === QR Code === */}
         <div className="receipt-xxl-qr">
-          <h5>Vérification du reçu</h5>
-          <QRCodeCanvas value={`${API}/receipt/${rental._id}`} size={120} />
+           <h6>Vérification du reçu</h6>
+          <QRCodeCanvas value={`${API}/receipt/${rental._id}`} size={50} />
         </div>
 
         {/* === Mention légale === */}
         <div className="receipt-legal">
-          <p>Ce reçu est généré électroniquement par <strong>{admin?.fullname || "le Propriétaire"}</strong>.</p>
+          <p>Ce reçu est généré électroniquement par <strong>{admin?.fullname || "le Propriétaire"}</strong> via <strong>GED IMMO</strong>.</p>
           <p>Toute falsification est passible de sanctions.</p>
         </div>
       </div>
@@ -149,8 +161,23 @@ export default function ReceiptLocataire() {
       <style>{`
         .receipt-xxl-container { display: flex; flex-direction: column; align-items: center; padding: 3rem; background: linear-gradient(135deg, #f5f7fa, #e6e9f0); min-height: 100vh; }
         .receipt-xxl-card { background: #fff; width: 900px; padding: 2rem 3rem; border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); font-family: 'Montserrat', sans-serif; color: #2c3e50; line-height: 1.8; position: relative; margin-bottom: 2rem; }
-        .receipt-xxl-card::before { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); width: 400px; height: 400px; background-image: url('/logo4 copie.jpg'); background-size: contain; background-repeat: no-repeat; background-position: center; opacity: 0.1; z-index: 0; pointer-events: none; }
-        .receipt-xxl-header { text-align: center; margin-bottom: 2rem; }
+        .receipt-xxl-card::before {
+  content: "";
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(0deg);
+  width: 400px;
+  height: 400px;
+  background-image: url('${watermarkLogo}');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.07;
+  z-index: 0;
+  pointer-events: none;
+}
+        .receipt-xxl-header { text-align: center; margin-bottom: 1rem; }
         .receipt-xxl-header h1 { font-size: 2.5rem; color: #4b00cc; margin: 0; }
         .receipt-xxl-section { display: flex; justify-content: space-between; margin-bottom: 1rem; }
         .receipt-xxl-section div { width: 48%; background: #fafafa; padding: 1rem; border-radius: 10px; border: 1px solid #eee; }
@@ -164,7 +191,42 @@ export default function ReceiptLocataire() {
         .receipt-xxl-qr { margin-top: 1rem; text-align: center; }
         .receipt-xxl-qr h5 { color: #4b00cc; margin-bottom: 0.5rem; }
         .receipt-legal { margin-top: 1rem; text-align: center; font-size: 0.8rem; color: #777; border-top: 1px dashed #ccc; padding-top: 0.5rem; }
-        @media print { .btn__print { display: none !important; } .receipt-xxl-card { box-shadow: none; width: 100%; padding: 1rem } }
+        @media print { .btn__print { display: none !important; } 
+        .receipt-xxl-card { box-shadow: none; width: 100%; padding: 1rem } }
+        .receipt-header-logos {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0,7rem;
+  padding: 0 1rem;
+}
+
+.admin-logo-header,
+.platform-logo-header {
+  height: 70px;
+  width: auto;
+  object-fit: contain;
+}
+
+.admin-logo-placeholder {
+  height: 70px;
+  width: 140px;
+  font-size: 0.9rem;
+  color: #777;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #aaa;
+  border-radius: 8px;
+}
+
+/* Impression */
+@media print {
+  .admin-logo-header,
+  .platform-logo-header {
+    height: 60px !important;
+  }
+}
       `}</style>
     </div>
   );

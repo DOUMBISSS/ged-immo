@@ -48,7 +48,7 @@ export const LocataireProvider = ({ children }) => {
       if (expiry && Date.now() > parseInt(expiry, 10)) {
         logoutLocataire();
         toast.error("⏰ Votre session a expiré, veuillez vous reconnecter.");
-        navigate("/login-locataire");
+        navigate("/Mon__compte");
       }
     };
 

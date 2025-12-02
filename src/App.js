@@ -63,6 +63,9 @@ import ProtectedRoute from './middlewares/ProtectedRoute';
 import LoginGED from './Pages/Plateforme/LoginGED';
 import RegisterGED from './Pages/Plateforme/RegisterGED';
 import AdminsGED from './Pages/Plateforme/AdminsGED';
+import DetailEntrepot from './Pages/Entrepot/DetailEntrepot';
+import DetailBureau from './Pages/Bureau/DetailBureau';
+import GedNotifications from './Pages/Plateforme/GedNotifications';
 
 // ✅ Wrapper pour accéder à UserContext
 function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
@@ -106,6 +109,7 @@ function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
         <Route path="/ged/register" element={<RegisterGED />} />
         <Route path="/ged/admin/:id" element={<DetailAdminGed />} />
             <Route path="/ged/admins" element={<AdminsGED />} />
+                <Route path="/ged/notifications/fr/" element={<GedNotifications />} />
         {/* --- ROUTES PUBLIQUES --- */}
         <Route path="/" element={<Home />} />
         <Route path="/confirm/:token" element={<ConfirmEmail />} />
@@ -118,11 +122,14 @@ function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
         <Route path="/home-magasin" element={<HomeMagasin />} />
         <Route path="/register__proprio" element={<RegisterMagasin />} />
         <Route path="/My__dash" element={<DashMagasin />} />
-        <Route path="/DetailMagasin/:id" element={<DetailMagasin />} />
+       
         <Route path="/Mon/profil" element={<ProfilOwner />} />
         {/* <Route path="/Mon__recu/fr/:id" element={<ReceiptMagasin />} /> */}
+        {/* <Route path="/detailProject/fr/:id" element={<DetailProjectMagasin />} /> */}
         <Route path="/liste/fr/" element={<ListeMagasin />} />
-        <Route path="/detailProject/fr/:id" element={<DetailProjectMagasin />} />
+        <Route path="/detailEntrepot/:id" element={<DetailEntrepot />} />
+         <Route path="/DetailMagasin/:id" element={<DetailMagasin />} />
+          <Route path="/detailBureau/:id" element={<DetailBureau />} />
 
         {/* --- LOCATAIRES --- */}
         <Route path="/Mon__compte" element={<HomeLocataire />} />
@@ -131,7 +138,7 @@ function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
 
         {/* --- ROUTES PROTÉGÉES --- */}
         <Route path="/Accueil" element={<ProtectedRoute authRequired={true}><Accueil /></ProtectedRoute>} />
-            <Route path="/DetailMagasin/:id" element={<ProtectedRoute authRequired={true}><DetailMagasin /></ProtectedRoute>} />
+        <Route path="/DetailMagasin/:id" element={<ProtectedRoute authRequired={true}><DetailMagasin /></ProtectedRoute>} />
         <Route path="/Actions" element={<ProtectedRoute authRequired={true}><Tracabilite /></ProtectedRoute>} />
         <Route path="/mon-profil" element={<ProtectedRoute authRequired={true}><Profil /></ProtectedRoute>} />
         <Route path="/users" element={<ProtectedRoute authRequired={true} allowedRoles={['user','admin']} adminId={currentAdminId}><User /></ProtectedRoute>} />

@@ -5,53 +5,79 @@ import "react-toastify/dist/ReactToastify.css";
 
 export default function UpdateProfilModal({ person, isOpen, onClose, onUpdate }) {
   const { user } = useUserContext();
+  const [loading, setLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(false);
 
-  const [name, setName] = useState("");
-  const [lastname, setLastname] = useState("");
+  // --- Champs communs ---
+  const [countryCode, setCountryCode] = useState("+225");
   const [tel, setTel] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
-  const [profession, setProfession] = useState("");
-  const [pieces, setPiece] = useState("");
-  const [situation, setSituation] = useState("");
   const [city, setCity] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [confirmModal, setConfirmModal] = useState(false);
-  const [countryCode, setCountryCode] = useState("+225");
+
+  // --- Champs particulier ---
+  const [name, setName] = useState("");
+  const [lastname, setLastname] = useState("");
+  const [profession, setProfession] = useState("");
+  const [situation, setSituation] = useState("");
+  const [pieces, setPiece] = useState("");
   const [dateEmission, setDateEmission] = useState("");
-const [dateExpiration, setDateExpiration] = useState("");
-const [dateEntrance, setDateEntrance] = useState("");
+  const [dateExpiration, setDateExpiration] = useState("");
+  const [dateEntrance, setDateEntrance] = useState("");
 
-  // Pré-remplir le formulaire si `person` est passé
-useEffect(() => {
-  if (!person || !isOpen) return;
+  // --- Champs société ---
+  const [raisonSociale, setRaisonSociale] = useState("");
+  const [rccm, setRccm] = useState("");
+  const [ifu, setIfu] = useState("");
+  const [responsable, setResponsable] = useState("");
+  const [siegeSocial, setSiegeSocial] = useState("");
+  const [domaineActivite, setDomaineActivite] = useState("");
 
-  setName(person.name || "");
-  setLastname(person.lastname || "");
-  setEmail(person.email || "");
-  setAddress(person.address || "");
-  setProfession(person.profession || "");
-  setPiece(person.pieces || "");
-  setSituation(person.situation || "");
-  setCity(person.city || "");
+  // --- Type de personne ---
+  const typePersonne = person?.typePersonne || "particulier";
 
-  if (person.tel) {
-    if (person.tel.startsWith("+225")) setCountryCode("+225");
-    else if (person.tel.startsWith("+33")) setCountryCode("+33");
-    else if (person.tel.startsWith("+1")) setCountryCode("+1");
-    else if (person.tel.startsWith("+221")) setCountryCode("+221");
-    else if (person.tel.startsWith("+226")) setCountryCode("+226");
+  // 🧩 Pré-remplir les champs selon le type
+  useEffect(() => {
+    if (!person || !isOpen) return;
 
-    const cleanedTel = person.tel.replace(/^(\+\d{1,3})/, ""); 
-    setTel(cleanedTel);
-  }
+    setTel(person.tel?.replace(/^(\+\d{1,3})/, "") || "");
+    setEmail(person.email || "");
+    setAddress(person.address || "");
+    setCity(person.city || "");
 
-  // Pré-remplir les nouvelles dates
-  setDateEmission(person.date_emission || "");
-  setDateExpiration(person.date_expiration || "");
-  setDateEntrance(person.date_entrance || "");
-}, [person, isOpen]);
+    // --- particulier ---
+    if (typePersonne === "particulier") {
+      setName(person.name || "");
+      setLastname(person.lastname || "");
+      setProfession(person.profession || "");
+      setSituation(person.situation || "");
+      setPiece(person.pieces || "");
+      setDateEmission(person.date_emission || "");
+      setDateExpiration(person.date_expiration || "");
+      setDateEntrance(person.date_entrance || "");
+    }
 
+    // --- société ---
+    if (typePersonne === "societe") {
+      setRaisonSociale(person.raisonSociale || "");
+      setRccm(person.rccm || "");
+      setIfu(person.ifu || "");
+      setResponsable(person.responsable || "");
+      setSiegeSocial(person.siegeSocial || "");
+      setDomaineActivite(person.domaineActivite || "");
+    }
+
+    // Déterminer l'indicatif du téléphone
+    if (person.tel) {
+      if (person.tel.startsWith("+33")) setCountryCode("+33");
+      else if (person.tel.startsWith("+1")) setCountryCode("+1");
+      else if (person.tel.startsWith("+221")) setCountryCode("+221");
+      else if (person.tel.startsWith("+226")) setCountryCode("+226");
+      else setCountryCode("+225");
+    }
+  }, [person, isOpen, typePersonne]);
+
+  // 🧠 Soumission avec confirmation
   const handleSubmit = (e) => {
     e.preventDefault();
     setConfirmModal(true);
@@ -59,31 +85,48 @@ useEffect(() => {
 
   const confirmUpdate = async () => {
     setConfirmModal(false);
-
     if (!user?._id) {
       toast.error("Utilisateur non connecté !");
       return;
     }
 
-    const fullTel = `${countryCode}${tel}`; // numéro complet avec indicatif
-    const dataUpdate = {
-      name,
-      lastname,
-      tel: fullTel,
-      email,
-      address,
-      profession,
-      pieces,
-      situation,
-      city,
-      date_emission: dateEmission,
-  date_expiration: dateExpiration,
-  date_entrance: dateEntrance,
-      updatedBy: `${user.fullname || user.name || "Utilisateur"} (${user.role || "Admin"})`,
-    };
+    const fullTel = `${countryCode}${tel}`;
+
+   const dataUpdate = {
+      typePersonne, // ✅ très important
+  tel: fullTel,
+  email,
+  address,
+  city,
+  updatedBy: `${user.fullname || user.name || "Utilisateur"} (${user.role || "Admin"})`,
+};
+
+    // Ajouter dynamiquement selon type
+   // Ajout conditionnel
+if (typePersonne === "particulier") {
+  Object.assign(dataUpdate, {
+    name,
+    lastname,
+    profession,
+    situation,
+    pieces,
+    date_emission: dateEmission,
+    date_expiration: dateExpiration,
+    date_entrance: dateEntrance,
+  });
+} else if (typePersonne === "societe") {
+  Object.assign(dataUpdate, {
+    raisonSociale,
+    rccm,
+    ifu,
+    responsable,
+    siegeSocial,
+    domaineActivite,
+  });
+}
 
     try {
-      const res = await fetch(`https://backend-ged-immo.onrender.com/update/locataire/${person._id}`, {
+      const res = await fetch(`http://localhost:4000/update/locataire/${person._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -98,13 +141,13 @@ useEffect(() => {
         return;
       }
 
-      toast.success("Profil locataire mis à jour avec succès !");
+      toast.success("Profil mis à jour avec succès !");
       onUpdate && onUpdate();
       onClose();
       window.location.reload();
     } catch (err) {
       console.error("Erreur serveur :", err);
-      toast.error("Erreur serveur lors de la mise à jour");
+      toast.error("Erreur lors de la mise à jour");
     }
   };
 
@@ -115,127 +158,125 @@ useEffect(() => {
       <div className="modal-container">
         <div className="modal-contents">
           <div className="modal-header">
-            <h2><i className="fa-solid fa-user-pen"></i> Mise à jour du locataire</h2>
+            <h2>
+              <i className="fa-solid fa-user-pen"></i> 
+              Mise à jour {typePersonne === "societe" ? "de la société" : "du locataire"}
+            </h2>
             <button className="btn-close" onClick={onClose}>×</button>
           </div>
 
-          {loading ? (
-            <div style={{ textAlign: "center", padding: "30px" }}>
-              Chargement des informations...
+          <form className="modal-body form-grid" onSubmit={handleSubmit}>
+            {/* --- Champs communs --- */}
+            <div className="form-group">
+              <label>Email</label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-          ) : (
-            <form className="modal-body form-grid" onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Nom</label>
-                <input type="text" required value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
 
-              <div className="form-group">
-                <label>Prénom(s)</label>
-                <input type="text" required value={lastname} onChange={(e) => setLastname(e.target.value)} />
-              </div>
+            <div className="form-group">
+              <label>Indicatif</label>
+              <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)}>
+                <option value="+225">Côte d’Ivoire (+225)</option>
+                <option value="+33">France (+33)</option>
+                <option value="+1">USA (+1)</option>
+                <option value="+221">Sénégal (+221)</option>
+                <option value="+226">Burkina Faso (+226)</option>
+              </select>
+            </div>
 
-              <div className="form-group">
-                <label>Indicatif</label>
-                <select
-                  value={countryCode}
-                  onChange={(e) => setCountryCode(e.target.value)}
-                  className="select-field"
-                >
-                  <option value="+225">Côte d’Ivoire (+225)</option>
-                  <option value="+33">France (+33)</option>
-                  <option value="+1">USA (+1)</option>
-                  <option value="+221">Sénégal (+221)</option>
-                  <option value="+226">Burkina Faso (+226)</option>
-                </select>
-              </div>
+            <div className="form-group">
+              <label>Téléphone</label>
+              <input
+                type="text"
+                value={tel}
+                onChange={(e) => setTel(e.target.value)}
+                placeholder="Numéro sans indicatif"
+                required
+              />
+            </div>
 
-              <div className="form-group">
-                <label>Téléphone</label>
-                <input
-                  type="text"
-                  value={tel}              // ← tel contient déjà le numéro sans indicatif
-                  onChange={(e) => setTel(e.target.value)}
-                  placeholder="Numéro sans indicatif"
-                  required
-                />
-              </div>
+            <div className="form-group">
+              <label>Adresse</label>
+              <input type="text" required value={address} onChange={(e) => setAddress(e.target.value)} />
+            </div>
 
-              <div className="form-group">
-                <label>Email</label>
-                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
+            <div className="form-group">
+              <label>Ville</label>
+              <input type="text" required value={city} onChange={(e) => setCity(e.target.value)} />
+            </div>
 
-              <div className="form-group">
-                <label>Adresse</label>
-                <input type="text" required value={address} onChange={(e) => setAddress(e.target.value)} />
-              </div>
+            {/* --- Si particulier --- */}
+            {typePersonne === "particulier" && (
+              <>
+                <div className="form-group"><label>Nom</label>
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+                <div className="form-group"><label>Prénom</label>
+                  <input type="text" value={lastname} onChange={(e) => setLastname(e.target.value)} />
+                </div>
+                <div className="form-group"><label>Profession</label>
+                  <input type="text" value={profession} onChange={(e) => setProfession(e.target.value)} />
+                </div>
+                <div className="form-group"><label>Situation matrimoniale</label>
+                  <select value={situation} onChange={(e) => setSituation(e.target.value)}>
+                    <option value="">Sélectionner</option>
+                    <option value="Célibataire">Célibataire</option>
+                    <option value="Marié(e)">Marié(e)</option>
+                    <option value="Veuf(ve)">Veuf(ve)</option>
+                  </select>
+                </div>
+                <div className="form-group"><label>N° CNI / Passeport</label>
+                  <input type="text" value={pieces} onChange={(e) => setPiece(e.target.value)} />
+                </div>
+                <div className="form-group"><label>Date d’émission</label>
+                  <input type="date" value={dateEmission} onChange={(e) => setDateEmission(e.target.value)} />
+                </div>
+                <div className="form-group"><label>Date d’expiration</label>
+                  <input type="date" value={dateExpiration} onChange={(e) => setDateExpiration(e.target.value)} />
+                </div>
+                <div className="form-group"><label>Date d’entrée</label>
+                  <input type="date" value={dateEntrance} onChange={(e) => setDateEntrance(e.target.value)} />
+                </div>
+              </>
+            )}
 
-              <div className="form-group">
-                <label>Ville</label>
-                <input type="text" required value={city} onChange={(e) => setCity(e.target.value)} />
-              </div>
+            {/* --- Si société --- */}
+            {typePersonne === "societe" && (
+              <>
+                <div className="form-group"><label>Raison sociale</label>
+                  <input type="text" value={raisonSociale} onChange={(e) => setRaisonSociale(e.target.value)} />
+                </div>
+                <div className="form-group"><label>RCCM</label>
+                  <input type="text" value={rccm} onChange={(e) => setRccm(e.target.value)} />
+                </div>
+                <div className="form-group"><label>IFU</label>
+                  <input type="text" value={ifu} onChange={(e) => setIfu(e.target.value)} />
+                </div>
+                <div className="form-group"><label>Responsable</label>
+                  <input type="text" value={responsable} onChange={(e) => setResponsable(e.target.value)} />
+                </div>
+                <div className="form-group"><label>Siège social</label>
+                  <input type="text" value={siegeSocial} onChange={(e) => setSiegeSocial(e.target.value)} />
+                </div>
+                <div className="form-group"><label>Domaine d’activité</label>
+                  <input type="text" value={domaineActivite} onChange={(e) => setDomaineActivite(e.target.value)} />
+                </div>
+              </>
+            )}
 
-              <div className="form-group">
-                <label>Profession</label>
-                <input type="text" value={profession} onChange={(e) => setProfession(e.target.value)} />
-              </div>
-
-              <div className="form-group">
-                <label>Situation matrimoniale</label>
-                <select value={situation} onChange={(e) => setSituation(e.target.value)}>
-                  <option value="">Sélectionner</option>
-                  <option value="Célibataire">Célibataire</option>
-                  <option value="Marié(e)">Marié(e)</option>
-                  <option value="Veuf(ve)">Veuf(ve)</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>N° CNI / Passeport</label>
-                <input type="text" value={pieces} onChange={(e) => setPiece(e.target.value)} />
-              </div>
-               <div className="form-group">
-    <label>Date d'émission</label>
-    <input
-      type="date"
-      value={dateEmission}
-      onChange={(e) => setDateEmission(e.target.value)}
-    />
-  </div>
-
-  <div className="form-group">
-    <label>Date d'expiration</label>
-    <input
-      type="date"
-      value={dateExpiration}
-      onChange={(e) => setDateExpiration(e.target.value)}
-    />
-  </div>
-
-  <div className="form-group">
-    <label>Date d'entrée</label>
-    <input
-      type="date"
-      value={dateEntrance}
-      onChange={(e) => setDateEntrance(e.target.value)}
-    />
-  </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={onClose}>Annuler</button>
-                <button type="submit" className="btn-primary">Enregistrer</button>
-              </div>
-            </form>
-          )}
+            <div className="modal-footer">
+              <button type="button" className="btn-secondary" onClick={onClose}>Annuler</button>
+              <button type="submit" className="btn-primary">Enregistrer</button>
+            </div>
+          </form>
         </div>
       </div>
 
+      {/* Confirmation */}
       {confirmModal && (
         <div className="confirm-overlay">
           <div className="confirm-box">
             <h3>Confirmer la mise à jour</h3>
-            <p>Voulez-vous vraiment enregistrer les modifications ?</p>
+            <p>Voulez-vous vraiment enregistrer ces modifications ?</p>
             <div className="confirm-buttons">
               <button className="btn-secondary" onClick={() => setConfirmModal(false)}>Annuler</button>
               <button className="btn-primary" onClick={confirmUpdate}>Confirmer</button>

@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Navbar from "./Navbar";
 import { useState, useEffect, useMemo } from "react";
 import { TailSpin } from "react-loader-spinner";
@@ -8,153 +8,115 @@ import toast, { Toaster } from "react-hot-toast";
 import { useUserContext } from "../contexts/UserContext";
 
 export default function Statistiques() {
-  const { id } = useParams();
-  const { user } = useUserContext();
-
+  const { user, hasFeature } = useUserContext();
   const [projects, setProjects] = useState([]);
   const [persons, setPersons] = useState([]);
   const [searchProject, setSearchProject] = useState(localStorage.getItem("searchProject") || "");
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const [searchMonth, setSearchMonth] = useState(localStorage.getItem("searchMonth") || currentMonth);
-  const [loading, setLoading] = useState(true);
-  const [newPeople, setNewPeople] = useState(false);
+  const [selectedType, setSelectedType] = useState(localStorage.getItem("selectedType") || "");
+  const [projectTypes, setProjectTypes] = useState([]);
+  const [searchMonth, setSearchMonth] = useState(localStorage.getItem("searchMonth") || new Date().toISOString().slice(0, 7));
   const [searchTerm, setSearchTerm] = useState("");
-
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(Number(localStorage.getItem("currentPage")) || 1);
   const itemsPerPage = 15;
+  const [loading, setLoading] = useState(true);
 
-  const handleSearchMonth = (e) => {
-    setSearchMonth(e.target.value);
-    localStorage.setItem("searchMonth", e.target.value);
-    setCurrentPage(1);
-  };
+  // --- Sauvegarde localStorage ---
+  useEffect(() => { localStorage.setItem("searchProject", searchProject); }, [searchProject]);
+  useEffect(() => { localStorage.setItem("selectedType", selectedType); }, [selectedType]);
+  useEffect(() => { localStorage.setItem("searchMonth", searchMonth); }, [searchMonth]);
+  useEffect(() => { localStorage.setItem("currentPage", currentPage); }, [currentPage]);
 
-  const handleProjectChange = (e) => {
-    setSearchProject(e.target.value);
-    localStorage.setItem("searchProject", e.target.value);
-    setCurrentPage(1);
-  };
-
+  // --- Récupération des données ---
   useEffect(() => {
     if (!user?._id) return;
-  
-    const fetchAllData = async () => {
-      setLoading(true);
+    setLoading(true);
+
+    const fetchData = async () => {
       try {
-        const res = await fetch(`https://backend-ged-immo.onrender.com/data/${user._id}`,{
-           headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${user?.token}`, // ✅ envoi du token
-        },
-      });
-        const data = await res.json();
-  
-        if (!res.ok) {
-          toast.error(data.message || "Erreur lors de la récupération des données.");
-          return;
-        }
-  
-        if (data.success) {
-          setProjects(data.projects || []);
-          setPersons(data.persons || []);
-        } else {
-          toast.error(data.message || "Aucune donnée trouvée.");
-        }
+        const [projectsRes, personsRes] = await Promise.all([
+          fetch(`http://localhost:4000/projects/admin/${user._id}`, {
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${user?.token}` },
+          }),
+          fetch(`http://localhost:4000/locataire/${user._id}`, {
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${user?.token}` },
+          }),
+        ]);
+
+        const projectsData = await projectsRes.json();
+        const personsData = await personsRes.json();
+
+        if (projectsData.success) setProjects(projectsData.projects || []);
+        setPersons(personsData || []);
       } catch (err) {
         toast.error("Erreur serveur : " + err.message);
       } finally {
         setLoading(false);
       }
     };
-  
-    fetchAllData();
-  }, [user]);
-  const handlePageChange = (page) => setCurrentPage(page);
 
+    fetchData();
+  }, [user]);
+
+  // --- Déterminer les types de projet disponibles ---
   useEffect(() => {
-    if (!user?._id) return;
-    setLoading(true);
-    fetch(`https://backend-ged-immo.onrender.com/projects/admin/${user._id}`,{
-           headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${user?.token}`, // ✅ envoi du token
-        },
-      })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setProjects(data.projects || []);
-      })
-      .catch((err) => toast.error("Erreur récupération projets : " + err.message))
-      .finally(() => setLoading(false));
-  }, [user]);
+    if (projects.length > 0) {
+      const types = [...new Set(projects.map(p => p.categorie || p.type || "autre"))];
+      setProjectTypes(types);
+    }
+  }, [projects]);
 
-  useEffect(() => {
-    if (!user?._id) return;
-    setLoading(true);
-    fetch(`https://backend-ged-immo.onrender.com/locataire/${user._id}`,{
-           headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${user?.token}`, // ✅ envoi du token
-        },
-      })
-      .then((res) => res.json())
-      .then((data) => setPersons(data || []))
-      .catch((err) => toast.error("Erreur récupération locataires : " + err.message))
-      .finally(() => setLoading(false));
-  }, [user]);
+  // --- Projets filtrés selon le type sélectionné ---
+  const filteredProjects = selectedType
+    ? projects.filter(p => (p.categorie || p.type || "autre").toLowerCase() === selectedType.toLowerCase())
+    : projects;
 
-  // --- Filtrage et normalisation du mois ---
-const filteredPersons = useMemo(() => {
-  if (!searchProject) return [];
-
-  const formattedMonth = searchMonth || currentMonth;
+  // --- Filtrage des locataires corrigé pour periodEnd ---
+ const filteredPersons = useMemo(() => {
+  const [year, month] = searchMonth.split("-");
+  const monthStart = new Date(Number(year), Number(month) - 1, 1, 0, 0, 0, 0);
+  const monthEnd = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
 
   return persons
-    .filter((person) => {
-      if (person.archived) return false;
+    .filter(p => {
+      const start = p.periodStart ? new Date(p.periodStart) : new Date(0);
 
-      const homesArray = Array.isArray(person.homes)
-        ? person.homes
-        : person.homeId
-        ? [person.homeId]
-        : [];
+      // 🔹 Prend periodEnd si défini, sinon dateArchived si archivé, sinon max date
+      let end;
+      if (p.periodEnd) {
+        end = new Date(p.periodEnd);
+      } else if (p.archived && p.dateArchived) {
+        end = new Date(p.dateArchived);
+      } else {
+        end = new Date(9999, 11, 31, 23, 59, 59, 999); // locataires en cours
+      }
 
-      const belongsToProject = homesArray.some(
-        (home) =>
-          String(home.projectId || home.project_id || home.project) ===
-          String(searchProject)
-      );
-
-      const matchesSearch = `${person.name || ""} ${person.prenom || ""}`
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-
-      return belongsToProject && matchesSearch;
+      return start <= monthEnd && end >= monthStart;
     })
-    .map((person) => {
-      const homesArray = Array.isArray(person.homes)
-        ? person.homes
-        : person.homeId
-        ? [person.homeId]
-        : [];
+    .filter(p => {
+      const matchProject = !searchProject || String(p.projectId) === searchProject;
+      const projectOfPerson = projects.find(pr => String(pr._id) === String(p.projectId));
+      const matchType = !selectedType || (projectOfPerson && (projectOfPerson.categorie || projectOfPerson.type || "").toLowerCase() === selectedType.toLowerCase());
+      return matchProject && matchType;
+    })
+    .filter(p => searchTerm === "" || `${p.name || ""} ${p.lastname || ""}`.toLowerCase().includes(searchTerm.toLowerCase()))
+    .map(p => {
+      const homesArray = Array.isArray(p.homes) 
+        ? p.homes.filter(Boolean) 
+        : p.homeId 
+          ? [p.homeId] 
+          : [];
 
-      // 🔹 Correction ici : rentalIds au lieu de rentals
-      const rentalForMonth = person.rentalIds?.find((rent) => {
-        if (!rent.month) return false;
-
-        let rentMonth;
-        if (typeof rent.month === "string") {
-          rentMonth = rent.month.slice(0, 7);
-        } else {
-          rentMonth = new Date(rent.month).toISOString().slice(0, 7);
-        }
-
-        return rentMonth === formattedMonth;
+      const rentalForMonth = p.rentalIds?.find(rent => {
+        if (!rent?.month) return false;
+        const rentMonth = typeof rent.month === "string" 
+          ? rent.month.slice(0, 7) 
+          : new Date(rent.month).toISOString().slice(0, 7);
+        return rentMonth === searchMonth;
       });
 
-      return { ...person, rentalForMonth, homesArray };
+      return { ...p, rentalForMonth, homesArray };
     });
-}, [persons, searchMonth, searchProject, searchTerm, currentMonth]);
+}, [persons, projects, searchProject, selectedType, searchTerm, searchMonth]);
 
   // --- Pagination ---
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -162,79 +124,30 @@ const filteredPersons = useMemo(() => {
   const currentPersons = filteredPersons.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredPersons.length / itemsPerPage);
 
-  // --- Statistiques globales ---
+  // --- Statistiques ---
   const totalLocataires = filteredPersons.length;
-  const totalLoyersPayes = filteredPersons.reduce(
-    (acc, p) => acc + (p.rentalForMonth?.status === "Payé" ? 1 : 0),
-    0
-  );
-  const totalLoyersImpayes = filteredPersons.reduce(
-    (acc, p) => acc + (p.rentalForMonth?.status !== "Payé" ? 1 : 0),
-    0
-  );
-  const tauxPaiement =
-    totalLoyersPayes + totalLoyersImpayes > 0
-      ? ((totalLoyersPayes / (totalLoyersPayes + totalLoyersImpayes)) * 100).toFixed(1)
-      : 0;
+  const totalLoyersPayes = filteredPersons.reduce((acc, p) => acc + (p.rentalForMonth?.status === "Payé" ? 1 : 0), 0);
+  const totalLoyersImpayes = filteredPersons.reduce((acc, p) => acc + (p.rentalForMonth?.status !== "Payé" ? 1 : 0), 0);
+  const tauxPaiement = totalLoyersPayes + totalLoyersImpayes > 0 ? ((totalLoyersPayes / (totalLoyersPayes + totalLoyersImpayes)) * 100).toFixed(1) : 0;
+  const montantTotalPaye = filteredPersons.reduce((acc, p) => acc + ((p.rentalForMonth?.status === "Payé") ? (Number(p.rentalForMonth.amount) || Number(p.homesArray?.[0]?.rent) || 0) : 0), 0);
+  const montantTotalImpayes = filteredPersons.reduce((acc, p) => acc + ((p.rentalForMonth && p.rentalForMonth.status !== "Payé") ? (Number(p.rentalForMonth.amount) || Number(p.homesArray?.[0]?.rent) || 0) : 0), 0);
 
-  const montantTotalPaye = filteredPersons.reduce((acc, p) => {
-    if (p.rentalForMonth?.status === "Payé") {
-      return acc + (Number(p.rentalForMonth.amount) || Number(p.homesArray?.[0]?.rent) || 0);
-    }
-    return acc;
-  }, 0);
-
-  const montantTotalImpayes = filteredPersons.reduce((acc, p) => {
-    if (p.rentalForMonth && p.rentalForMonth?.status !== "Payé") {
-      return acc + (Number(p.rentalForMonth.amount) || Number(p.homesArray?.[0]?.rent) || 0);
-    }
-    return acc;
-  }, 0);
-
-    // --- Export Excel ---
+  // --- Export Excel ---
   const exportExcel = () => {
-    if (!filteredPersons.length) {
-      toast.error("Aucune donnée à exporter !");
-      return;
-    }
-
-    const projectName =
-      projects.find((p) => p._id === searchProject)?.name || "Tous les projets";
-
+    if (!filteredPersons.length) { toast.error("Aucune donnée à exporter !"); return; }
+    const projectName = projects.find(p => p._id === searchProject)?.name || "Tous les projets";
     const header = [
       [`Rapport Locataires - Projet : ${projectName}`],
       [`Mois : ${searchMonth}`],
       [""],
       ["Nom & Prénom(s)", "Contact", "Bien", "Pièces", "Mois", "Statut", "Montant (FCFA)"],
     ];
-
-    const body = filteredPersons.map((p) => {
-      const month = p.rentalForMonth
-        ? new Date(p.rentalForMonth.month).toLocaleString("fr-FR", {
-            month: "long",
-            year: "numeric",
-          })
-        : "N/A";
-
+    const body = filteredPersons.map(p => {
+      const month = p.rentalForMonth ? new Date(p.rentalForMonth.month).toLocaleString("fr-FR", { month: "long", year: "numeric" }) : "N/A";
       const statut = p.rentalForMonth?.status || "Impayé";
-
-      const montant =
-        p.homesArray?.[0]?.rent ||
-        p.rentalForMonth?.amount ||
-        0;
-
-      return [
-        `${p.name || ""} ${p.lastname || ""}`,
-        p.tel || "",
-        p.homesArray?.[0]?.categorie || "",
-        p.homesArray?.[0]?.NmbrePieces || "",
-        month,
-        statut,
-        montant,
-      ];
+      const montant = p.homesArray?.[0]?.rent || p.rentalForMonth?.amount || 0;
+      return [`${p.name || ""} ${p.lastname || ""}`, p.tel || "", p.homesArray?.[0]?.categorie || "", p.homesArray?.[0]?.NmbrePieces || "", month, statut, montant];
     });
-
-    // ✅ Totaux à la fin
     const footer = [
       [""],
       ["TOTAL LOCATAIRES", totalLocataires],
@@ -244,228 +157,120 @@ const filteredPersons = useMemo(() => {
       ["MONTANT PAYÉ (FCFA)", montantTotalPaye],
       ["MONTANT IMPAYÉ (FCFA)", montantTotalImpayes],
     ];
-
     const worksheet = XLSX.utils.aoa_to_sheet([...header, ...body, ...footer]);
-
-    worksheet["!cols"] = [
-      { wch: 25 },
-      { wch: 15 },
-      { wch: 20 },
-      { wch: 10 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 20 },
-    ];
-
+    worksheet["!cols"] = [{ wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Locataires");
-
     const monthLabel = searchMonth.replace("-", "_");
     XLSX.writeFile(workbook, `Rapport_Locataires_${projectName}_${monthLabel}.xlsx`);
   };
 
-  // --- Affichage ---
   return (
     <div>
       <Navbar />
       <div className="saas-container">
-        {loading ? (
-          <div className="loading">
-            <TailSpin height="80" width="80" color="#4fa94d" />
-          </div>
-        ) : (
+        {loading ? <div className="loading"><TailSpin height="80" width="80" color="#4fa94d" /></div> : (
           <div className="saas-card">
+            {/* Breadcrumb & header */}
             <nav aria-label="breadcrumb" className="breadcrumb">
-              <ol>
-                <li>
-                  <Link to="/Accueil">Accueil</Link>
-                </li>
-                <li>Statistiques</li>
-              </ol>
+              <ol><li><Link to="/Accueil">Accueil</Link></li><li>Statistiques</li></ol>
             </nav>
-
             <div className="header-actions">
-              <h2>
-                <i className="fa-solid fa-chart-line"></i> Rapport & Statistiques
-              </h2>
-
-               <button
-    className="btn-export excel"
-    onClick={exportExcel}
-    style={{
-      background: "#16a34a",
-      color: "#fff",
-      border: "none",
-      padding: ".5rem 1rem",
-      borderRadius: "6px",
-      cursor: "pointer",
-      fontWeight: 500,
-      display: "flex",
-      alignItems: "center",
-      gap: ".4rem",
-    }}
-  >
-    <i className="fa-solid fa-file-excel"></i> Export Excel
-  </button>
+              <h2><i className="fa-solid fa-chart-line"></i> Rapport & Statistiques</h2>
+              <button className={`export-excel ${hasFeature("exportAllowed") ? "enabled" : "disabled"}`} disabled={!hasFeature("exportAllowed")} onClick={() => hasFeature("exportAllowed") && exportExcel()}><i className="fa-solid fa-file-excel"></i> Export Excel</button>
             </div>
-
-          
 
             {/* Filtres */}
             <div className="filter-section">
-              <select
-                className="select-field"
-                value={searchProject}
-                onChange={handleProjectChange}
-              >
-                <option value="">Toutes les propriétés</option>
-                {projects.map((project) => (
-                  <option key={project._id} value={project._id}>
-                    {project.name}
-                  </option>
-                ))}
+              <select className="select-field" value={selectedType} onChange={(e) => { setSelectedType(e.target.value); setSearchProject(""); setCurrentPage(1); }}>
+                <option value="">Tous les types</option>
+                {projectTypes.map((type, idx) => (<option key={idx} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>))}
               </select>
-
-              <input
-                type="month"
-                value={searchMonth}
-                onChange={handleSearchMonth}
-                className="select-field"
-              />
-
-              <input
-                type="text"
-                placeholder="Rechercher un locataire..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
+              <select className="select-field" value={searchProject} onChange={(e) => { setSearchProject(e.target.value); setCurrentPage(1); }}>
+                <option value="">Toutes les propriétés</option>
+                {filteredProjects.map(p => (<option key={p._id} value={p._id}>{p.name}</option>))}
+              </select>
+              <input type="month" className="select-field" value={searchMonth} onChange={(e) => { setSearchMonth(e.target.value); setCurrentPage(1); }} />
+              <input type="text" placeholder="Rechercher un locataire..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
 
-            <div style={{ marginBottom: "1rem", fontWeight: "500" }}>
-              📅 Statistiques du mois :{" "}
-              {new Date(searchMonth + "-01").toLocaleString("fr-FR", {
-                month: "long",
-                year: "numeric",
-              })}
-            </div>
-
-            {/* Cartes Statistiques */}
+            {/* Statistiques & tableau */}
+            <div style={{ marginBottom: "1rem", fontWeight: "500" }}>📅 Statistiques du mois : {new Date(searchMonth + "-01").toLocaleString("fr-FR", { month: "long", year: "numeric" })}</div>
             <div className="dashboard-cards">
-              <div className="card card-primary">
-                <div className="card-header">
-                  <i className="fa-solid fa-users fa-lg"></i>
-                  <h4>Locataires ce mois</h4>
-                </div>
-                <span>{totalLocataires}</span>
-              </div>
-
-              <div className="card card-success">
-                <div className="card-header">
-                  <i className="fa-solid fa-money-bill-wave fa-lg"></i>
-                  <h4>Loyers payés</h4>
-                </div>
-                <span>{totalLoyersPayes}</span>
-              </div>
-
-              <div className="card card-danger">
-                <div className="card-header">
-                  <i className="fa-solid fa-triangle-exclamation fa-lg"></i>
-                  <h4>Loyers impayés</h4>
-                </div>
-                <span>{totalLoyersImpayes}</span>
-              </div>
-
-              <div className="card card-info">
-                <div className="card-header">
-                  <i className="fa-solid fa-percent fa-lg"></i>
-                  <h4>Taux de paiement</h4>
-                </div>
-                <span>{tauxPaiement}%</span>
-              </div>
-
-              <div className="card card-success">
-                <div className="card-header">
-                  <i className="fa-solid fa-hand-holding-dollar fa-lg"></i>
-                  <h4>Montant payé</h4>
-                </div>
-                <span>{montantTotalPaye.toLocaleString("fr-FR")} FCFA</span>
-              </div>
+              <div className="card card-primary"><div className="card-header"><i className="fa-solid fa-users fa-lg"></i><h4>Locataires ce mois</h4></div><span>{totalLocataires}</span></div>
+              <div className="card card-success"><div className="card-header"><i className="fa-solid fa-money-bill-wave fa-lg"></i><h4>Loyers payés</h4></div><span>{totalLoyersPayes}</span></div>
+              <div className="card card-danger"><div className="card-header"><i className="fa-solid fa-triangle-exclamation fa-lg"></i><h4>Loyers impayés</h4></div><span>{totalLoyersImpayes}</span></div>
+              <div className="card card-info"><div className="card-header"><i className="fa-solid fa-percent fa-lg"></i><h4>Taux de paiement</h4></div><span>{tauxPaiement}%</span></div>
+              <div className="card card-success"><div className="card-header"><i className="fa-solid fa-hand-holding-dollar fa-lg"></i><h4>Montant payé</h4></div><span>{montantTotalPaye.toLocaleString("fr-FR")} FCFA</span></div>
             </div>
 
-            {/* Tableau */}
-            <div className="payment-section">
-              <h3>Détails des paiements</h3>
-              <table className="payment-table">
-                <thead>
-                  <tr>
-                    <th>Nom & Prénom(s)</th>
-                    <th>Contacts</th>
-                    <th>Bien</th>
-                    <th>Nb pièces</th>
-                    <th>Mois</th>
-                    <th>Statut</th>
-                    <th>Montant</th>
-                    <th>Détails</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!searchProject || filteredPersons.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" style={{ textAlign: "center" }}>
-                        Veuillez sélectionner une propriété pour voir les locataires.
-                      </td>
-                    </tr>
-                  ) : (
-                    currentPersons.map((person) => (
-                      <tr key={person._id}>
-                        <td>{person.name} {person.lastname}</td>
-                        <td>{person.tel}</td>
-                        <td>{person.homesArray?.[0]?.categorie}</td>
-                        <td>{person.homesArray?.[0]?.NmbrePieces || "N/A"}</td>
-                        <td>
-                      {person.rentalForMonth
-                        ? new Date(person.rentalForMonth.month).toLocaleString("fr-FR", {
-                            month: "long",
-                            year: "numeric",
-                          })
-                        : "N/A"}
-                    </td>
-                    <td>
-                      <span
-                        className={`status ${
-                          person.rentalForMonth?.status === "Payé" ? "paid" : "pending"
-                        }`}
-                      >
-                        {person.rentalForMonth?.status || "Impayé"}
-                      </span>
-                    </td>
-                        <td>{person.homesArray?.[0]?.rent || "N/A"} FCFA</td>
-                        <td>
-                          <Link to={`/detailUser/${person._id}`}>
-                            <button className="btn-details">Détails</button>
-                          </Link>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+           <div className="payment-section">
+  <h3>Détails des paiements</h3>
+  <table className="payment-table">
+    <thead>
+      <tr>
+        <th>Nom & Prénom(s)</th>
+        <th>Contacts</th>
+        <th>Bien</th>
+        <th>Nb pièces</th>
+        <th>Mois</th>
+        <th>Statut</th>
+        <th>Montant</th>
+        <th>Détails</th>
+      </tr>
+    </thead>
+    <tbody>
+      {currentPersons.length === 0 ? (
+        <tr>
+          <td colSpan="8" style={{ textAlign: "center" }}>
+            {searchProject
+              ? "Aucun locataire pour ce projet."
+              : "Veuillez sélectionner une propriété pour voir les locataires."}
+          </td>
+        </tr>
+      ) : (
+        currentPersons.map(p => (
+          <tr key={p._id}>
+            <td>{p.name} {p.lastname}</td>
+            <td>{p.tel}</td>
+            <td>{p.homesArray?.[0]?.categorie || "N/A"}</td>
+            <td>{p.homesArray?.[0]?.NmbrePieces || "N/A"}</td>
+            <td>
+              {p.rentalForMonth
+                ? new Date(p.rentalForMonth.month).toLocaleString("fr-FR", { month: "long", year: "numeric" })
+                : "N/A"}
+            </td>
+            <td>
+              <span className={`status ${p.rentalForMonth?.status === "Payé" ? "paid" : "pending"}`}>
+                {p.rentalForMonth?.status || "Impayé"}
+              </span>
+            </td>
+            <td>{p.homesArray?.[0]?.rent || p.rentalForMonth?.amount || "N/A"} FCFA</td>
+            <td>
+              <Link to={`/detailUser/${p._id}`}>
+                <button className="btn-details">Détails</button>
+              </Link>
+            </td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
 
-            {totalPages > 1 && (
-              <div className="pagination">
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <button
-                    key={i}
-                    className={currentPage === i + 1 ? "active" : ""}
-                    onClick={() => handlePageChange(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            )}
+  {totalPages > 1 && (
+    <div className="pagination">
+      {Array.from({ length: totalPages }, (_, i) => (
+        <button
+          key={i}
+          className={currentPage === i + 1 ? "active" : ""}
+          onClick={() => setCurrentPage(i + 1)}
+        >
+          {i + 1}
+        </button>
+      ))}
+    </div>
+  )}
+</div>
           </div>
         )}
       </div>
@@ -501,6 +306,39 @@ const filteredPersons = useMemo(() => {
         .pagination { margin-top: 1.5rem; display: flex; gap: .3rem; justify-content: center; }
         .pagination button { padding: .4rem .8rem; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; background: #fff; }
         .pagination button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+       /* Bouton Export Excel - état général */
+button.export-excel {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Autorisation accordée - bouton actif */
+button.export-excel.enabled {
+  background-color: #16a34a; /* vert */
+  color: #fff;
+}
+
+button.export-excel.enabled:hover {
+  background-color: #138f3f;
+  transform: scale(1.05);
+}
+
+/* Pas d'autorisation - bouton désactivé */
+button.export-excel.disabled {
+  background-color: #a1a1aa; /* gris clair */
+  color: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
       `}</style>
     </div>
   );

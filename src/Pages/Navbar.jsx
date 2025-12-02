@@ -204,9 +204,9 @@ const handleLoginSubmit = async (e) => {
          <NavLink to="/Ma__comptabilite" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-calculator"></i> Ma comptabilité
         </NavLink>
-          {/* <NavLink to="/Notifications" className={({ isActive }) => isActive ? 'active' : ''}>
+          <NavLink to="/Notifications" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-box-archive"></i> Notifications
-        </NavLink> */}
+        </NavLink>
         {/* <NavLink to="/mon-profil" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-user"></i> Profil
         </NavLink> */}

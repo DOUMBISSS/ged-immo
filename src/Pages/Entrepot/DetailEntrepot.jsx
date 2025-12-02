@@ -8,16 +8,16 @@ import "react-toastify/dist/ReactToastify.css";
 
 const API = "http://localhost:4000";
 
-export default function DetailMagasin() {
+export default function DetailEntrepot() {
   const { id: projectId } = useParams();
   const navigate = useNavigate();
   const { user } = useUserContext();
 
   const [project, setProject] = useState(null);
-  const [magasins, setMagasins] = useState([]);
+  const [entrepots, setEntrepots] = useState([]);
   const [showModal, setShowModal] = useState(false);
 
-  // Formulaire
+  // Form
   const [reference, setReference] = useState("");
   const [nameHome, setNameHome] = useState("");
   const [addressHome, setAddressHome] = useState("");
@@ -25,14 +25,13 @@ export default function DetailMagasin() {
   const [quarter, setQuarter] = useState("");
   const [rent, setRent] = useState("");
   const [description, setDescription] = useState("");
-  const [guarantee, setGuarantee] = useState("");
-  const [surfaceMagasin, setSurfaceMagasin] = useState("");
-  const [accesRoutier, setAccesRoutier] = useState("");
-  const [vitrine, setVitrine] = useState(false);
-  const [stockDisponible, setStockDisponible] = useState(false);
-  const [zoneCommerciale, setZoneCommerciale] = useState(false);
-    const [mezanine, setMezanine] = useState(false);
-      const [NmbrePieces, SetNmbrePieces] = useState("");
+  const [surfaceEntrepot, setSurfaceEntrepot] = useState("");
+  const [hauteurSousPlafond, setHauteurSousPlafond] = useState("");
+  const [capaciteStockage, setCapaciteStockage] = useState("");
+  const [quaiChargement, setQuaiChargement] = useState(false);
+  const [securite, setSecurite] = useState(false);
+  const [accesCamion, setAccesCamion] = useState(false);
+  const [ventilation, setVentilation] = useState(false);
   const [state, setState] = useState("Disponible");
   const [img, setImg] = useState(null);
   const [images, setImages] = useState([]);
@@ -46,7 +45,7 @@ export default function DetailMagasin() {
       .then((data) => {
         if (data.project) {
           setProject(data.project);
-          setMagasins(data.homes || []);
+          setEntrepots(data.homes || []);
         }
       })
       .catch((err) => console.error("Erreur chargement projet:", err));
@@ -64,22 +63,21 @@ export default function DetailMagasin() {
       const formData = new FormData();
       formData.append("reference", reference);
       formData.append("nameHome", nameHome);
-      formData.append("categorie", "magasin");
+      formData.append("categorie", "entrepot");
       formData.append("addressHome", addressHome);
       formData.append("city", city);
       formData.append("quarter", quarter);
       formData.append("rent", rent);
       formData.append("description", description);
-      formData.append("guarantee", guarantee);
-      formData.append("surfaceMagasin", surfaceMagasin);
-      
-      formData.append("accesRoutier", accesRoutier);
-      formData.append("vitrine", vitrine);
-      formData.append("stockDisponible", stockDisponible);
-      formData.append("zoneCommerciale", zoneCommerciale);
+      formData.append("surfaceEntrepot", surfaceEntrepot);
+      formData.append("hauteurSousPlafond", hauteurSousPlafond);
+      formData.append("capaciteStockage", capaciteStockage);
+      formData.append("quaiChargement", quaiChargement);
+      formData.append("securite", securite);
+      formData.append("accesCamion", accesCamion);
+      formData.append("ventilation", ventilation);
       formData.append("state", state);
-      formData.append("NmbrePieces", NmbrePieces);
-formData.append("mezanine", mezanine);
+
       if (img) formData.append("img", img);
       if (images.length > 0) Array.from(images).forEach((f) => formData.append("images", f));
 
@@ -91,14 +89,14 @@ formData.append("mezanine", mezanine);
 
       const data = await res.json();
       if (data.success) {
-        toast.success("🏬 Magasin ajouté avec succès !");
-        setMagasins((prev) => [...prev, data.home]);
+        toast.success("🏗️ Entrepôt ajouté avec succès !");
+        setEntrepots((prev) => [...prev, data.home]);
         setShowModal(false);
       } else {
-        toast.error(data.message || "Erreur lors de l’ajout du magasin");
+        toast.error(data.message || "Erreur lors de l’ajout de l’entrepôt");
       }
     } catch (err) {
-      console.error("Erreur ajout magasin:", err);
+      console.error("Erreur ajout entrepôt:", err);
       toast.error("Erreur serveur.");
     }
   };
@@ -114,39 +112,39 @@ formData.append("mezanine", mezanine);
               style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
             >
               <h1>
-                <i className="fa-solid fa-store"></i>{" "}
-                {project ? `Magasins du projet : ${project.name}` : "Chargement..."}
+                <i className="fa-solid fa-warehouse"></i>{" "}
+                {project ? `Entrepôts du projet : ${project.name}` : "Chargement..."}
               </h1>
               <div style={{ display: "flex", gap: "10px" }}>
                 <button className="btn-add-home" onClick={() => setShowModal(true)}>
-                  <i className="fa-solid fa-plus"></i> Ajouter un magasin
+                  <i className="fa-solid fa-plus"></i> Ajouter un entrepôt
                 </button>
               </div>
             </div>
 
-            {/* === Section Statistiques Magasin === */}
+            {/* === Section Statistiques Entrepôt === */}
 <div className="stats-section">
-  <h3>📊 Statistiques des magasins</h3>
+  <h3>📊 Statistiques des entrepôts</h3>
   <div className="stats-grid">
     <div className="stat-card total">
       <h4>Total</h4>
-      <p>{magasins.length}</p>
+      <p>{entrepots.length}</p>
     </div>
     <div className="stat-card occupe">
       <h4>Occupés</h4>
-      <p>{magasins.filter((m) => m.state?.toLowerCase() === "occupé" || m.state?.toLowerCase() === "loué").length}</p>
+      <p>{entrepots.filter((e) => e.state?.toLowerCase() === "occupé" || e.state?.toLowerCase() === "loué").length}</p>
     </div>
     <div className="stat-card disponible">
       <h4>Disponibles</h4>
-      <p>{magasins.filter((m) => m.state?.toLowerCase() === "disponible").length}</p>
+      <p>{entrepots.filter((e) => e.state?.toLowerCase() === "disponible").length}</p>
     </div>
     <div className="stat-card taux">
       <h4>Taux d’occupation</h4>
       <p>
-        {magasins.length > 0
+        {entrepots.length > 0
           ? `${Math.round(
-              (magasins.filter((m) => m.state?.toLowerCase() === "occupé" || m.state?.toLowerCase() === "loué").length /
-                magasins.length) *
+              (entrepots.filter((e) => e.state?.toLowerCase() === "occupé" || e.state?.toLowerCase() === "loué").length /
+                entrepots.length) *
                 100
             )}%`
           : "0%"}
@@ -155,48 +153,59 @@ formData.append("mezanine", mezanine);
   </div>
 </div>
 
-           <div className="magasin-table-section mt-4">
-  <h3>🏪 Liste des magasins</h3>
+       <div className="entrepot-table-section mt-4">
+  <h3>🏭 Liste des entrepôts</h3>
 
   <div className="table-responsive">
     <table className="table">
       <thead>
         <tr>
           <th>Image</th>
-          <th>Nom du magasin</th>
+          <th>Nom</th>
           <th>Référence</th>
           <th>Ville</th>
           <th>Surface</th>
-          <th>Zone commerciale</th>
-          {/* <th>Vitrine</th> */}
+          <th>Hauteur</th>
+          <th>Capacité</th>
           <th>Loyer mensuel</th>
+          <th>Équipements</th>
           <th>Détails</th>
         </tr>
       </thead>
       <tbody>
-        {magasins.length > 0 ? (
-          magasins.map((m) => (
-            <tr key={m._id}>
+        {entrepots.length > 0 ? (
+          entrepots.map((e) => (
+            <tr key={e._id}>
               <td>
                 <img
-                  src={m.img ? `${API}/${m.img}` : "/logo4 copie.jpg"}
-                  alt={m.nameHome}
+                  src={e.img ? `${API}/${e.img}` : "/logo4 copie.jpg"}
+                  alt={e.nameHome}
                   className="table-img"
                 />
               </td>
-              <td>{m.nameHome}</td>
-              <td>{m.reference}</td>
-              <td>{m.city || "N/A"}</td>
-              <td>{m.surfaceMagasin ? `${m.surfaceMagasin} m²` : "N/A"}</td>
-              <td>{m.zoneCommerciale ? "Oui" : "Non"}</td>
-              {/* <td>{m.vitrine ? "Oui" : "Non"}</td> */}
+              <td>{e.nameHome}</td>
+              <td>{e.reference}</td>
+              <td>{e.city || "N/A"}</td>
+              <td>{e.surfaceEntrepot ? `${e.surfaceEntrepot} m²` : "N/A"}</td>
+              <td>{e.hauteurSousPlafond || "N/A"}</td>
+              <td>{e.capaciteStockage || "N/A"}</td>
               <td>
-                {m.rent
-                  ? `${parseInt(m.rent).toLocaleString()} F CFA`
+                {e.rent
+                  ? `${parseInt(e.rent).toLocaleString()} F CFA`
                   : "Non défini"}
               </td>
               <td>
-                <Link to={`/detailHome/${m._id}`}>
+                {[
+                  e.quaiChargement && "Quai",
+                  e.securite && "Sécurité",
+                  e.accesCamion && "Accès camion",
+                  e.ventilation && "Ventilation",
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "Aucun"}
+              </td>
+              <td>
+                <Link to={`/detailHome/${e._id}`}>
                   <button className="btn-details">
                     <i className="fa-solid fa-eye"></i> Voir
                   </button>
@@ -206,8 +215,8 @@ formData.append("mezanine", mezanine);
           ))
         ) : (
           <tr>
-            <td colSpan="9" className="text-center">
-              Aucun magasin trouvé pour ce projet.
+            <td colSpan="10" className="text-center">
+              Aucun entrepôt trouvé pour ce projet.
             </td>
           </tr>
         )}
@@ -218,9 +227,10 @@ formData.append("mezanine", mezanine);
           </div>
         </div>
       </div>
+
       <Footer />
 
-      {/* MODAL */}
+      {/* Modal ajout */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -228,49 +238,33 @@ formData.append("mezanine", mezanine);
               &times;
             </button>
             <form onSubmit={handleSubmit} className="form">
-              <h1 className="page-title"><i className="fa-solid fa-store"></i> Ajouter un magasin</h1>
-              
+              <h1 className="page-title"><i className="fa-solid fa-warehouse"></i> Ajouter un entrepôt</h1>
+
               <label>Nom</label>
               <input type="text" value={nameHome} onChange={(e) => setNameHome(e.target.value)} required />
-              
+
               <label>Référence</label>
               <input type="text" value={reference} onChange={(e) => setReference(e.target.value)} required />
-              
+
               <label>Surface (m²)</label>
-              <input type="text" value={surfaceMagasin} onChange={(e) => setSurfaceMagasin(e.target.value)} />
-              
-              <label>Ville</label>
-              <input type="text" value={city} onChange={(e) => setCity(e.target.value)} required />
-              
-              <label>Quartier</label>
-              <input type="text" value={quarter} onChange={(e) => setQuarter(e.target.value)} />
-              
-              <label>Adresse</label>
-              <input type="text" value={addressHome} onChange={(e) => setAddressHome(e.target.value)} />
-              
-              <label>Loyer</label>
-              <input type="text" value={rent} onChange={(e) => setRent(e.target.value)} />
+              <input type="text" value={surfaceEntrepot} onChange={(e) => setSurfaceEntrepot(e.target.value)} />
 
-              <label>Caution</label>
-              <input type="text" value={guarantee} onChange={(e) => setGuarantee(e.target.value)} />
+              <label>Hauteur sous plafond</label>
+              <input type="text" value={hauteurSousPlafond} onChange={(e) => setHauteurSousPlafond(e.target.value)} />
 
-              <label>Nombre de pièces</label>
-            <input
-              type="number"
-              value={NmbrePieces || ""}
-              onChange={(e) => SetNmbrePieces(e.target.value)}
-            />
-                          
+              <label>Capacité de stockage</label>
+              <input type="text" value={capaciteStockage} onChange={(e) => setCapaciteStockage(e.target.value)} />
+
               <div className="checkbox-grid">
-                <label><input type="checkbox" checked={vitrine} onChange={() => setVitrine(!vitrine)} /> Vitrine</label>
-                <label><input type="checkbox" checked={stockDisponible} onChange={() => setStockDisponible(!stockDisponible)} /> Stock disponible</label>
-                <label><input type="checkbox" checked={zoneCommerciale} onChange={() => setZoneCommerciale(!zoneCommerciale)} /> Zone commerciale</label>
-                <label><input type="checkbox" checked={mezanine} onChange={() => setMezanine(!mezanine)} /> Mezanine</label>
+                <label><input type="checkbox" checked={quaiChargement} onChange={() => setQuaiChargement(!quaiChargement)} /> Quai de chargement</label>
+                <label><input type="checkbox" checked={securite} onChange={() => setSecurite(!securite)} /> Sécurité</label>
+                <label><input type="checkbox" checked={accesCamion} onChange={() => setAccesCamion(!accesCamion)} /> Accès camion</label>
+                <label><input type="checkbox" checked={ventilation} onChange={() => setVentilation(!ventilation)} /> Ventilation</label>
               </div>
 
               <label>Description</label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-              
+
               <button type="submit" className="btn-add-home">Ajouter</button>
             </form>
           </div>

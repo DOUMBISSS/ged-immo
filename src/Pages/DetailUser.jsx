@@ -13,7 +13,7 @@ import UpdateProfilModal from "./Locataires/UpdateProfilModal";
 
 
 export default function DetailUser() {
-  const { user,clearUser } = useUserContext();
+  const { user,clearUser,hasFeature } = useUserContext();
   const { id } = useParams();
   const [person, setPerson] = useState({ home_id: [], rentals: [] });
  const [documents, setDocuments] = useState({});
@@ -26,6 +26,7 @@ export default function DetailUser() {
 const [selectedRent, setSelectedRent] = useState(null);
 const [loadingContract, setLoadingContract] = useState(true);
 const [isOpen, setIsOpen] = useState(false); 
+const [openIndex, setOpenIndex] = useState(null);
 
   // Paiement
   const [date_of_payment, setDate] = useState("");
@@ -54,6 +55,7 @@ const [workCost, setWorkCost] = useState("");
 const [workDate, setWorkDate] = useState("");
 const [showDocumentModal, setShowDocumentModal] = useState(false);
  const [isModalOpen, setIsModalOpen] = useState(false);
+ 
 
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
@@ -63,7 +65,7 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
   // 🔹 Récupération loyers payés
   const fetchRents = async () => {
     try {
-      const res = await fetch(`https://backend-ged-immo.onrender.com/rents/${id}`);
+      const res = await fetch(`http://localhost:4000/rents/${id}`);
       if (!res.ok) throw new Error("Erreur récupération loyers");
 
       const data = await res.json();
@@ -86,7 +88,7 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
     setLoading(true);
     try {
       // 🔹 Récupération locataire
-      const res = await fetch(`https://backend-ged-immo.onrender.com/detail/locataire/${id}`);
+      const res = await fetch(`http://localhost:4000/detail/locataire/${id}`);
       if (!res.ok) throw new Error("Erreur récupération locataire");
 
       const text = await res.text();
@@ -94,7 +96,7 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
       setPerson(data);
 
       // 🔹 Récupération documents
-      const docRes = await fetch(`https://backend-ged-immo.onrender.com/locataire/${id}/documents`);
+      const docRes = await fetch(`http://localhost:4000/locataire/${id}/documents`);
       if (docRes.ok) {
         const docData = await docRes.json();
         if (docData.success && docData.documents) {
@@ -137,22 +139,16 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
     fetchWorks();
   }, [id]);
   
- 
-
-// 🔹 Archiver un locataire avec confirmation
-const handleArchive = async (id) => {
-  if (!user?.token) {
-    toast.error("🔒 Vous devez être connecté pour archiver un locataire.");
-    navigate("/");
-    return;
-  }
-
+const confirmAction = async ({ 
+  message, 
+  warning, 
+  onConfirm, 
+  duration = 8000 
+}) => {
   toast((t) => (
     <div style={{ textAlign: "center" }}>
-      <p style={{ fontWeight: "bold" }}>⚠️ Voulez-vous vraiment archiver ce locataire ?</p>
-      <p style={{ color: "red", fontWeight: "bold", margin: "10px 0" }}>
-        Cette action est irréversible !
-      </p>
+      {message && <p style={{ fontWeight: "bold" }}>{message}</p>}
+      {warning && <p style={{ color: "red", fontWeight: "bold", margin: "10px 0" }}>{warning}</p>}
       <div style={{ marginTop: "10px", display: "flex", justifyContent: "center", gap: "15px" }}>
         <button
           style={{
@@ -163,48 +159,12 @@ const handleArchive = async (id) => {
             fontWeight: "bold"
           }}
           onClick={async () => {
-            try {
-              const res = await fetch(`https://backend-ged-immo.onrender.com/locataire/${id}/archive`, {
-                method: "PATCH",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${user.token}`,
-                },
-              });
-
-              let data;
-              try {
-                data = await res.json();
-              } catch {
-                data = {};
-              }
-
-              if (!res.ok) {
-                if (data.message?.toLowerCase().includes("token") || data.message?.toLowerCase().includes("expiré")) {
-                  toast.error("🔑 Session expirée, veuillez vous reconnecter.");
-                  localStorage.removeItem("token");
-                  clearUser();
-                  navigate("/");
-                  return;
-                }
-                toast.error(data.message || "❌ Erreur lors de l'archivage");
-                return;
-              }
-
-              toast.success("✅ Locataire et tous ses paiements/documents archivés avec succès !");
-              // Ici tu peux éventuellement mettre à jour le state local pour retirer ce locataire
-              navigate("/Mes__archives");
-            } catch (err) {
-              console.error("Erreur archivage locataire:", err);
-              toast.error("❌ Erreur serveur lors de l'archivage");
-            } finally {
-              toast.dismiss(t.id);
-            }
+            await onConfirm();
+            toast.dismiss(t.id);
           }}
         >
-          Oui, archiver
+          Oui
         </button>
-
         <button
           style={{
             background: "#6b7280",
@@ -219,7 +179,53 @@ const handleArchive = async (id) => {
         </button>
       </div>
     </div>
-  ), { duration: 8000 });
+  ), { duration });
+};
+
+// 🔹 Archiver un locataire avec confirmation
+const handleArchive = async (id) => {
+  if (!user?.token) {
+    toast.error("🔒 Vous devez être connecté pour archiver un locataire.");
+    navigate("/");
+    return;
+  }
+
+  confirmAction({
+    message: "⚠️ Voulez-vous vraiment archiver ce locataire ?",
+    warning: "Cette action est irréversible !",
+    onConfirm: async () => {
+      try {
+        const res = await fetch(`http://localhost:4000/locataire/${id}/archive`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${user.token}`,
+          },
+        });
+
+        let data;
+        try { data = await res.json(); } catch { data = {}; }
+
+        if (!res.ok) {
+          if (data.message?.toLowerCase().includes("token") || data.message?.toLowerCase().includes("expiré")) {
+            toast.error("🔑 Session expirée, veuillez vous reconnecter.");
+            localStorage.removeItem("token");
+            clearUser();
+            navigate("/");
+            return;
+          }
+          toast.error(data.message || "❌ Erreur lors de l'archivage");
+          return;
+        }
+
+        toast.success("✅ Locataire et tous ses paiements/documents archivés avec succès !");
+        navigate("/Mes__archives");
+      } catch (err) {
+        console.error("Erreur archivage locataire:", err);
+        toast.error("❌ Erreur serveur lors de l'archivage");
+      }
+    }
+  });
 };
 
   // 🔹 Suppression paiement
@@ -230,7 +236,7 @@ const deleteRent = async (rentId) => {
   }
 
   try {
-    const res = await fetch(`https://backend-ged-immo.onrender.com/rents/${rentId}`, {
+    const res = await fetch(`http://localhost:4000/rents/${rentId}`, {
       method: "DELETE",
       headers: {
         "Authorization": `Bearer ${user.token}`,
@@ -307,7 +313,7 @@ const handleAdd = async () => {
     };
 
     // 🔹 Appel API sécurisé avec token
-    const res = await fetch("https://backend-ged-immo.onrender.com/NewRents", {
+    const res = await fetch("http://localhost:4000/NewRents", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -547,31 +553,79 @@ const toggleYear = (year) => {
                       <button className="btn__updateProfil" onClick={() => setIsModalOpen(true)}>
                           <i className="fa-solid fa-pen-to-square"></i> Mettre à jour
                         </button>
-                      <button className="btn__archive" onClick={() => handleArchive(person._id)}>
-                        <i className="fa-solid fa-box-archive"></i> Archiver
-                      </button>
+                        <button
+                          className="btn__archive"
+                          onClick={() => {
+                            if (!hasFeature("archives")) {
+                              toast.error("🔒 L’archivage est réservé au plan Premium.");
+                              return;
+                            }
+                            handleArchive(person._id);
+                          }}
+                          disabled={!hasFeature("archives")}
+                          style={{
+                            opacity: hasFeature("archives") ? 1 : 0.6,
+                            cursor: hasFeature("archives") ? "pointer" : "not-allowed",
+                            backgroundColor: hasFeature("archives") ? "#2563eb" : "#9ca3af",
+                            border: "none",
+                            color: "#fff",
+                            padding: "0.6rem 1rem",
+                            borderRadius: "6px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.4rem",
+                            transition: "all 0.3s ease",
+                          }}
+                        >
+                          <i className="fa-solid fa-box-archive"></i> Archiver
+                        </button>
                     </div>
                   </div>
 
-                  {/* Infos personnelles */}
-                  <div className="tenant-section">
-                    <h3 className="section-title">Informations personnelles</h3>
-                    <div className="info-grid">
-                      <p><span>Nom :</span> {person.name || "N/A"}</p>
-                      <p><span>Prénom :</span> {person.lastname || "N/A"}</p>
-                      <p><span>Date de naissance :</span> {formatDate(person.birth)}</p>
-                      <p><span>Lieu de naissance :</span> {formatDate(person.lieu)}</p>
-                      <p><span>Sexe :</span> {person.sexe || "N/A"}</p>
-                      <p><span>Nationalité :</span> {person.nationality || "N/A"}</p>
-                      <p><span>Téléphone :</span> {person.tel || "N/A"}</p>
-                      <p><span>Contact d'Urgence :</span> {person.tel_urgency || "N/A"}</p>
-                      <p><span>Email :</span> {person.email || "N/A"}</p>
-                      <p><span>Profession :</span> {person.profession || "N/A"}</p>
-                         <p><span>Ville :</span> {person.city || "N/A"}</p>
-                      <p><span>Domicile :</span> {person.address || "N/A"}</p>
-                      <p><span>Situation matrimoniale :</span> {person.situation || "N/A"}</p>
-                    </div>
-                  </div>
+                 {/* Informations générales */}
+<div className="tenant-section">
+  <div className="tenant-header">
+    <h3 className="section-title">Informations {person.typePersonne === "societe" ? "de la société" : "personnelles"}</h3>
+    <span
+      className={`badge-type ${
+        person.typePersonne === "societe" ? "badge-societe" : "badge-particulier"
+      }`}
+    >
+      {person.typePersonne === "societe" ? "Société" : "Particulier"}
+    </span>
+  </div>
+
+  <div className="info-grid">
+    {person.typePersonne === "societe" ? (
+      <>
+        <p><span>Raison sociale :</span> {person.raisonSociale || "N/A"}</p>
+        <p><span>Responsable :</span> {person.responsable || "N/A"}</p>
+        <p><span>RCCM :</span> {person.rccm || "N/A"}</p>
+        <p><span>IFU :</span> {person.ifu || "N/A"}</p>
+        <p><span>Siège social :</span> {person.siegeSocial || "N/A"}</p>
+        <p><span>Domaine d’activité :</span> {person.domaineActivite || "N/A"}</p>
+        <p><span>Téléphone :</span> {person.tel || "N/A"}</p>
+        <p><span>Email :</span> {person.email || "N/A"}</p>
+      </>
+    ) : (
+      <>
+        <p><span>Nom :</span> {person.name || "N/A"}</p>
+        <p><span>Prénom :</span> {person.lastname || "N/A"}</p>
+        <p><span>Date de naissance :</span> {formatDate(person.birth)}</p>
+        <p><span>Lieu de naissance :</span> {person.lieu || "N/A"}</p>
+        <p><span>Sexe :</span> {person.sexe || "N/A"}</p>
+        <p><span>Nationalité :</span> {person.nationality || "N/A"}</p>
+        <p><span>Profession :</span> {person.profession || "N/A"}</p>
+        <p><span>Situation matrimoniale :</span> {person.situation || "N/A"}</p>
+        <p><span>Téléphone :</span> {person.tel || "N/A"}</p>
+        <p><span>Contact d'urgence :</span> {person.tel_urgency || "N/A"}</p>
+        <p><span>Email :</span> {person.email || "N/A"}</p>
+        <p><span>Ville :</span> {person.city || "N/A"}</p>
+        <p><span>Adresse :</span> {person.address || "N/A"}</p>
+      </>
+    )}
+  </div>
+</div>
 
                   {/* Pièces d’identité */}
                   <div className="tenant-section">
@@ -753,49 +807,98 @@ const toggleYear = (year) => {
                 </div>
 
                   {/* Logement */}
-                  <div className="tenant-section">
-                    <h3 className="section-title">Logement attribué</h3>
-                    {person.homeId ? (
-                      <div className="home-card">
-                        <div className="home-images" style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                          {person.homeId.img && (
-                            <img
-                              src={person.homeId.img.startsWith("http") ? person.homeId.img : `https://backend-ged-immo.onrender.com/${person.homeId.img}`}
-                              alt="Home principale"
-                              className="home-image"
-                              style={{ width: "150px", height: "150px", objectFit: "cover" }}
-                            />
-                          )}
-                          {Array.isArray(person.homeId.images) && person.homeId.images.length > 0 && person.homeId.images.map((url, idx) => (
-                            <img
-                              key={idx}
-                              src={url.startsWith("http") ? url : `https://backend-ged-immo.onrender.com/${url}`}
-                              alt={`Home secondaire ${idx}`}
-                              className="home-image"
-                              style={{ width: "150px", height: "150px", objectFit: "cover" }}
-                            />
-                          ))}
-                          {!person.homeId.img && (!person.homeId.images || person.homeId.images.length === 0) && (
-                            <p>Aucune image disponible</p>
-                          )}
-                        </div>
-                        <div className="home-info">
-                          <p><span>Nom :</span> {person.homeId.nameHome || "N/A"}</p>
-                          <p><span>Référence :</span> {person.homeId.reference || "N/A"}</p>
-                          <p><span>Type :</span> {person.homeId.categorie || "N/A"}</p>
-                          <p><span>Adresse :</span> {person.homeId.addressHome || "N/A"}</p>
-                          <p><span>Ville :</span> {person.homeId.city || "N/A"}</p>
-                          <p><span>Nombre de pièces :</span> {person.homeId.NmbrePieces || "N/A"}</p>
-                          <p><span>Loyer mensuel :</span> {person.homeId.rent ? Number(person.homeId.rent).toLocaleString() : "N/A"} FCFA</p>
-                          <p><span>Caution :</span> {person.homeId.guarantee ? Number(person.homeId.guarantee).toLocaleString() : "N/A"} FCFA</p>
-                          <p><span>Statut :</span> {person.homeId.state || "Occupé"}</p>
-                          <p><span>Description :</span> {person.homeId.description || "Aucune description"}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="no-home">Aucun logement attribué</p>
-                    )}
-                  </div>
+                <div className="tenant-section">
+          <h3 className="section-title">Logement attribué</h3>
+  {person.homeId ? (
+    <div className="home-card">
+      {/* Images */}
+      <div className="home-images" style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+        {person.homeId.img && (
+          <img
+            src={person.homeId.img.startsWith("http") ? person.homeId.img : `https://backend-ged-immo.onrender.com/${person.homeId.img}`}
+            alt="Principal"
+            className="home-image"
+            style={{ width: "150px", height: "150px", objectFit: "cover" }}
+          />
+        )}
+        {Array.isArray(person.homeId.images) && person.homeId.images.length > 0 && person.homeId.images.map((url, idx) => (
+          <img
+            key={idx}
+            src={url.startsWith("http") ? url : `https://backend-ged-immo.onrender.com/${url}`}
+            alt={`Secondaire ${idx}`}
+            className="home-image"
+            style={{ width: "150px", height: "150px", objectFit: "cover" }}
+          />
+        ))}
+        {!person.homeId.img && (!person.homeId.images || person.homeId.images.length === 0) && (
+          <p>Aucune image disponible</p>
+        )}
+      </div>
+
+      {/* Infos communes */}
+      <div className="home-info">
+        <p><span>Nom :</span> {person.homeId.nameHome || "N/A"}</p>
+        <p><span>Type :</span> {person.homeId.nameHomeType || "N/A"}</p>
+        <p><span>Référence :</span> {person.homeId.reference || "N/A"}</p>
+        <p><span>Categorie :</span> {person.homeId.categorie || "N/A"}</p>
+        <p><span>Sous-catégorie :</span> {person.homeId.sousCategorie || "N/A"}</p>
+        <p><span>Adresse :</span> {person.homeId.addressHome || "N/A"}</p>
+        <p><span>Ville :</span> {person.homeId.city || "N/A"}</p>
+        <p><span>Quartier :</span> {person.homeId.quarter || "N/A"}</p>
+        <p><span>Description :</span> {person.homeId.description || "Aucune description"}</p>
+        <p><span>Loyer :</span> {person.homeId.rent ? Number(person.homeId.rent).toLocaleString() + " FCFA" : "N/A"}</p>
+        <p><span>Prix :</span> {person.homeId.price ? Number(person.homeId.price).toLocaleString() + " FCFA" : "N/A"}</p>
+        <p><span>Caution :</span> {person.homeId.guarantee ? Number(person.homeId.guarantee).toLocaleString() + " FCFA" : "N/A"}</p>
+        {/* <p><span>Charges :</span> {person.homeId.charges || "N/A"}</p> */}
+        <p><span>Statut :</span> {person.homeId.state || "Occupé"}</p>
+      </div>
+
+      {/* Infos spécifiques selon type */}
+      {person.homeId.nameHomeType === "Appartement" || person.homeId.nameHomeType === "Maison" ? (
+        <div className="home-specific">
+          <p><span>Nombre de pièces :</span> {person.homeId.NmbrePieces || "N/A"}</p>
+        </div>
+      ) : null}
+
+      {person.homeId.nameHomeType === "Bureau" && (
+        <div className="bureau-info">
+          <p><span>Surface :</span> {person.homeId.surfaceBureau || "N/A"} m²</p>
+          <p><span>Nombre de bureaux :</span> {person.homeId.NmbreBureaux || "N/A"}</p>
+          <p><span>Salle de réunion :</span> {person.homeId.salleReunion ? "Oui" : "Non"}</p>
+          <p><span>Climatisation :</span> {person.homeId.climatisation ? "Oui" : "Non"}</p>
+          <p><span>Fibre optique :</span> {person.homeId.fibreOptique ? "Oui" : "Non"}</p>
+          <p><span>Parking :</span> {person.homeId.parking ? "Oui" : "Non"}</p>
+          <p><span>Ascenseur :</span> {person.homeId.ascenseur ? "Oui" : "Non"}</p>
+          <p><span>Mezzanine :</span> {person.homeId.mezanine ? "Oui" : "Non"}</p>
+        </div>
+      )}
+
+      {person.homeId.nameHomeType === "Magasin" && (
+        <div className="magasin-info">
+          <p><span>Surface :</span> {person.homeId.surfaceMagasin || "N/A"} m²</p>
+          <p><span>Vitrine :</span> {person.homeId.vitrine ? "Oui" : "Non"}</p>
+          <p><span>Stock disponible :</span> {person.homeId.stockDisponible ? "Oui" : "Non"}</p>
+          <p><span>Accès routier :</span> {person.homeId.accesRoutier || "N/A"}</p>
+          <p><span>Zone commerciale :</span> {person.homeId.zoneCommerciale ? "Oui" : "Non"}</p>
+        </div>
+      )}
+
+      {person.homeId.nameHomeType === "Entrepôt" && (
+        <div className="entrepot-info">
+          <p><span>Surface :</span> {person.homeId.surfaceEntrepot || "N/A"} m²</p>
+          <p><span>Hauteur sous plafond :</span> {person.homeId.hauteurSousPlafond || "N/A"} m</p>
+          <p><span>Capacité de stockage :</span> {person.homeId.capaciteStockage || "N/A"}</p>
+          <p><span>Quai de chargement :</span> {person.homeId.quaiChargement ? "Oui" : "Non"}</p>
+          <p><span>Sécurité :</span> {person.homeId.securite ? "Oui" : "Non"}</p>
+          <p><span>Accès camion :</span> {person.homeId.accesCamion ? "Oui" : "Non"}</p>
+          <p><span>Ventilation :</span> {person.homeId.ventilation ? "Oui" : "Non"}</p>
+        </div>
+      )}
+    </div>
+  ) : (
+    <p className="no-home">Aucun logement attribué</p>
+  )}
+</div>
 
 <div className="tenant-section paiement-section">
   <h3 className="section-title">Détails des paiements</h3>
@@ -986,61 +1089,157 @@ const toggleYear = (year) => {
   )}
 </div>
 
-{/* travaux */}
 <div className="tenant-section">
-  <h3 className="section-title">Travaux maison</h3>
+  <h3 className="section-title">🛠️ Travaux et demandes de réparation</h3>
 
   <div className="works-list">
     {works.length === 0 ? (
       <p>Aucun travail enregistré</p>
     ) : (
-      works.map((work) => {
-        // chaque travail a son propre état
+      works.map((work, index) => {
+        // chaque travail gère son ouverture individuellement
+        const isOpen = openIndex === index;
 
         return (
           <div key={work._id} className="work-card">
             {/* --- En-tête cliquable --- */}
             <div
               className="work-header"
-              onClick={() => setIsOpen(!isOpen)}
-              style={{ cursor: "pointer" }}
+              onClick={() => setOpenIndex(isOpen ? null : index)}
+              style={{
+                cursor: "pointer",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
             >
-              <p>
-                <strong>Titre :</strong> {work.title}
+              <p style={{ fontWeight: "600" }}>
+                {work.title || "Travail sans titre"}
               </p>
 
-              <div className="work-actions">
+              <div className="work-actions" style={{ display: "flex", gap: "10px" }}>
                 <i
-                  className={`fa-solid ${
-                    isOpen ? "fa-chevron-up" : "fa-chevron-down"
-                  } toggle-icon`}
+                  className={`fa-solid ${isOpen ? "fa-chevron-up" : "fa-chevron-down"}`}
+                  style={{ color: "#2563eb" }}
                 ></i>
                 <i
                   className="fa-solid fa-trash delete-icon"
                   title="Supprimer"
+                  style={{ color: "#dc2626", cursor: "pointer" }}
                   onClick={(e) => {
-                    e.stopPropagation(); // évite d’ouvrir le dépliant
+                    e.stopPropagation();
                     confirmDeleteWork(work._id);
                   }}
                 ></i>
               </div>
             </div>
 
-            {/* --- Contenu dépliant --- */}
-            <div className={`accordion-content ${isOpen ? "open" : ""}`}>
-              <p>
-                <strong>Description :</strong> {work.description || "N/A"}
-              </p>
-              <p>
-                <strong>Coût :</strong>{" "}
-                {work.cost ? `${work.cost.toLocaleString()} FCFA` : "N/A"}
-              </p>
+            {/* --- Contenu du dépliant --- */}
+            <div
+              className={`accordion-content ${isOpen ? "open" : ""}`}
+              style={{
+                maxHeight: isOpen ? "1000px" : "0",
+                overflow: "hidden",
+                transition: "max-height 0.3s ease",
+                marginTop: isOpen ? "10px" : "0",
+              }}>
+              <p><strong>Description :</strong> {work.description || "Aucune description"}</p>
+
+              {/* Coût */}
+              {work.cost > 0 && (
+                <p><strong>Coût :</strong> {work.cost.toLocaleString()} FCFA</p>
+              )}
+
+              {/* Date */}
               <p>
                 <strong>Date :</strong>{" "}
-                {work.date
-                  ? new Date(work.date).toLocaleDateString("fr-FR")
+                {work.createdAt
+                  ? new Date(work.createdAt).toLocaleDateString("fr-FR")
                   : "N/A"}
               </p>
+
+              {/* Statut */}
+              <p>
+                <strong>Statut :</strong>{" "}
+                <span
+                  style={{
+                    color:
+                      work.status === "Accepté" || work.status === "Terminé"
+                        ? "#16a34a"
+                        : work.status === "Refusé"
+                        ? "#dc2626"
+                        : "#f59e0b",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {work.status || "En attente"}
+                </span>
+              </p>
+
+              {/* Réponse du propriétaire */}
+              {work.adminResponse && (
+                <p><strong>Réponse du propriétaire :</strong> {work.adminResponse}</p>
+              )}
+
+              {/* Commentaire admin */}
+              {work.adminComment && (
+                <p><strong>Note interne :</strong> {work.adminComment}</p>
+              )}
+               {work.adminResponse && (
+                  <p><strong>Réponse :</strong> {work.adminResponse}</p>
+                )}
+            {work.updatedBy && (
+              <p style={{ fontStyle: "italic", fontSize: "14px", marginTop: "3px" }}>
+                Réponse donnée par : {work.updatedBy}
+              </p>
+            )}
+
+              {/* Pièces jointes */}
+              {work.attachments?.length > 0 && (
+                <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                  {work.attachments.map((url, i) => (
+                    <img
+                      key={i}
+                      src={url.startsWith("http") ? url : `http://localhost:4000/${url}`}
+                      alt={`Pièce jointe ${i + 1}`}
+                      style={{
+                        width: "70px",
+                        height: "70px",
+                        borderRadius: "6px",
+                        objectFit: "cover",
+                        border: "1px solid #e5e7eb",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* ✅ Facture PDF */}
+              {work.invoice && (
+                <div style={{ marginTop: "12px" }}>
+                  <a
+                    href={
+                      work.invoice.startsWith("http")
+                        ? work.invoice
+                        : `http://localhost:4000/${work.invoice}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download
+                    style={{
+                      display: "inline-block",
+                      padding: "6px 12px",
+                      background: "#2563eb",
+                      color: "white",
+                      borderRadius: "6px",
+                      textDecoration: "none",
+                      fontWeight: "500",
+                    }}
+                  >
+                    📄 Télécharger la facture
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -1048,6 +1247,7 @@ const toggleYear = (year) => {
     )}
   </div>
 
+  {/* Bouton ajouter un travail */}
   <button className="btn-add" onClick={() => setShowWorkModal(true)}>
     <i className="fa-solid fa-plus"></i> Ajouter un travail effectué
   </button>
@@ -1610,6 +1810,19 @@ tr:hover .rent-cell {
   max-height: 500px;
   opacity: 1;
   padding: 12px 16px;
+}
+  .badge-type {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  color: #fff;
+  font-size: 0.9rem;
+}
+.badge-particulier {
+  background-color: #16a34a; /* vert */
+}
+.badge-societe {
+  background-color: #2563eb; /* bleu */
 }
       `}</style>
     </div>

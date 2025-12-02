@@ -1,52 +1,128 @@
 import React, { useState } from "react";
 import { toast } from "react-toastify";
-import { useUserContext } from "../../contexts/UserContext"
+import { useUserContext } from "../../contexts/UserContext";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 Mo
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
-export default function DuplicateHomeModal({
-  home,
-  projectId,
-  adminId,
-  onClose,
-  onDuplicated,
-}) {
-  const [formData, setFormData] = useState({
-    reference: home.reference ? `${home.reference}-copie` : "",
-    nameHome: home.nameHome || "",
-    categorie: home.categorie || "",
-    addressHome: home.addressHome || "",
-    city: home.city || "",
-    quarter: home.quarter || "",
-    rent: home.rent || "",
-    description: home.description || "",
-    guarantee: home.guarantee || "",
-    observations: home.observations || "",
-    state: "Disponible",
-    NmbrePieces: home.NmbrePieces || "",
-    works: home.works || [],
-  });
+const fieldsByCategory = {
+  immobilier: [
+    { name: "nameHome", label: "Nom du logement", type: "text", required: true },
+    { name: "reference", label: "Référence", type: "text" },
+    { name: "NmbrePieces", label: "Nombre de pièces", type: "text" },
+    { name: "rent", label: "Loyer (FCFA)", type: "text" },
+    { name: "guarantee", label: "Caution", type: "text" },
+    { name: "works", label: "Travaux (séparés par virgules)", type: "textarea" },
+    { name: "description", label: "Description", type: "textarea" },
+    { name: "city", label: "Ville", type: "text" },
+    { name: "quarter", label: "Quartier", type: "text" },
+    { name: "addressHome", label: "Adresse", type: "text" },
+    { name: "observations", label: "Observations", type: "textarea" },
+    { name: "state", label: "Disponibilité", type: "select", options: ["Disponible"] },
+  ],
+  bureau: [
+    { name: "nameHome", label: "Nom du bureau", type: "text", required: true },
+    { name: "reference", label: "Référence", type: "text" },
+    { name: "rent", label: "Loyer (FCFA)", type: "text" },
+    { name: "description", label: "Description", type: "textarea" },
+    { name: "city", label: "Ville", type: "text" },
+    { name: "quarter", label: "Quartier", type: "text" },
+    { name: "addressHome", label: "Adresse", type: "text" },
+    { name: "state", label: "Disponibilité", type: "select", options: ["Disponible"] },
+    { name: "NmbrePieces", label: "Nombre de bureaux", type: "text" },
+    { name: "salleReunion", label: "Salle de réunion", type: "checkbox" },
+    { name: "climatisation", label: "Climatisation", type: "checkbox" },
+    { name: "fibreOptique", label: "Fibre optique", type: "checkbox" },
+    { name: "parking", label: "Parking", type: "checkbox" },
+    { name: "ascenseur", label: "Ascenseur", type: "checkbox" },
+  ],
+ magasin: [
+    { name: "nameHome", label: "Nom du magasin", type: "text", required: true },
+    { name: "reference", label: "Référence", type: "text" },
+    { name: "rent", label: "Loyer (FCFA)", type: "text" },
+    { name: "surfaceMagasin", label: "Surface (m²)", type: "text" },
+    { name: "NmbrePieces", label: "Nombre de pièces", type: "text" },
+    { name: "guarantee", label: "Caution", type: "text" },
+    { name: "mezanine", label: "Mezanine (m²)", type: "checkbox" },
+    { name: "accesRoutier", label: "Accès routier", type: "text" },
+    { name: "vitrine", label: "Vitrine", type: "checkbox" },
+    { name: "stockDisponible", label: "Stock disponible", type: "checkbox" },
+    { name: "zoneCommerciale", label: "Zone commerciale", type: "checkbox" },
+    { name: "description", label: "Description", type: "textarea" },
+    { name: "city", label: "Ville", type: "text" },
+    { name: "quarter", label: "Quartier", type: "text" },
+    { name: "addressHome", label: "Adresse", type: "text" },
+    { name: "state", label: "Disponibilité", type: "select", options: ["Disponible"] },
+  ],
+  entrepot: [
+    { name: "nameHome", label: "Nom de l'entrepôt", type: "text", required: true },
+    { name: "reference", label: "Référence", type: "text" },
+    { name: "rent", label: "Loyer (FCFA)", type: "text" },
+    { name: "surface", label: "Surface (m²)", type: "text" },
+    { name: "description", label: "Description", type: "textarea" },
+    { name: "city", label: "Ville", type: "text" },
+    { name: "quarter", label: "Quartier", type: "text" },
+    { name: "addressHome", label: "Adresse", type: "text" },
+    { name: "state", label: "Disponibilité", type: "select", options: ["Disponible"] },
+    { name: "NmbrePieces", label: "Nombre de bureaux", type: "text" },
+    { name: "salleReunion", label: "Salle de réunion", type: "checkbox" },
+    { name: "climatisation", label: "Climatisation", type: "checkbox" },
+    { name: "fibreOptique", label: "Fibre optique", type: "checkbox" },
+    { name: "parking", label: "Parking", type: "checkbox" },
+    { name: "ascenseur", label: "Ascenseur", type: "checkbox" },
+  ],
+};
 
-  const { user } = useUserContext(); // ✅ récupère le user connecté
+export default function DuplicateHomeModal({ home, projectId, onClose, onDuplicated }) {
+  const { user } = useUserContext();
+
+// 🔹 formData harmonisé
+const [formData, setFormData] = useState({
+  reference: home.reference ? `${home.reference}-copie` : "",
+  nameHome: home.nameHome || "",
+  categorie: home.categorie || "",
+  addressHome: home.addressHome || "",
+  city: home.city || "",
+  quarter: home.quarter || "",
+  rent: home.rent || "",
+  description: home.description || "",
+  guarantee: home.guarantee || "",
+  observations: home.observations || "",
+  state: home.state || "Disponible",
+  NmbrePieces: home.NmbrePieces || "", // pour tous types
+  works: home.works || [],
+  surface: home.surface || "",
+  surfaceMagasin: home.surfaceMagasin || "",
+   accesRoutier: home.accesRoutier || "",
+  mezanine: home.mezanine || "",
+    vitrine: home.vitrine || false,
+  stockDisponible: home.stockDisponible || false,
+  zoneCommerciale: home.zoneCommerciale || false,
+  salleReunion: home.salleReunion || false,
+  climatisation: home.climatisation || false,
+  fibreOptique: home.fibreOptique || false,
+  parking: home.parking || false,
+  ascenseur: home.ascenseur || false,
+});
+
   const [img, setImg] = useState(null);
   const [imgPreview, setImgPreview] = useState(null);
   const [images, setImages] = useState([]);
   const [imagesPreview, setImagesPreview] = useState([]);
 
-  const piecesOptions = {
-    Appartement: ["2","3","4","5","6","7","8","9","10"],
-    Maison: ["3","4","5","6","7","8","9","10"],
-    Studio: ["1"],
-    Villa: ["3","4","5","6","7","8","9","10"],
-  };
-
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
-  // 🔹 Image principale
+  const handleWorksChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, works: value.split(",").map((s) => s.trim()) }));
+  };
+
   const handleMainImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -58,10 +134,9 @@ export default function DuplicateHomeModal({
     reader.readAsDataURL(file);
   };
 
-  // 🔹 Images secondaires
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    const validFiles = files.filter(f => {
+    const validFiles = files.filter((f) => {
       if (!ALLOWED_TYPES.includes(f.type)) {
         toast.error(`${f.name} : format invalide`);
         return false;
@@ -73,291 +148,172 @@ export default function DuplicateHomeModal({
       return true;
     });
     setImages(validFiles);
-    setImagesPreview(validFiles.map(f => URL.createObjectURL(f)));
+    setImagesPreview(validFiles.map((f) => URL.createObjectURL(f)));
   };
 
-  // 🔹 Champs tableau works
-  const handleWorksChange = (e) => {
-    const value = e.target.value;
-    setFormData(prev => ({
-      ...prev,
-      works: value.split(",").map(s => s.trim())
-    }));
-  };
+  const mainImage =
+    home.img?.startsWith("http") ? home.img : `http://localhost:4000/${home.img}`;
+  const existingImages =
+    home.images?.map((img) =>
+      img.startsWith("http") ? img : `http://localhost:4000/${img}`
+    ) || [];
 
-  const resetForm = () => {
-    setFormData({
-      reference: home.reference ? `${home.reference}-copie` : "",
-      nameHome: home.nameHome || "",
-      categorie: home.categorie || "",
-      addressHome: home.addressHome || "",
-      city: home.city || "",
-      quarter: home.quarter || "",
-      rent: home.rent || "",
-      description: home.description || "",
-      guarantee: home.guarantee || "",
-      observations: home.observations || "",
-      state: "Disponible",
-      NmbrePieces: home.NmbrePieces || "",
-      works: home.works || [],
-    });
-    setImg(null);
-    setImgPreview(null);
-    setImages([]);
-    setImagesPreview([]);
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!user?.token) return toast.error("Session expirée ou utilisateur non connecté !");
 
+    try {
+      const form = new FormData();
+      form.append("projectId", projectId);
 
+      Object.entries(formData).forEach(([key, value]) => {
+        form.append(key, Array.isArray(value) ? JSON.stringify(value) : value);
+      });
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+      if (img) form.append("img", img);
+      images.forEach((f) => form.append("images", f));
 
-  if (!user?.token) {
-    return toast.error("Session expirée ou utilisateur non connecté !");
-  }
-
-  try {
-    const form = new FormData();
-    form.append("projectId", projectId);
-
-    // Champs modifiables
-    Object.entries(formData).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        form.append(key, JSON.stringify(value));
-      } else {
-        form.append(key, value);
-      }
-    });
-
-    // Images
-    if (img) form.append("img", img);
-    if (images.length > 0) images.forEach((file) => form.append("images", file));
-
-    const response = await fetch(
-      `https://backend-ged-immo.onrender.com/homes/${home._id}/duplicate`,
-      {
+      const response = await fetch(`http://localhost:4000/homes/${home._id}/duplicate`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${user.token}`, // ✅ token pour authenticate()
-        },
+        headers: { Authorization: `Bearer ${user.token}` },
         body: form,
-      }
-    );
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (data.success) {
-      toast.success("Maison dupliquée avec succès !");
-      onDuplicated(data.home);
-      resetForm();
-      onClose();
-    } else {
-      toast.error(data.message || "Erreur lors de la duplication");
+      if (data.success) {
+        toast.success("Bien dupliqué avec succès !");
+        onDuplicated(data.home);
+        onClose();
+      } else toast.error(data.message || "Erreur lors de la duplication");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur lors de la duplication du bien");
     }
-  } catch (err) {
-    console.error("Erreur duplication maison :", err);
-    toast.error("Erreur lors de la duplication de la maison");
-  }
-};
+  };
+
+  const currentFields =
+    fieldsByCategory[home.categorie?.toLowerCase()] || fieldsByCategory.immobilier;
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content scrollable-modal">
         <button className="modal-close" onClick={onClose}>&times;</button>
-
         <form onSubmit={handleSubmit} className="form">
-          <h1 className="page-title"><i className="fa fa-copy"></i> Dupliquer une propriété</h1>
+          <h2 className="modal-title">📋 Dupliquer la propriété</h2>
 
-          {/* Informations générales */}
-          <section className="form-section">
-            <h3 className="form-section__title">Informations générales</h3>
-            <div className="form-row">
-              <div className="form-col">
-                <label>Nom du logement</label>
-                <input
-                  name="nameHome"
-                  type="text"
-                  className="form-input"
-                  value={formData.nameHome}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="form-col">
-                <label>Référence (N° Porte)</label>
-                <input
-                  name="reference"
-                  type="text"
-                  className="form-input"
-                  value={formData.reference}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-col">
-                <label>Catégorie</label>
-                <select
-                  name="categorie"
-                  className="form-input"
-                  value={formData.categorie}
-                  onChange={(e) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      categorie: e.target.value,
-                      NmbrePieces: "",
-                    }));
-                  }}
-                  required
-                >
-                  <option value="">Sélectionner</option>
-                  {Object.keys(piecesOptions).map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-col">
-                <label>Nombre de pièces</label>
-                <select
-                  name="NmbrePieces"
-                  className="form-input"
-                  value={formData.NmbrePieces}
-                  onChange={handleChange}
-                  required
-                  disabled={!formData.categorie}
-                >
-                  <option value="">Sélectionner</option>
-                  {formData.categorie &&
-                    piecesOptions[formData.categorie].map(p => (
-                      <option key={p} value={p}>{p}</option>
+          <div className="form-grid">
+            {currentFields.map((field) => (
+              <div className="form-group" key={field.name}>
+                <label>{field.label}</label>
+                {field.type === "textarea" ? (
+                  <textarea
+                    name={field.name}
+                    value={formData[field.name] || ""}
+                    onChange={field.name === "works" ? handleWorksChange : handleChange}
+                    required={field.required}
+                  />
+                ) : field.type === "select" ? (
+                  <select
+                    name={field.name}
+                    value={formData[field.name]}
+                    onChange={handleChange}
+                    required={field.required}
+                  >
+                    {field.options.map((opt, idx) => (
+                      <option key={idx} value={opt}>{opt}</option>
                     ))}
-                </select>
+                  </select>
+                ) : field.type === "checkbox" ? (
+                  <input
+                    type="checkbox"
+                    name={field.name}
+                    checked={formData[field.name] || false}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  <input
+                    name={field.name}
+                    type={field.type}
+                    value={formData[field.name] || ""}
+                    onChange={handleChange}
+                    required={field.required}
+                  />
+                )}
               </div>
+            ))}
+
+            <div className="form-group">
+              <label>Image principale</label>
+              <input type="file" onChange={handleMainImageChange} />
+              {(imgPreview || mainImage) && (
+                <img src={imgPreview || mainImage} alt="principale" className="img-preview" />
+              )}
             </div>
 
-            <label>Description</label>
-            <textarea
-              name="description"
-              className="form-input"
-              value={formData.description}
-              onChange={handleChange}
-            />
-
-            <label>Travaux (séparés par des virgules)</label>
-            <input
-              type="text"
-              name="works"
-              className="form-input"
-              value={Array.isArray(formData.works) ? formData.works.join(", ") : formData.works}
-              onChange={handleWorksChange}
-            />
-          </section>
-
-          {/* Localisation */}
-          <section className="form-section">
-            <h3 className="form-section__title">Localisation</h3>
-            <div className="form-row">
-              <div className="form-col">
-                <label>Ville</label>
-                <input
-                  name="city"
-                  type="text"
-                  className="form-input"
-                  value={formData.city}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-col">
-                <label>Quartier</label>
-                <input
-                  name="quarter"
-                  type="text"
-                  className="form-input"
-                  value={formData.quarter}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-col">
-                <label>Adresse</label>
-                <input
-                  name="addressHome"
-                  type="text"
-                  className="form-input"
-                  value={formData.addressHome}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Financier */}
-          <section className="form-section">
-            <h3 className="form-section__title">Financier</h3>
-            <div className="form-row">
-              <div className="form-col">
-                <label>Loyer mensuel (FCFA)</label>
-                <input name="rent" type="text" className="form-input" value={formData.rent} onChange={handleChange} />
-              </div>
-              <div className="form-col">
-                <label>Caution</label>
-                <input name="guarantee" type="text" className="form-input" value={formData.guarantee} onChange={handleChange} />
-              </div>
-            </div>
-          </section>
-
-          {/* Observations */}
-          <section>
-            <label>Observations</label>
-            <textarea name="observations" className="form-input" value={formData.observations} onChange={handleChange} />
-          </section>
-
-          {/* Disponibilité */}
-          <section>
-            <div className="form-col">
-              <label>Disponibilité</label>
-              <select name="state" className="form-input" value={formData.state} onChange={handleChange} required>
-                <option value="Disponible">Disponible</option>
-                {/* <option value="Occupé">Occupé</option> */}
-              </select>
-            </div>
-          </section>
-
-          {/* Images */}
-          <section className="form-section">
-            <h3 className="form-section__title">Images</h3>
-            <div className="form-row">
-              <div className="form-col">
-                <label>Image principale</label>
-                <input type="file" onChange={handleMainImageChange} />
-              </div>
-              <div className="form-col">
-                <label>Images secondaires</label>
-                <input type="file" multiple onChange={handleFileChange} />
-              </div>
-            </div>
-
-            {/* Aperçus */}
-            <div style={{ marginTop: 10 }}>
-              {imgPreview || home.img ? (
-                <>
-                  <p style={{ color: imgPreview ? "#4b00cc" : "#555" }}>
-                    Image principale {imgPreview ? "sélectionnée" : "actuelle"} :
-                  </p>
-                  <img src={imgPreview || home.img} alt="image principale" style={{ width: 150, borderRadius: 5 }} />
-                </>
-              ) : null}
-
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-                {(imagesPreview.length > 0 ? imagesPreview : home.images || []).map((src, idx) => (
-                  <img key={idx} src={src} alt="image secondaire" style={{ width: 100, borderRadius: 5 }} />
+            <div className="form-group">
+              <label>Images secondaires</label>
+              <input type="file" multiple onChange={handleFileChange} />
+              <div className="images-preview">
+                {(imagesPreview.length > 0 ? imagesPreview : existingImages).map((src, idx) => (
+                  <img key={idx} src={src} alt="secondaire" className="img-preview" />
                 ))}
               </div>
             </div>
-          </section>
+          </div>
 
-          <button type="submit" className="btn-add-home">
-            Confirmer la duplication
-          </button>
+          <button type="submit" className="btn-submit">✅ Confirmer la duplication</button>
         </form>
       </div>
+
+      <style>{`
+        .modal-overlay {
+          position: fixed; top:0; left:0; width:100%; height:100%;
+          background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center;
+          z-index:9999; padding:20px;
+        }
+        .modal-content {
+          background:#fff; border-radius:12px; width:100%; max-width:800px;
+          box-shadow:0 15px 30px rgba(0,0,0,0.2); overflow:hidden; position:relative;
+        }
+        .scrollable-modal {
+          max-height:90vh; overflow-y:auto; padding:30px;
+        }
+        .modal-close {
+          position:absolute; top:15px; right:15px; font-size:28px; border:none;
+          background:none; cursor:pointer; color:#888;
+        }
+        .modal-title {
+          font-size:26px; margin-bottom:25px; text-align:center; color:#333;
+        }
+        .form-grid {
+          display:grid; grid-template-columns:1fr 1fr; gap:20px;
+        }
+        .form-group {
+          display:flex; flex-direction:column;
+        }
+        .form-group label {
+          margin-bottom:6px; font-weight:500; color:#555;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+          padding:10px; border-radius:8px; border:1px solid #ccc;
+          font-size:14px; outline:none; transition:0.2s border;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+          border-color:#6a1fff;
+        }
+        .form-group textarea { resize:vertical; min-height:60px; }
+        .form-group input[type="checkbox"] { width:20px; height:20px; margin-top:5px; }
+        .img-preview { width:80px; border-radius:8px; margin-top:10px; object-fit:cover; }
+        .images-preview { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+        .btn-submit {
+          grid-column:span 2; margin-top:20px; padding:14px; background:#4b00cc;
+          color:#fff; border:none; border-radius:10px; font-size:16px; cursor:pointer;
+          transition:0.3s background;
+        }
+        .btn-submit:hover { background:#6a1fff; }
+        @media(max-width:700px) { .form-grid { grid-template-columns:1fr; } }
+      `}</style>
     </div>
   );
 }

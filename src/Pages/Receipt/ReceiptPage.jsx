@@ -3,22 +3,38 @@ import { useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import { QRCodeCanvas } from "qrcode.react";
 
-const API ="https://backend-ged-immo.onrender.com";
+const API ="http://localhost:4000";
 
 export default function ReceiptPage() {
+
+    const formatCurrency = (amount) =>
+    Number(amount || 0).toLocaleString("fr-FR") + " FCFA";
+  const formatDate = (dateStr) =>
+    dateStr ? new Date(dateStr).toLocaleDateString("fr-FR") : "N/A";
+  const formatMonth = (dateStr) =>
+    dateStr
+      ? new Date(dateStr).toLocaleDateString("fr-FR", {
+          month: "long",
+          year: "numeric",
+        })
+      : "N/A";
+
   const { token } = useParams();
   const [receipt, setReceipt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const componentRef = useRef();
 
-  // 📌 Génération du PDF
-  const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
-    documentTitle: receipt
-      ? `Reçu_${receipt.tenantName || "locataire"}_${receipt.homeName || ""}`
+
+
+const handlePrint = useReactToPrint({
+  contentRef: componentRef, 
+  documentTitle:
+    receipt
+      ? `Reçu - ${receipt.tenantName || "locataire"} du (${formatMonth(receipt.paymentDate)})`
       : "Reçu",
-  });
+});
+ 
 
   useEffect(() => {
     const fetchReceipt = async () => {
@@ -48,22 +64,46 @@ export default function ReceiptPage() {
   if (error) return <p style={{ textAlign: "center", color: "red" }}>{error}</p>;
   if (!receipt) return <p style={{ textAlign: "center" }}>Lien invalide ou expiré ❌</p>;
 
-  const formatCurrency = (amount) =>
-    Number(amount || 0).toLocaleString("fr-FR") + " FCFA";
-  const formatDate = (dateStr) =>
-    dateStr ? new Date(dateStr).toLocaleDateString("fr-FR") : "N/A";
-  const formatMonth = (dateStr) =>
-    dateStr
-      ? new Date(dateStr).toLocaleDateString("fr-FR", {
-          month: "long",
-          year: "numeric",
-        })
-      : "N/A";
+
+
+
+ // 🔹 Récupérer le logo de l’admin depuis les données du reçu
+const adminLogo = receipt?.adminLogo;
+
+// 🔹 Déterminer le watermark (logo admin ou logo par défaut)
+const watermarkLogo =
+  adminLogo
+    ? adminLogo.startsWith("http")
+      ? adminLogo
+      : `${API}/${adminLogo}`
+    : "/logo4 copie.jpg";
+
 
   return (
     <>
     <div className="receipt-xxl-container">
       <div className="receipt-xxl-card" ref={componentRef}>
+        
+                 <div className="receipt-header-logos">
+  
+  {/* Logo Admin */}
+  {/* {adminLogo ? (
+    <img
+  src={adminLogo?.startsWith("http") ? adminLogo : `${API}/${adminLogo}`}
+  alt="Logo Admin"
+  className="admin-logo-header"
+/>
+  ) : (
+    <div className="admin-logo-placeholder">Logo admin indisponible</div>
+  )} */}
+
+  {/* Logo plateforme GED IMMO */}
+  <img
+    src="/logo4 copie.jpg"
+    alt="Logo GED IMMO"
+    className="platform-logo-header"
+  />
+</div>
         <div className="receipt-xxl-header">
           <h3>Reçu paiement N° {receipt.receipt_number || "—"}</h3>
         </div>
@@ -151,12 +191,12 @@ export default function ReceiptPage() {
 
      
           <div className="receipt-xxl-qr">
-          <h5>Vérification du reçu</h5>
-          <QRCodeCanvas value={`${API}/receipt/${receipt._id || token}`} size={120} />
+          <h6>Vérification du reçu</h6>
+          <QRCodeCanvas value={`${API}/receipt/${receipt._id || token}`} size={50} />
         </div>
 
             <div className="receipt-legal">
-            <p>Ce reçu est généré électroniquement par <strong>{receipt.adminName  || "l'Administrateur"}</strong>.</p>
+            <p>Ce reçu est généré électroniquement par <strong>{receipt.adminName  || "l'Administrateur"}</strong> via <strong>GED IMMO</strong>.</p>
             <p>Toute falsification est passible de sanctions.</p>
           </div>
       </div>
@@ -172,18 +212,18 @@ export default function ReceiptPage() {
       .receipt-xxl-card::before {
   content: "";
   position: absolute;
-  top: 50%;
+  top: 55%;
   left: 50%;
   transform: translate(-50%, -50%) rotate(0deg);
-  width: 400px;  /* ajustez selon votre logo */
+  width: 400px;
   height: 400px;
-  background-image: url('/logo4 copie.jpg'); /* chemin vers votre logo */
+  background-image: url('${watermarkLogo}');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.1; /* effet filigrane */
+  opacity: 0.07;
   z-index: 0;
-  pointer-events: none; /* ne gêne pas les clics */
+  pointer-events: none;
 }
         .receipt-xxl-header { text-align: center; margin-bottom: 2rem; }
         .receipt-xxl-header h1 { font-size: 2.5rem; color: #4b00cc; margin: 0; }
@@ -227,6 +267,40 @@ export default function ReceiptPage() {
           color: #4b00cc;
           margin-bottom: 0.5rem;
         }
+          .receipt-header-logos {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0,7rem;
+  padding: 0 1rem;
+}
+
+.admin-logo-header,
+.platform-logo-header {
+  height: 70px;
+  width: auto;
+  object-fit: contain;
+}
+
+.admin-logo-placeholder {
+  height: 70px;
+  width: 140px;
+  font-size: 0.9rem;
+  color: #777;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #aaa;
+  border-radius: 8px;
+}
+
+/* Impression */
+@media print {
+  .admin-logo-header,
+  .platform-logo-header {
+    height: 60px !important;
+  }
+}
           
       `}</style>
     </div>

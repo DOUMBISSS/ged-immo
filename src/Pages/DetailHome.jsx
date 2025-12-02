@@ -5,6 +5,7 @@ import Footer from "./Footer";
 import { toast, Toaster } from "react-hot-toast";
 import { UpdateHomeModal } from "./Maison/UpdateHomeModal";
 import { useUserContext } from "../contexts/UserContext"
+import DuplicateHomeModal from "./Maison/DuplicateHomeModal";
 
 export default function DetailHome() {
     // ✅ Image par défaut (logo)
@@ -15,10 +16,11 @@ export default function DetailHome() {
   const [rentHome, setRentHome] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
    const [showUpdateModal, setShowUpdateModal] = useState(false);
-     const { user } = useUserContext(); // ✅ récupération de l’admin connecté
+   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+     const { user ,hasFeature } = useUserContext(); // ✅ récupération de l’admin connecté
 
   useEffect(() => {
-    fetch(`https://backend-ged-immo.onrender.com/api/homes/${id}`)
+    fetch(`http://localhost:4000/api/homes/${id}`)
       .then((res) => res.json())
       .then((data) => setRentHome(data))
       .catch((err) => console.log(err));
@@ -69,7 +71,7 @@ const handleArchive = () => {
           }}
           onClick={async () => {
             try {
-              const res = await fetch(`https://backend-ged-immo.onrender.com/homes/${id}/archive`, {
+              const res = await fetch(`http://localhost:4000/homes/${id}/archive`, {
                 method: "PATCH",
                 headers: {
                   "Content-Type": "application/json",
@@ -81,7 +83,7 @@ const handleArchive = () => {
               if (!res.ok) throw new Error(data.message || "Erreur lors de l'archivage");
 
               toast.success(data.message || "🏠 Maison archivée avec succès !");
-              navigate("/Mes__projet/fr/");
+              navigate("/Mes__archives");
             } catch (err) {
               console.error(err);
               toast.error("Erreur serveur, réessayez plus tard.");
@@ -108,6 +110,33 @@ const handleArchive = () => {
       </div>
     </div>
   ), { duration: 50000 });
+};
+
+
+const handleDuppliquer = async () => {
+  if (!hasFeature("duplicateHomes")) {
+    toast.error("🔒 Fonction disponible uniquement dans le plan Standard ou Premium.");
+    return;
+  }
+
+  try {
+    const res = await fetch(`http://localhost:4000/homes/${id}/duplicate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${user.token}`,
+      },
+      body: JSON.stringify({ projectId: rentHome.projectId }),
+    });
+    
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Erreur duplication");
+    toast.success("✅ Maison dupliquée avec succès !");
+  } catch (err) {
+    console.error("Erreur duplication :", err);
+    toast.error(err.message || "Erreur serveur.");
+  }
 };
 
 
@@ -146,6 +175,25 @@ const handleArchive = () => {
             <div style={styles.btnGroup}>
              <button style={styles.btnUpdate} onClick={() => setShowUpdateModal(true)}>Mettre à jour</button>
               <button style={styles.btnArchive} onClick={handleArchive}>Archiver</button>
+                  <button
+          onClick={() => setShowDuplicateModal(true)}
+          disabled={!hasFeature("duplicateHomes")}
+          style={{
+            opacity: hasFeature("duplicateHomes") ? 1 : 0.6,
+            cursor: hasFeature("duplicateHomes") ? "pointer" : "not-allowed",
+            background: hasFeature("duplicateHomes") ? "#2563eb" : "#9ca3af",
+            color: "#fff",
+            padding: "0.5rem 1rem",
+            borderRadius: "6px",
+            border: "none",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: ".5rem",
+            fontWeight: 500,
+          }}
+        >
+          <i className="fa-solid fa-copy"></i> Dupliquer
+        </button>
             </div>
           </div>
         </div>
@@ -268,22 +316,58 @@ const handleArchive = () => {
 
 {/* ===== Détails de la maison ===== */}
 <div style={styles.detailsSection}>
-  <h2>Détails de la maison</h2>
+  <h2>Détails du bien</h2>
   <div style={styles.detailsGrid}>
     <p><strong>Nom :</strong> {rentHome.nameHome || "N/A"}</p>
+    <p><strong>Type :</strong> {rentHome.nameHomeType || "N/A"}</p>
     <p><strong>Catégorie :</strong> {rentHome.categorie || "N/A"}</p>
-     <p><strong>Référence ou N°Porte :</strong> {rentHome.reference || "N/A"}</p>
-    <p><strong>Nombre de pièces :</strong> {rentHome.NmbrePieces || "N/A"}</p>
-    <p><strong>Loyer :</strong> {rentHome.rent || "N/A"}</p> {/* Utiliser rent pour la surface */}
+    <p><strong>Référence ou N°Porte :</strong> {rentHome.reference || "N/A"}</p>
+    <p><strong>Loyer :</strong> {rentHome.rent || "N/A"} FCFA</p>
+    {/* <p><strong>Prix :</strong> {rentHome.price ? `${rentHome.price} FCFA` : "N/A"}</p> */}
     <p><strong>Adresse :</strong> {rentHome.addressHome || "N/A"}</p>
     <p><strong>Ville :</strong> {rentHome.city || "N/A"}</p>
     <p><strong>Quartier :</strong> {rentHome.quarter || "N/A"}</p>
-    <p><strong>Prix :</strong> {rentHome.rent ? `${rentHome.rent} FCFA` : "N/A"}</p>
-    {/* <p><strong>Disponibilité :</strong> {rentHome.personId ? "Occupée" : "Libre"}</p> */}
+    <p><strong>Zone :</strong> {rentHome.zone || "N/A"}</p>
+    <p><strong>Nombre de pièces :</strong> {rentHome.NmbrePieces || "N/A"}</p>
     <p><strong>Description :</strong> {rentHome.description || "Aucune description"}</p>
-    <p><strong>Caution :</strong> {rentHome.guarantee || "N/A"}</p>
+    <p><strong>Caution :</strong> {rentHome.guarantee || "N/A"} FCFA</p>
+    <p><strong>Charges :</strong> {rentHome.charges || "N/A"}</p>
     <p><strong>État :</strong> {rentHome.state || "N/A"}</p>
 
+    {/* Spécifiques selon le type */}
+    {rentHome.nameHomeType === "Bureau" && (
+      <>
+        <p><strong>Surface bureau :</strong> {rentHome.surfaceBureau || "N/A"}m²</p>
+        <p><strong>Nombre de bureaux :</strong> {rentHome.NmbreBureaux || "N/A"}</p>
+        <p><strong>Salle de réunion :</strong> {rentHome.salleReunion ? "Oui" : "Non"}</p>
+        <p><strong>Climatisation :</strong> {rentHome.climatisation ? "Oui" : "Non"}</p>
+        <p><strong>Fibre optique :</strong> {rentHome.fibreOptique ? "Oui" : "Non"}</p>
+        <p><strong>Parking :</strong> {rentHome.parking ? "Oui" : "Non"}</p>
+        <p><strong>Ascenseur :</strong> {rentHome.ascenseur ? "Oui" : "Non"}</p>
+      </>
+    )}
+
+    {rentHome.nameHomeType === "Magasin" && (
+      <>
+        <p><strong>Surface magasin :</strong> {rentHome.surfaceMagasin || "N/A"}m²</p>
+        <p><strong>Vitrine :</strong> {rentHome.vitrine ? "Oui" : "Non"}</p>
+        <p><strong>Stock disponible :</strong> {rentHome.stockDisponible ? "Oui" : "Non"}</p>
+        <p><strong>Mezanine :</strong> {rentHome.mezanine ? "Oui" : "Non"}</p>
+        <p><strong>Zone commerciale :</strong> {rentHome.zoneCommerciale ? "Oui" : "Non"}</p>
+      </>
+    )}
+
+    {rentHome.nameHomeType === "Entrepôt" && (
+      <>
+        <p><strong>Surface entrepôt :</strong> {rentHome.surfaceEntrepot || "N/A"} m</p>
+        <p><strong>Hauteur sous plafond :</strong> {rentHome.hauteurSousPlafond || "N/A"}</p>
+        <p><strong>Capacité de stockage :</strong> {rentHome.capaciteStockage || "N/A"}</p>
+        <p><strong>Quai de chargement :</strong> {rentHome.quaiChargement ? "Oui" : "Non"}</p>
+        <p><strong>Sécurité :</strong> {rentHome.securite ? "Oui" : "Non"}</p>
+        <p><strong>Accès camion :</strong> {rentHome.accesCamion ? "Oui" : "Non"}</p>
+        <p><strong>Ventilation :</strong> {rentHome.ventilation ? "Oui" : "Non"}</p>
+      </>
+    )}
   </div>
 </div>
 
@@ -370,15 +454,19 @@ const handleArchive = () => {
         </div>
       </div>
 
-           {/* Modal de mise à jour */}
-      {/* {showUpdateModal && (
-        <UpdateHomeModal
-          home={rentHome}
-          onClose={() => setShowUpdateModal(false)}
-          onUpdated={(updated) => setRentHome(updated)}
-          token={user?.token}
-        />
-      )} */}
+      {showDuplicateModal && (
+  <DuplicateHomeModal
+    home={rentHome}
+    projectId={rentHome.projectId}
+    adminId={user._id}
+    onClose={() => setShowDuplicateModal(false)}
+    onDuplicated={(newHome) => {
+      toast.success("Maison dupliquée !");
+      setRentHome(newHome); // mettre à jour la vue si nécessaire
+      setShowDuplicateModal(false);
+    }}
+  />
+)}
 
        {showUpdateModal && (
         <UpdateHomeModal
@@ -415,6 +503,7 @@ const styles = {
   btnGroup: { display: 'flex', gap: '0.5rem' },
   btnUpdate: { padding: '0.5rem 1rem', backgroundColor: '#3498db', color: '#fff', borderRadius: '6px', cursor: 'pointer', border: 'none' },
   btnArchive: { padding: '0.5rem 1rem', backgroundColor: '#e74c3c', color: '#fff', borderRadius: '6px', cursor: 'pointer', border: 'none' },
+    btnDupliquer: { padding: '0.5rem 1rem', backgroundColor: '#34495e', color: '#fff', borderRadius: '6px', cursor: 'pointer', border: 'none' },
   mainContent: { display: 'flex', gap: '2rem', flexWrap: 'wrap' },
   imagesSection: { flex: '1 1 400px', display: 'flex', gap: '1rem' },
   mainImage: { flex: 1, borderRadius: '10px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' },

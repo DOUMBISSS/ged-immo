@@ -22,7 +22,20 @@ export default function DetailAdminGed() {
   const [subscriptions, setSubscriptions] = useState([]);
   const [latestSubscription, setLatestSubscription] = useState(null);
   const [persons, setPersons] = useState([]);
-          const [isOpen, setIsOpen] = useState(false); // État du dépliant
+          const [isOpen, setIsOpen] = useState(false);
+          const [showCancelModal, setShowCancelModal] = useState(false);
+const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [selectedSub, setSelectedSub] = useState(null);
+
+const openCancelModal = (sub) => {
+  setSelectedSub(sub);
+  setShowCancelModal(true);
+};
+
+const openDeleteModal = (sub) => {
+  setSelectedSub(sub);
+  setShowDeleteModal(true);
+};
 
   // Pagination abonnements
   const [currentSubPage, setCurrentSubPage] = useState(1);
@@ -132,6 +145,20 @@ const countLocatairesByProject = (projectId) => {
   const currentProjects = projects.slice(indexOfFirstProject, indexOfLastProject);
   const totalProjectPages = Math.ceil(projects.length / projectsPerPage);
 
+  // Détection abonnement actuel & programmé
+const now = new Date();
+
+const currentSubscription = subscriptions.find(
+  s => s.active && new Date(s.subscriptionEnd) > now
+);
+
+const scheduledSubscription = subscriptions.find(
+  s =>
+    s.scheduledStart &&
+    new Date(s.scheduledStart) > now &&
+    !s.active
+);
+
   return (
     <div>
       <NavbarGED />
@@ -158,32 +185,63 @@ const countLocatairesByProject = (projectId) => {
                 </div>
               </div>
 
-              <div className="profile-details">
-                <p><strong>Email :</strong> {admin.email}</p>
-                <p><strong>Téléphone :</strong> {admin.number || "Non spécifié"}</p>
-                <p><strong>Adresse :</strong> {admin.address || "—"}</p>
-                <p><strong>Vérifié :</strong> {admin.isVerified ? "✅ Oui" : "❌ Non"}</p>
-                {admin.emailToken && <p><strong>Token email :</strong> {admin.emailToken}</p>}
+ {/* === ABONNEMENT ACTUEL + ABONNEMENT PROGRAMMÉ === */}
 
-                {latestSubscription ? (
-                  <div className="subscription-badge">
-                    <div className="badge-status">
-                      <span className={`badge ${latestSubscription.suspended ? "suspended" : latestSubscription.active && new Date(latestSubscription.subscriptionEnd) > new Date() ? "active" : "expired"}`}>
-                        {latestSubscription.suspended ? "⏸️ Suspendu" : latestSubscription.active && new Date(latestSubscription.subscriptionEnd) > new Date() ? "✅ Actif" : "❌ Expiré"}
-                      </span>
-                      <span className="subscription-type">{latestSubscription.subscriptionType?.toUpperCase() || "—"}</span>
-                    </div>
-                    <div className="subscription-info">
-                      <p><strong>Début :</strong> {latestSubscription.subscriptionStart ? new Date(latestSubscription.subscriptionStart).toLocaleDateString("fr-FR") : "—"}</p>
-                      <p><strong>Fin :</strong> {latestSubscription.subscriptionEnd ? new Date(latestSubscription.subscriptionEnd).toLocaleDateString("fr-FR") : "—"}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <p style={{ marginTop: "1rem", color: "#6b7280" }}>Aucun abonnement actif pour cet administrateur.</p>
-                )}
+<div className="profile-details">
+  <p><strong>Email :</strong> {admin.email}</p>
+  <p><strong>Téléphone :</strong> {admin.number || "Non spécifié"}</p>
+  <p><strong>Adresse :</strong> {admin.address || "—"}</p>
+  <p><strong>Vérifié :</strong> {admin.isVerified ? "✅ Oui" : "❌ Non"}</p>
+  {admin.emailToken && <p><strong>Token email :</strong> {admin.emailToken}</p>}
 
-                  <button className="btn-renew" onClick={() => setIsRenewModalOpen(true)}>💳 Prolonger abonnement</button>
-              </div>
+  {/* Abonnement Actuel */}
+  {currentSubscription ? (
+    <div className="subscription-badge">
+      <h4 style={{ margin: "0 0 .4rem 0", color: "#0f172a" }}>🎫 Abonnement actuel</h4>
+
+      <div className="badge-status">
+        <span className="badge active">✅ Actif</span>
+        <span className="subscription-type">
+          {currentSubscription.subscriptionType?.toUpperCase()}
+        </span>
+      </div>
+
+      <div className="subscription-info">
+        <p><strong>Début :</strong> {new Date(currentSubscription.subscriptionStart).toLocaleDateString("fr-FR")}</p>
+        <p><strong>Fin :</strong> {new Date(currentSubscription.subscriptionEnd).toLocaleDateString("fr-FR")}</p>
+      </div>
+    </div>
+  ) : (
+    <p style={{ marginTop: "1rem", color: "#6b7280" }}>
+      Aucun abonnement actif pour cet administrateur.
+    </p>
+  )}
+
+  {/* Abonnement Programmé */}
+  {scheduledSubscription && (
+    <div className="subscription-badge" style={{ marginTop: "1rem" }}>
+      <h4 style={{ margin: "0 0 .4rem 0", color: "#0f172a" }}>🕒 Abonnement programmé</h4>
+
+      <div className="badge-status">
+        <span className="badge scheduled">
+          🕒 Programmé
+        </span>
+        <span className="subscription-type">
+          {scheduledSubscription.subscriptionType?.toUpperCase()}
+        </span>
+      </div>
+
+      <div className="subscription-info">
+        <p><strong>Début programmé :</strong> {new Date(scheduledSubscription.scheduledStart).toLocaleDateString("fr-FR")}</p>
+        <p><strong>Fin :</strong> {new Date(scheduledSubscription.subscriptionEnd).toLocaleDateString("fr-FR")}</p>
+      </div>
+    </div>
+  )}
+
+  <button className="btn-renew" onClick={() => setIsRenewModalOpen(true)}>
+    💳 Prolonger abonnement
+  </button>
+</div>
             </div>
 
             <div className="admin-subscription-card">
@@ -262,55 +320,116 @@ const countLocatairesByProject = (projectId) => {
 </div>
 
           {/* === HISTORIQUE DES ABONNEMENTS === */}
-          <div className="section">
-            <h3><i className="fa-solid fa-receipt"></i> Historique des abonnements</h3>
-            {subscriptions.length === 0 ? (
-              <p className="empty">Aucun abonnement trouvé pour cet administrateur.</p>
-            ) : (
-              <>
-                <table className="saas-table">
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Début</th>
-                      <th>Fin</th>
-                      <th>Prix</th>
-                      <th>Méthode</th>
-                      <th>Statut paiement</th>
-                      <th>État</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentSubscriptions.map((sub) => (
-                      <tr key={sub._id}>
-                        <td>{sub.subscriptionType}</td>
-                        <td>{new Date(sub.subscriptionStart).toLocaleDateString("fr-FR")}</td>
-                        <td>{new Date(sub.subscriptionEnd).toLocaleDateString("fr-FR")}</td>
-                        <td>{sub.subscriptionPrice} FCFA</td>
-                        <td>{sub.paymentMethod}</td>
-                        <td>
-                          <span className={`status-badge ${sub.paymentStatus === "paid" ? "paid" : sub.paymentStatus === "pending" ? "pending" : "failed"}`}>
-                            {sub.paymentStatus}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`status-badge ${sub.active ? "active" : "expired"}`}>
-                            {sub.active ? "Actif" : "Expiré"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+       <div className="section">
+  <h3><i className="fa-solid fa-receipt"></i> Historique des abonnements</h3>
+  {subscriptions.length === 0 ? (
+    <p className="empty">Aucun abonnement trouvé pour cet administrateur.</p>
+  ) : (
+    <>
+      <table className="saas-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Début</th>
+            <th>Fin</th>
+            <th>Prix</th>
+            <th>Méthode</th>
+            <th>Statut paiement</th>
+            <th>État</th>
+            <th>Créé le</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {currentSubscriptions.map((sub) => (
+            <tr key={sub._id}>
+              <td>{sub.subscriptionType}</td>
+              <td>{new Date(sub.subscriptionStart).toLocaleDateString("fr-FR")}</td>
+              <td>{new Date(sub.subscriptionEnd).toLocaleDateString("fr-FR")}</td>
+              <td>{sub.subscriptionPrice} FCFA</td>
+              <td>{sub.paymentMethod}</td>
+              <td>
+                <span
+                  className={`status-badge ${
+                    sub.paymentStatus === "paid"
+                      ? "paid"
+                      : sub.paymentStatus === "pending"
+                      ? "pending"
+                      : "failed"
+                  }`}
+                >
+                  {sub.paymentStatus}
+                </span>
+              </td>
+              <td>
+                <span
+                  className={`status-badge ${
+                    sub.suspended
+                      ? "canceled"
+                      : sub.active
+                      ? "active"
+                      : "expired"
+                  }`}
+                >
+                  {sub.suspended ? "Annulé" : sub.active ? "Actif" : "Expiré"}
+                </span>
+              </td>
+              <td>
+                {/* 🕒 Format complet date + heure locale */}
+                {sub.createdAt
+                  ? new Date(sub.createdAt).toLocaleString("fr-FR", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })
+                  : "—"}
+              </td>
+              <td>
+              <button
+                className="btn-icon cancel"
+                onClick={() => openCancelModal(sub)}
+                title="Annuler cet abonnement"
+              >
+                <i className="fa-solid fa-ban"></i>
+              </button>
 
-                <div className="pagination" style={{ marginTop: "1rem", textAlign: "center" }}>
-                  <button disabled={currentSubPage === 1} onClick={() => setCurrentSubPage(prev => prev - 1)} style={{ marginRight: "0.5rem" }}>← Précédent</button>
-                  <span>Page {currentSubPage} / {totalSubPages}</span>
-                  <button disabled={currentSubPage === totalSubPages} onClick={() => setCurrentSubPage(prev => prev + 1)} style={{ marginLeft: "0.5rem" }}>Suivant →</button>
-                </div>
-              </>
-            )}
-          </div>
+              <button
+                className="btn-icon delete"
+                onClick={() => openDeleteModal(sub)}
+                title="Supprimer définitivement"
+              >
+                <i className="fa-solid fa-trash"></i>
+              </button>
+            </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div
+        className="pagination"
+        style={{ marginTop: "1rem", textAlign: "center" }}
+      >
+        <button
+          disabled={currentSubPage === 1}
+          onClick={() => setCurrentSubPage((prev) => prev - 1)}
+          style={{ marginRight: "0.5rem" }}
+        >
+          ← Précédent
+        </button>
+        <span>
+          Page {currentSubPage} / {totalSubPages}
+        </span>
+        <button
+          disabled={currentSubPage === totalSubPages}
+          onClick={() => setCurrentSubPage((prev) => prev + 1)}
+          style={{ marginLeft: "0.5rem" }}
+        >
+          Suivant →
+        </button>
+      </div>
+    </>
+  )}
+</div>
 
           {/* === PROJETS === */}
   <div className="section">
@@ -473,7 +592,94 @@ const countLocatairesByProject = (projectId) => {
         onRenew={(newEndDate) => setAdmin({ ...admin, subscriptionEnd: newEndDate })}
       />
 
-      {/* === STYLES === */}
+      {showDeleteModal && (
+  <div className="modal-overlay">
+    <div className="modal-box danger">
+      <h3>Supprimer définitivement ?</h3>
+      <p>
+        Attention : Cette action est irréversible.  
+        Supprimer <strong>{selectedSub.subscriptionType}</strong> ?
+      </p>
+
+      <div className="modal-actions">
+        <button className="btn-cancel" onClick={() => setShowDeleteModal(false)}>
+          Annuler
+        </button>
+
+        <button
+          className="btn-danger"
+          onClick={async () => {
+            try {
+              const res = await fetch(`http://localhost:4000/subscription/${selectedSub._id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` }
+              });
+
+              const data = await res.json();
+              if (!res.ok) return toast.error(data.message);
+
+              toast.success("Abonnement supprimé");
+
+              setSubscriptions(prev =>
+                prev.filter(s => s._id !== selectedSub._id)
+              );
+
+            } catch (err) {
+              toast.error("Erreur lors de la suppression");
+            }
+            setShowDeleteModal(false);
+          }}
+        >
+          Oui, supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{showCancelModal && (
+  <div className="modal-overlay">
+    <div className="modal-box">
+      <h3>Annuler l’abonnement ?</h3>
+      <p>
+        Voulez-vous vraiment annuler l’abonnement :  
+        <strong>{selectedSub.subscriptionType}</strong> ?
+      </p>
+
+      <div className="modal-actions">
+        <button className="btn-cancel" onClick={() => setShowCancelModal(false)}>
+          Fermer
+        </button>
+
+        <button
+          className="btn-confirm"
+          onClick={async () => {
+            try {
+              const res = await fetch(`http://localhost:4000/subscription/cancel/${selectedSub._id}`, {
+                method: "PUT",
+                headers: { Authorization: `Bearer ${token}` }
+              });
+
+              const data = await res.json();
+              if (!res.ok) return toast.error(data.message);
+
+              toast.success("Abonnement annulé");
+              setSubscriptions(prev =>
+                prev.map(s => s._id === selectedSub._id ? data.subscription : s)
+              );
+
+            } catch (err) {
+              toast.error("Erreur lors de l'annulation");
+            }
+            setShowCancelModal(false);
+          }}
+        >
+          Oui, annuler
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       <style>{`
         /* Gardé exactement le même style que ton code d'origine */
         .saas-container { padding: 2rem; background: #f8fafc; min-height: 100vh; }
@@ -519,6 +725,81 @@ const countLocatairesByProject = (projectId) => {
         .subscription-info p { margin: 0; }
         .pagination button { padding: 6px 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
         .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .badge.scheduled {
+  background-color: #3b82f6; /* Bleu vif pour se démarquer */
+  color: #fff;
+}
+
+.badge.scheduled:hover {
+  background-color: #2563eb; /* Bleu plus foncé au survol */
+}
+  .btn-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  font-size: 1.1rem;
+}
+
+.btn-icon.cancel { color: #f59e0b; }
+.btn-icon.delete { color: #dc2626; }
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999;
+}
+
+.modal-box {
+  background: white;
+  padding: 1.5rem;
+  width: 380px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+.modal-box.danger h3 {
+  color: #dc2626;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  gap: 10px;
+}
+
+.btn-cancel {
+  background: #e5e7eb;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-confirm {
+  background: #2563eb;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+  .status-badge.canceled {
+  background: #eef2ff; color: red; font-weight: 600; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem;
+}
+    .status-badge.active {
+  background: #eef2ff; color: #41d41cff;; font-weight: 600; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem;
+}
       `}</style>
     </div>
   );

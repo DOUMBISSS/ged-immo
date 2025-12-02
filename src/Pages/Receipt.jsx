@@ -1,17 +1,24 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { toast } from "react-toastify";
 import { useReactToPrint } from "react-to-print";
 import Navbar from "./Navbar";
 import Footer from "../Pages/Footer";
-import "react-toastify/dist/ReactToastify.css";
+import { toast, Toaster } from "react-hot-toast";
 import EmailModal from "./Email/EmailModal";
 import { useUserContext } from "../contexts/UserContext";
 import { QRCodeCanvas } from "qrcode.react";
+import printJS from 'print-js';
 
 const API = "http://localhost:4000";
 
 export default function Receipt({ admin }) {
+  
+  const formatCurrency = (amount) => Number(amount || 0).toLocaleString("fr-FR") + " FCFA";
+  const formatDate = (dateStr) => (dateStr ? new Date(dateStr).toLocaleDateString("fr-FR") : "N/A");
+  const formatMonth = (dateStr) =>
+    dateStr
+      ? new Date(dateStr).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+      : "N/A";
   const { rentId } = useParams();
   const { user } = useUserContext();
   const token = user?.token;
@@ -23,6 +30,8 @@ export default function Receipt({ admin }) {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [adminLogo, setAdminLogo] = useState(null);
+  
 
   const [signatures, setSignatures] = useState([]);
   const [selectedSignature, setSelectedSignature] = useState(null);
@@ -30,11 +39,15 @@ export default function Receipt({ admin }) {
   const canvasRef = useRef(null);
   const isDrawing = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
-  const componentRef = useRef();
+  const componentRef = useRef(null);
+
 
   const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
-    documentTitle: person ? `${person.name} ${person.prenom} - Reçu` : "Reçu",
+    contentRef: componentRef, // ✅ nouveau format
+    documentTitle: person
+      ? `Reçu - ${person.name} ${person.lastname} du (${formatMonth(rental?.month)})`
+      : "Reçu",
+
   });
 
   // 🔹 Récupération complète locataire et son logement
@@ -46,6 +59,7 @@ export default function Receipt({ admin }) {
       const text = await res.text();
       const data = text ? JSON.parse(text) : { home_id: [], rentals: [] };
       setPerson(data);
+      
     } catch (e) {
       console.error("Erreur fetchPersonData:", e);
       toast.error("Impossible de récupérer les données du locataire");
@@ -64,6 +78,7 @@ useEffect(() => {
 
       setRental(data.rental || data);
       setPerson(data.person || null);
+      setAdminLogo(data?.rental?.adminId?.companyInfo?.logo || null);
 
       // ⚡ Récupérer aussi les infos complètes du locataire (loyer inclus)
       if (data.person?._id) {
@@ -268,12 +283,6 @@ const handleDeleteSignature = async (index) => {
   if (error) return <p style={{ textAlign: "center", color: "red" }}>{error}</p>;
   if (!person || !rental) return <p style={{ textAlign: "center" }}>Aucune donnée disponible</p>;
 
-  const formatCurrency = (amount) => Number(amount || 0).toLocaleString("fr-FR") + " FCFA";
-  const formatDate = (dateStr) => (dateStr ? new Date(dateStr).toLocaleDateString("fr-FR") : "N/A");
-  const formatMonth = (dateStr) =>
-    dateStr
-      ? new Date(dateStr).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
-      : "N/A";
 
   const home = person.homeId || {};
 
@@ -424,51 +433,77 @@ const handleSendWhatsapp = async ({
   }
 };
 
-  const handleSendEmail = async () => {
-    try {
-      if (!person) return toast.error("Données du locataire manquantes.");
-      const email = Array.isArray(person) ? person[0]?.email || "" : person.email || "";
-      if (!email) return toast.error("Email du locataire manquant.");
+const handleSendEmail = async () => {
+  try {
+    if (!person) return toast.error("Données du locataire manquantes.");
+    const email = person.email || "";
+    if (!email) return toast.error("Email du locataire manquant.");
 
-      setSendingEmail(true);
+    setSendingEmail(true);
 
-      const body = {
+    const res = await fetch(`${API}/rents/${rentId}/send-receipt`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${user?.token}`,
+      },
+      body: JSON.stringify({
         person_email: email,
-        rentId: rentId,
+        rentId,
         adminName: user?.name || "",
         adminEmail: user?.email || "",
-      };
+      }),
+    });
 
-      const res = await fetch(`${API}/rents/${rentId}/send-receipt`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.token}` },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData?.message || "Erreur lors de l'envoi du mail");
-      }
-
-      const data = await res.json();
-      toast.success(data.message || "Email envoyé avec succès ✅");
-    } catch (err) {
-      console.error("handleSendEmail error:", err);
-      toast.error(err.message || "Erreur lors de l'envoi du mail");
-    } finally {
-      setSendingEmail(false);
+    // 🛑 Gestion permission refusée (403)
+    if (res.status === 403) {
+      const data = await res.json(); // ← OK car on ne fera PAS res.json() une 2e fois
+      toast.error(data?.message || "❌ Permission refusée.");
+      return;
     }
-  };
+
+    // 🛑 Gestion non authentifié (401)
+    if (res.status === 401) {
+      const data = await res.json();
+      toast.error(data?.message || "❌ Vous devez vous reconnecter.");
+      return;
+    }
+
+    // 🛑 Erreurs générales
+    if (!res.ok) {
+      const errData = await res.json();
+      toast.error(errData?.message || "Erreur lors de l'envoi du mail");
+      return;
+    }
+
+    // 🟢 Succès
+    const data = await res.json();
+    toast.success(data.message || "Email envoyé avec succès !");
+  } catch (err) {
+    console.error("handleSendEmail error:", err);
+    toast.error("Erreur lors de l'envoi du mail");
+  } finally {
+    setSendingEmail(false);
+  }
+};
   
+
+// Déterminer le watermark (logo admin ou logo par défaut)
+const watermarkLogo =
+  adminLogo && adminLogo.startsWith("http")
+    ? adminLogo
+    : adminLogo
+    ? `${API}/${adminLogo}`
+    : "/logo4 copie.jpg";
 
   return (
     <>
       <Navbar />
       <div className="receipt-xxl-container">
         <div className="receipt-xxl-card" ref={componentRef}>
-          <div className="receipt-xxl-header">
-            <h3>Reçu paiement N° {rental.receipt_number || rental._id}</h3>
-          </div>
+{/* 🔹 Logos en-tête : Admin + GED IMMO */}
+
+         
 
           <div className="container__print">
             <button className="btn__print" onClick={handlePrint}>
@@ -490,22 +525,47 @@ const handleSendWhatsapp = async ({
             </button>
           </div>
 
-          <div className="receipt-xxl-section">
-            <div>
-              <h5>Le propriétaire</h5>
-              <p><strong>{user?.fullname || "Néant"}</strong></p>
-              <p><strong>{user?.number || "Néant"}</strong></p>
-              <p><strong>{user?.email || "Néant"}</strong></p>
-              <p><strong>{user?.address || "Néant"}</strong></p>
-            </div>
-            <div>
-              <h5>Le locataire</h5>
-              <p><strong>Mme/M. {person.name || "N/A"} {person.prenom || ""}</strong></p>
-              <p><strong>{person.tel || person.number || "N/A"}</strong></p>
-              <p><strong>{person.email || "N/A"}</strong></p>
-              <p><strong>{person.address || "N/A"}</strong></p>
-            </div>
+          <div className="receipt-header-logos">
+  
+  {/* Logo Admin */}
+  {/* {adminLogo ? (
+    <img
+  src={adminLogo?.startsWith("http") ? adminLogo : `${API}/${adminLogo}`}
+  alt="Logo Admin"
+  className="admin-logo-header"
+/>
+  ) : (
+    <div className="admin-logo-placeholder">Logo admin indisponible</div>
+  )} */}
+
+  {/* Logo plateforme GED IMMO */}
+  <img
+    src="/logo4 copie.jpg"
+    alt="Logo GED IMMO"
+    className="platform-logo-header"
+  />
+</div>
+
+           <div className="receipt-xxl-header">
+            <h3>Reçu paiement N° {rental.receipt_number || rental._id}</h3>
           </div>
+
+          <div className="receipt-xxl-section">
+  <div>
+    <h5>Le propriétaire</h5>
+    <p><strong>{rental?.adminId?.fullname || "Néant"}</strong></p>
+    <p><strong>{rental?.adminId?.number || "Néant"}</strong></p>
+    <p><strong>{rental?.adminId?.email || "Néant"}</strong></p>
+    <p><strong>{rental?.adminId?.address || "Néant"}</strong></p>
+  </div>
+  <div>
+    <h5>Le locataire</h5>
+    <p><strong>Mme/M. {person.name || "N/A"} {person.prenom || ""}</strong></p>
+    <p><strong>{person.tel || person.number || "N/A"}</strong></p>
+    <p><strong>{person.email || "N/A"}</strong></p>
+    <p><strong>{person.address || "N/A"}</strong></p>
+  </div>
+</div>
 
           <div className="receipt-xxl-description">
             <p>Reçu de <strong>Mme/M. {person?.name || ""} {person?.lastname || ""}</strong></p>
@@ -535,13 +595,13 @@ const handleSendWhatsapp = async ({
           </div>
 
           {/* ✅ Ajout du QR Code */}
-          {/* <div className="receipt-xxl-qr">
-            <h5>Vérification du reçu</h5>
-            <QRCodeCanvas value={`${API}/receipt/${rental._id}`} size={120} />
-          </div> */}
+          <div className="receipt-xxl-qr">
+            <h6>Vérification du reçu</h6>
+            <QRCodeCanvas value={`${API}/receipt/${rental._id}`} size={50} />
+          </div>
 
           <div className="receipt-legal">
-            <p>Ce reçu est généré électroniquement par <strong>{user?.fullname || "l'Administrateur"}</strong>.</p>
+            <p>Ce reçu est généré électroniquement par <strong>{rental?.adminId?.fullname || "l'Administrateur"}</strong> via <strong>GED IMMO</strong>.</p>
             <p>Toute falsification est passible de sanctions.</p>
           </div>
         </div>
@@ -647,8 +707,23 @@ const handleSendWhatsapp = async ({
         @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg); } }
         .receipt-xxl-container { display: flex; justify-content: center; padding: 3rem; background: linear-gradient(135deg, #f5f7fa, #e6e9f0); min-height: 100vh; }
         .receipt-xxl-card { background: #fff; width: 950px; padding: 2.5rem 3rem; border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); font-family: 'Montserrat', sans-serif; color: #2c3e50; line-height: 1.8;position: relative; }
-        .receipt-xxl-card::before { content: ""; position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); width: 400px; height: 400px; background-image: url('/logo4 copie.jpg'); background-size: contain; background-repeat: no-repeat; background-position: center; opacity: 0.1; z-index: 0; pointer-events: none; }
-        .receipt-xxl-header { text-align: center; margin-bottom: 2rem; }
+        .receipt-xxl-card::before {
+  content: "";
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(0deg);
+  width: 400px;
+  height: 400px;
+  background-image: url('${watermarkLogo}');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.07;
+  z-index: 0;
+  pointer-events: none;
+}
+        .receipt-xxl-header { text-align: center; margin-bottom: 1rem;font-weight: bold; }
         .receipt-xxl-header h1 { font-size: 2.5rem; color: #4b00cc; margin: 0; }
         .receipt-xxl-section { display: flex; justify-content: space-between; margin-bottom: 2rem; }
         .receipt-xxl-section div { width: 48%; background: #fafafa; padding: 1rem; border-radius: 10px; border: 1px solid #eee; }
@@ -656,7 +731,7 @@ const handleSendWhatsapp = async ({
         .receipt-xxl-description { background: #fdfdfd; padding: 1.5rem; border-radius: 10px; border: 1px solid #ddd; }
         .receipt-xxl-description p { margin: 0.7rem 0; font-size: 1rem; }
         .receipt-xxl-description strong { color: #000; }
-        .receipt-xxl-footer { margin-top: 3rem; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+        .receipt-xxl-footer { margin-top: 2rem; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
         .receipt-xxl-footer img { margin-top: 1rem; max-width: 200px; }
         .btn__print, .btn__email, .btn__whatsapp { padding: 0.7rem 1.5rem; border: none; font-weight: bold; border-radius: 8px; cursor: pointer; margin: 0 0.5rem 2rem 0; transition: 0.3s; }
         .btn__print { background-color: #4b00cc; color: #fff; }
@@ -677,6 +752,41 @@ const handleSendWhatsapp = async ({
         .receipt-legal { margin-top: 2rem; text-align: center; font-size: 0.8rem; color: #777; border-top: 1px dashed #ccc; padding-top: 0.5rem; }
         .receipt-xxl-qr { margin-top: 1rem; text-align: center; }
         .receipt-xxl-qr h5 { color: #4b00cc; margin-bottom: 0.5rem; }
+        /* ---- LOGOS HEADER ---- */
+.receipt-header-logos {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0,7rem;
+  padding: 0 1rem;
+}
+
+.admin-logo-header,
+.platform-logo-header {
+  height: 70px;
+  width: auto;
+  object-fit: contain;
+}
+
+.admin-logo-placeholder {
+  height: 70px;
+  width: 140px;
+  font-size: 0.9rem;
+  color: #777;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #aaa;
+  border-radius: 8px;
+}
+
+/* Impression */
+@media print {
+  .admin-logo-header,
+  .platform-logo-header {
+    height: 60px !important;
+  }
+}
       `}</style>
     </>
   );

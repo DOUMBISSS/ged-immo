@@ -1,5 +1,4 @@
-// Archives.jsx
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useState, useEffect, useMemo } from "react";
@@ -9,99 +8,140 @@ import { useUserContext } from "../contexts/UserContext";
 import PermissionModal from "./PermissionModal";
 
 export default function Archives() {
-  const { user } = useUserContext();
-  const [persons, setPersons] = useState([]);
+  const { user, hasFeature } = useUserContext();
+  const [archives, setArchives] = useState([]);
+  const [homes, setHomes] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [searchProject, setSearchProject] = useState(() => localStorage.getItem("archiveSearchProject") || "");
-  const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("archiveSearchTerm") || "");
-  const [currentPage, setCurrentPage] = useState(() => parseInt(localStorage.getItem("archiveCurrentPage")) || 1);
+
+  const [searchTerm, setSearchTerm] = useState(localStorage.getItem("archiveSearchTerm") || "");
+  const [selectedType, setSelectedType] = useState(localStorage.getItem("archiveSelectedType") || "");
+  const [searchProject, setSearchProject] = useState(localStorage.getItem("archiveSearchProject") || "");
+
+  const [currentPageArchives, setCurrentPageArchives] = useState(parseInt(localStorage.getItem("archiveCurrentPageArchives")) || 1);
+  const [currentPageHomes, setCurrentPageHomes] = useState(parseInt(localStorage.getItem("archiveCurrentPageHomes")) || 1);
+
   const [loading, setLoading] = useState(false);
-    const [homes, setHomes] = useState([]);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("locataires"); // "locataires" ou "biens"
+  const navigate = useNavigate();
 
   const itemsPerPage = 15;
 
-  // 🔹 Sauvegarde localStorage
-  useEffect(() => { localStorage.setItem("archiveSearchProject", searchProject); }, [searchProject]);
+  // --- Persistance locale ---
   useEffect(() => { localStorage.setItem("archiveSearchTerm", searchTerm); }, [searchTerm]);
-  useEffect(() => { localStorage.setItem("archiveCurrentPage", currentPage); }, [currentPage]);
+  useEffect(() => { localStorage.setItem("archiveSelectedType", selectedType); }, [selectedType]);
+  useEffect(() => { localStorage.setItem("archiveSearchProject", searchProject); }, [searchProject]);
+  useEffect(() => { localStorage.setItem("archiveCurrentPageArchives", currentPageArchives); }, [currentPageArchives]);
+  useEffect(() => { localStorage.setItem("archiveCurrentPageHomes", currentPageHomes); }, [currentPageHomes]);
 
-useEffect(() => {
-  if (!user) return; // pas encore chargé
+  // --- Vérification permission ---
+  useEffect(() => {
+    if (!user) return;
+    const hasPermission = user.role === "admin" || user.permissions?.includes("view_archives");
+    if (!hasPermission) {
+      setShowPermissionModal(true);
+      toast.error("Vous n'êtes pas autorisé à accéder aux archives.");
+    }
+  }, [user]);
 
-  // Un admin a automatiquement tous les droits
-  const hasPermission = user.role === "admin" || (user.permissions?.includes("view_archives"));
-
-  if (!hasPermission) {
-    setShowPermissionModal(true);
-    toast.error("Vous n'êtes pas autorisé à accéder aux archives.");
-  }
-}, [user]);
-
-  // 🔹 Récupérer projets + archives pour l'admin connecté
+  // --- Récupération des données ---
   useEffect(() => {
     if (!user?._id || !user?.token) return;
-
-    const adminIdToFetch = user.role === 'admin' ? user._id : user.adminId;
-
-    if (!adminIdToFetch) {
-      toast.error("Impossible de récupérer les archives : aucun administrateur lié.");
-      setProjects([]);
-      setPersons([]);
-      return;
-    }
+    const adminId = user.role === "admin" ? user._id : user.adminId;
+    if (!adminId) return;
 
     const fetchArchives = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`https://backend-ged-immo.onrender.com/archives/admin/${adminIdToFetch}`, {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
+        const queryParams = new URLSearchParams();
+        if (searchProject) queryParams.append("projectId", searchProject);
+        if (selectedType) queryParams.append("type", selectedType);
+
+        const url = `http://localhost:4000/archives/admin/${adminId}?${queryParams.toString()}`;
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${user.token}` } });
         const data = await res.json();
 
-        if (data.success) {
-          setProjects(data.projects || []);
-          setPersons(data.archives || []);
-        } else {
-          toast.error(data.message || "Erreur récupération archives");
-          setProjects([]);
-          setPersons([]);
-        }
+        if (!data.success) throw new Error(data.message || "Erreur de chargement des archives");
 
-  const res2 = await fetch(`https://backend-ged-immo.onrender.com/homes/archives/${adminIdToFetch}`, {
-  headers: { Authorization: `Bearer ${user.token}` },
-});
-const data2 = await res2.json();
-if (data2.success) {
-  setHomes(data2.archivedHomes || []);
-}
+        setProjects(data.projects || []);
+        setArchives(data.archives || []);
+        setHomes(data.archivedHomes || []);
       } catch (err) {
+        console.error("Erreur récupération archives :", err);
         toast.error("Erreur récupération archives : " + err.message);
-        toast.error("Erreur chargement archives : " + err.message);
-        setProjects([]);
-        setPersons([]);
+        setArchives([]); setHomes([]); setProjects([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchArchives();
-  }, [user]);
+  }, [user, selectedType, searchProject]);
 
-  // 🔹 Filtrage locataires
-  const filteredPersons = useMemo(() => {
-    return searchTerm
-      ? persons.filter(p => `${p.name || ""} ${p.lastname || ""}`.toLowerCase().includes(searchTerm.toLowerCase()))
-      : persons;
-  }, [persons, searchTerm]);
+  // --- Filtrage complet Archives ---
+  const filteredArchives = useMemo(() => {
+    const term = searchTerm.toLowerCase();
 
-  // 🔹 Pagination
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentPersons = filteredPersons.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredPersons.length / itemsPerPage);
+    return archives.filter(a => {
+      const fullText = `
+        ${a.name || ""}
+        ${a.lastname || ""}
+        ${a.raisonSociale || ""}
+        ${a.tel || ""}
+        ${a.homeInfo?.nameHome || ""}
+        ${a.homeId?.projectId?.name || ""}
+      `.toLowerCase();
+
+      const matchText = term === "" || fullText.includes(term);
+      const matchType = selectedType ? (a.typePersonne || "").toLowerCase() === selectedType.toLowerCase() : true;
+      const matchProject = searchProject ? (a.homeId?.projectId?._id === searchProject) : true;
+
+      return matchText && matchType && matchProject;
+    });
+  }, [archives, searchTerm, selectedType, searchProject]);
+
+  // --- Filtrage complet Maisons ---
+  const filteredHomes = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+
+    return homes.filter(h => {
+      const fullText = `
+        ${h.nameHome || ""}
+        ${h.addressHome || ""}
+        ${h.categorie || ""}
+        ${h.projectId?.name || ""}
+      `.toLowerCase();
+
+      const matchText = term === "" || fullText.includes(term);
+      const matchType = selectedType ? (h.categorie || "").toLowerCase() === selectedType.toLowerCase() : true;
+      const matchProject = searchProject ? (h.projectId?._id === searchProject) : true;
+
+      return matchText && matchType && matchProject;
+    });
+  }, [homes, searchTerm, selectedType, searchProject]);
+
+  // --- Pagination ---
+  const indexLastArchive = currentPageArchives * itemsPerPage;
+  const indexFirstArchive = indexLastArchive - itemsPerPage;
+  const currentArchivesPage = filteredArchives.slice(indexFirstArchive, indexLastArchive);
+  const totalPagesArchives = Math.ceil(filteredArchives.length / itemsPerPage);
+
+  const indexLastHome = currentPageHomes * itemsPerPage;
+  const indexFirstHome = indexLastHome - itemsPerPage;
+  const currentHomesPage = filteredHomes.slice(indexFirstHome, indexLastHome);
+  const totalPagesHomes = Math.ceil(filteredHomes.length / itemsPerPage);
+
+  // --- Vérification du plan ---
+  useEffect(() => {
+    if (!hasFeature("archives")) {
+      toast.error("🔒 Fonction non disponible dans le plan Gratuit. Passez à Standard pour l’activer.");
+    }
+  }, [hasFeature, navigate]);
+
+ 
 
   return (
+    
     <div>
       <Navbar />
       <Toaster position="top-right" reverseOrder={false} />
@@ -110,7 +150,7 @@ if (data2.success) {
         <div className="saas-card">
           <nav aria-label="breadcrumb" className="breadcrumb-custom">
             <ol>
-              <li><Link to='/Accueil'>Accueil</Link></li>
+              <li><Link to="/Accueil">Accueil</Link></li>
               <li className="active"><i className="fa-solid fa-box-archive"></i> Mes archives</li>
             </ol>
           </nav>
@@ -119,146 +159,74 @@ if (data2.success) {
             <h2><i className="fa-solid fa-box-archive"></i> Mes archives</h2>
           </div>
 
-          {/* Filtres */}
+          {/* --- Onglets Locataires / Biens --- */}
+          <div className="tabs-section">
+            <button className={activeTab === "locataires" ? "tab-active" : ""} onClick={() => setActiveTab("locataires")}>Locataires</button>
+            <button className={activeTab === "biens" ? "tab-active" : ""} onClick={() => setActiveTab("biens")}>Biens</button>
+          </div>
+
+          {/* --- Filtres dynamiques --- */}
           <div className="filter-section">
             <select
               className="select-field"
-              value={searchProject}
-              onChange={(e) => { setSearchProject(e.target.value); setCurrentPage(1); }}
+              value={selectedType}
+              onChange={e => { setSelectedType(e.target.value); setCurrentPageArchives(1); setCurrentPageHomes(1); }}
             >
-              <option value="">-- Sélectionner un projet --</option>
-              {projects.map((project) => (
-                <option key={project._id} value={project._id}>{project.name}</option>
+              <option value="">Tous les types</option>
+              {[...new Set(projects.map(p => p.categorie || p.type || ""))].map((type, idx) => (
+                <option key={idx} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
               ))}
             </select>
 
-            {searchProject && (
-              <input
-                type="text"
-                className="search-input"
-                placeholder="Rechercher un locataire..."
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              />
-            )}
+            <select
+              className="select-field"
+              value={searchProject}
+              onChange={e => { setSearchProject(e.target.value); setCurrentPageArchives(1); setCurrentPageHomes(1); }}
+            >
+              <option value="">Tous les projets</option>
+              {projects
+                .filter(p => !selectedType || (p.categorie || p.type || "").toLowerCase() === selectedType.toLowerCase())
+                .map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+            </select>
+
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Rechercher..."
+              value={searchTerm}
+              onChange={e => { setSearchTerm(e.target.value); setCurrentPageArchives(1); setCurrentPageHomes(1); }}
+            />
           </div>
 
-          {!searchProject ? (
-            <p style={{ textAlign: "center", marginTop: "20px" }}>
-              Veuillez sélectionner un projet pour afficher les archives.
-            </p>
+          {loading ? (
+            <div style={{ textAlign: "center", marginTop: "2rem" }}>
+              <Blocks visible={true} height="80" width="80" />
+            </div>
           ) : (
             <>
-              {/* Locataires archivés */}
-              <div className="tenant-section">
-  <h3>📌 Locataires archivés</h3>
-  {loading ? (
-    <Blocks visible={true} height="80" width="100%" ariaLabel="loading" />
-  ) : (
-    <div className="table-responsive">
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Nom & Prénom(s)</th>
-            <th>Contacts</th>
-            <th>Bien</th>
-            <th>Statut</th>
-            <th>Archivé(e) par</th>
-            <th>Date d’archivage</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentPersons.length === 0 ? (
-            <tr>
-              <td colSpan="7" style={{ textAlign: "center" }}>Aucun locataire trouvé</td>
-            </tr>
-          ) : (
-            currentPersons.map(person => (
-              <tr key={person._id}>
-                <td>{person.name} {person.lastname}</td>
-                <td>{person.tel}</td>
-                <td>{person.homeInfo?.categorie || "N/A"}</td>
-                <td><span className="badge badge-archived">Archivé</span></td>
-                <td>{person.archivedBy || "—"}</td>
-                <td>{person.dateArchived ? new Date(person.dateArchived).toLocaleDateString("fr-FR") : "—"}</td>
-                <td>
-                  <Link to={`/detailArchivedUser/${person._id}`}>
-                    <button className="btn-details">Détails</button>
-                  </Link>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  )}
-</div>
-
-              {/* 🔹 Maisons archivées */}
-<div className="tenant-section">
-  <h3>🏠 Maisons archivées</h3>
-  {loading ? (
-    <Blocks visible={true} height="80" width="100%" ariaLabel="loading" />
-  ) : (
-    <div className="table-responsive">
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Nom de la maison</th>
-            <th>Adresse</th>
-            <th>Catégorie</th>
-            <th>Projet</th>
-            <th>Statut</th>
-            <th>Archivé(e) par</th>
-            <th>Date d’archivage</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {homes.length === 0 ? (
-            <tr>
-              <td colSpan="8" style={{ textAlign: "center" }}>Aucune maison archivée</td>
-            </tr>
-          ) : (
-            homes.map(home => (
-              <tr key={home._id}>
-                <td>{home.nameHome || "N/A"}</td>
-                <td>{home.addressHome || "N/A"}</td>
-                <td>{home.categorie || "N/A"}</td>
-                <td>{home.projectId?.name || "N/A"}</td>
-                <td><span className="badge badge-archived">Archivé</span></td>
-                <td>{home.archivedBy || "—"}</td>
-                <td>{home.dateArchived ? new Date(home.dateArchived).toLocaleDateString("fr-FR") : "—"}</td>
-                <td>
-                  <Link to={`/detailArchivedHome/${home._id}`}>
-                    <button className="btn-details">Détails</button>
-                  </Link>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  )}
-</div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="pagination-section">
-                  <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>◀</button>
-                  <span>{currentPage} / {totalPages}</span>
-                  <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>▶</button>
-                </div>
+              {activeTab === "locataires" && (
+                <TableSection
+                  data={currentArchivesPage}
+                  totalPages={totalPagesArchives}
+                  currentPage={currentPageArchives}
+                  setCurrentPage={setCurrentPageArchives}
+                  type="locataire"
+                />
+              )}
+              {activeTab === "biens" && (
+                <TableSection
+                  data={currentHomesPage}
+                  totalPages={totalPagesHomes}
+                  currentPage={currentPageHomes}
+                  setCurrentPage={setCurrentPageHomes}
+                  type="bien"
+                />
               )}
             </>
           )}
         </div>
       </div>
 
-      {/* 🔹 Modal permission */}
       <PermissionModal
         show={showPermissionModal}
         onClose={() => setShowPermissionModal(false)}
@@ -267,30 +235,115 @@ if (data2.success) {
       />
 
       <Footer />
-      <Toaster position="top-right" reverseOrder={false} />
 
-      {/* CSS inchangé */}
+      {/* --- Composant TableSection réutilisable --- */}
       <style>{`
         .saas-container { padding: 2rem; background: #f8fafc; min-height: 100vh; }
         .saas-card { background: #fff; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); padding: 2rem; }
         .breadcrumb-custom ol { display: flex; gap: .5rem; list-style: none; padding: 0; }
         .breadcrumb-custom li { font-size: .9rem; }
         .breadcrumb-custom .active { color: #2563eb; font-weight: bold; }
-        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .filter-section { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .tabs-section { display: flex; gap: 1rem; margin-bottom: 1rem; }
+        .tabs-section button { padding: .5rem 1rem; border: none; border-radius: 8px; cursor: pointer; background: #e5e7eb; font-weight: 500; }
+        .tabs-section .tab-active { background: #2563eb; color: #fff; }
+        .filter-section { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
         .search-input, .select-field { padding: .5rem 1rem; border-radius: 6px; border: 1px solid #e5e7eb; }
-        .tenant-section { margin-bottom: 2rem; }
-        .tenant-section h3 { margin-bottom: 1rem; font-size: 1.2rem; color: #111827; }
         .table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        .table th, .table td { padding: .6rem; border: 1px solid #e5e7eb; text-align: center; }
+        .table th, .table td { border: 1px solid #e5e7eb; padding: .6rem; text-align: center; }
         .table th { background: #f1f5f9; }
-        .btn-details { padding: .3rem .6rem; border: none; border-radius: 6px; background: #2563eb; color: #fff; cursor: pointer; }
+        .btn-details { padding: .3rem .6rem; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
         .btn-details:hover { background: #1e40af; }
-        .badge-archived { background: #ef4444; color: #fff; padding: .2rem .6rem; border-radius: 12px; font-size: 12px; }
-        .pagination { margin-top: 1rem; display: flex; gap: .3rem; justify-content: center; }
-        .pagination button { padding: .4rem .8rem; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; cursor: pointer; }
-        .pagination button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+        .pagination-section { display: flex; justify-content: center; align-items: center; gap: .5rem; margin-top: 1rem; }
+        .tenant-section { margin-top: 2rem; }
+        .table-responsive { overflow-x: auto; }
       `}</style>
+    </div>
+  );
+}
+
+// --- TableSection ---
+function TableSection({ data, totalPages, currentPage, setCurrentPage, type }) {
+  return (
+    <div className="tenant-section">
+      <div className="table-responsive">
+        <table className="table">
+          <thead>
+            {type === "locataire" ? (
+              <tr>
+                <th>Nom / Société</th>
+                <th>Contact</th>
+                <th>Type</th>
+                <th>Bien</th>
+                <th>Projet</th>
+                <th>Archivé par</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            ) : (
+              <tr>
+                <th>Nom</th>
+                <th>Adresse</th>
+                <th>Catégorie</th>
+                <th>Projet</th>
+                <th>Archivé par</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            )}
+          </thead>
+        <tbody>
+  {data.length === 0 ? (
+    <tr>
+      <td colSpan={type === "locataire" ? 8 : 7} style={{ textAlign: "center" }}>
+        Aucun élément trouvé
+      </td>
+    </tr>
+  ) : data.map(item => (
+    <tr key={item._id}>
+      {type === "locataire" ? (
+        <>
+          <td>{item.typePersonne === "societe" ? item.raisonSociale || "Société" : `${item.name || ""} ${item.lastname || ""}`}</td>
+          <td>{item.tel || "N/A"}</td>
+          <td>{item.typePersonne === "societe" ? "Société" : "Particulier"}</td>
+          <td>{item.homeInfo?.nameHome || "—"}</td>
+          <td>{item.homeId?.projectId?.name || "—"}</td>
+          <td>{item.createdBy || "—"}</td>
+          <td>{item.archivedAt ? new Date(item.archivedAt).toLocaleDateString("fr-FR") : "—"}</td>
+          <td>
+            <Link to={`/detailArchivedUser/${item._id}`}>
+              <button className="btn-details">Détails</button>
+            </Link>
+          </td>
+        </>
+      ) : (
+        <>
+          <td>{item.nameHome}</td>
+          <td>{item.addressHome}</td>
+          <td>{item.categorie}</td>
+          <td>{item.projectId?.name}</td>
+          <td>{item.archivedInfo?.archivedByName || "—"}</td> {/* <-- Affiche archivedByName */}
+          
+          <td>{item.dateArchived ? new Date(item.dateArchived).toLocaleDateString("fr-FR") : "—"}</td>
+          <td>
+            <Link to={`/detailArchivedHome/${item._id}`}>
+              <button className="btn-details">Détails</button>
+            </Link>
+          </td>
+        </>
+      )}
+    </tr>
+  ))}
+</tbody>
+        </table>
+
+        {totalPages > 1 && (
+          <div className="pagination-section">
+            <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>◀</button>
+            <span>{currentPage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>▶</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

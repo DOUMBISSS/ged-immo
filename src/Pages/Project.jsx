@@ -32,7 +32,7 @@ export default function Project() {
     if (!user?._id) return;
     const fetchData = async () => {
       try {
-        const res = await fetch(`https://backend-ged-immo.onrender.com/data/${user._id}`);
+        const res = await fetch(`http://localhost:4000/data/${user._id}`);
         const data = await res.json();
 
         if (data.success) {
@@ -74,6 +74,7 @@ export default function Project() {
   // 🔹 Création nouveau projet
 const handleNewProjectSubmit = async (e) => {
   e.preventDefault();
+  
 
   // 🔹 Validation locale
   if (!newProjectName?.trim()) {
@@ -160,7 +161,7 @@ const handleNewProjectSubmit = async (e) => {
           {/* 🔹 Résumé maisons */}
           <div className="resume-cards">
             <div className="resume-card total">
-              <h4>Total maisons</h4>
+              <h4>Total Biens</h4>
               <span>{totalMaisons}</span>
             </div>
             <div className="resume-card occupees">
@@ -271,50 +272,72 @@ const handleNewProjectSubmit = async (e) => {
         </tr>
       </thead>
       <tbody>
-        {currentProjects.length === 0 ? (
-          <tr>
-            <td colSpan="6" style={{ textAlign: "center" }}>
-              Aucun projet trouvé
-            </td>
-          </tr>
-        ) : (
-          currentProjects.map((project) => (
-            <tr key={project._id}>
-              <td>{project.name}</td>
-              <td>{project.description || "Aucune description"}</td>
-              <td style={{ textTransform: "capitalize" }}>
-                {project.type || "Non spécifié"}
-              </td>
-              <td>
-                {typeof project.createdBy === "string"
-                  ? project.createdBy
-                  : project.createdBy?.fullname || "Inconnu"}
-              </td>
-              <td>
-                {new Date(project.createdAt).toLocaleDateString("fr-FR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
-              </td>
-              <td>
-                {/* ✅ Redirection conditionnelle selon le type */}
-                <Link
-                  to={
-                    project.type === "magasin"
-                      ? `/detailMagasin/${project._id}`
-                      : `/detail_projet/fr/${project._id}`
-                  }
-                >
-                  <button className="btn-details">
-                    <i className="fa-solid fa-eye"></i> Détails
-                  </button>
-                </Link>
-              </td>
-            </tr>
-          ))
-        )}
-      </tbody>
+  {currentProjects.length === 0 ? (
+    <tr>
+      <td colSpan="6" style={{ textAlign: "center" }}>
+        Aucun projet trouvé
+      </td>
+    </tr>
+  ) : (
+    currentProjects.map((project) => (
+      <tr key={project._id}>
+        <td>{project.name}</td>
+        <td>{project.description || "Aucune description"}</td>
+        <td style={{ textTransform: "capitalize" }}>
+          {project.type === "immobilier" && (
+            <><i className="fa-solid fa-house me-1" title="Immobilier"></i>Immobilier</>
+          )}
+          {project.type === "magasin" && (
+            <><i className="fa-solid fa-store me-1" title="Magasin"></i>Magasin</>
+          )}
+          {project.type === "bureau" && (
+            <><i className="fa-solid fa-building me-1" title="Bureau"></i>Bureau</>
+          )}
+          {project.type === "entrepot" && (
+            <><i className="fa-solid fa-warehouse me-1" title="Entrepôt"></i>Entrepôt</>
+          )}
+          {project.type === "terrain" && (
+            <><i className="fa-solid fa-tree me-1" title="Terrain"></i>Terrain</>
+          )}
+          {!project.type && "Non spécifié"}
+        </td>
+        <td>
+          {typeof project.createdBy === "string"
+            ? project.createdBy
+            : project.createdBy?.fullname || "Inconnu"}
+        </td>
+        <td>
+          {new Date(project.createdAt).toLocaleDateString("fr-FR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          })}
+        </td>
+        <td>
+          <Link
+            to={
+              project.type === "immobilier"
+                ? `/detail_projet/fr/${project._id}`
+                : project.type === "magasin"
+                ? `/detailMagasin/${project._id}`
+                : project.type === "bureau"
+                ? `/detailBureau/${project._id}`
+                : project.type === "entrepot"
+                ? `/detailEntrepot/${project._id}`
+                : project.type === "terrain"
+                ? `/detailTerrain/${project._id}`
+                : `/detail_projet/fr/${project._id}`
+            }
+          >
+            <button className="btn-details">
+              <i className="fa-solid fa-eye"></i> Détails
+            </button>
+          </Link>
+        </td>
+      </tr>
+    ))
+  )}
+</tbody>
     </table>
   </div>
 </div>

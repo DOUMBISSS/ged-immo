@@ -2,16 +2,18 @@ import React, { useContext, useState, useEffect } from "react";
 import { useUserContext } from "../../contexts/UserContext";
 import CreateUserModal from "./CreateUserModal";
 import EditPermissionsModal from "./EditPermissionsModal";
-import { toast } from "react-toastify";
+import { toast, Toaster } from "react-hot-toast";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 import { Link } from "react-router-dom";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 export default function Administrator() {
   const { user } = useUserContext();
   const [showModalUser, setShowModal] = useState(false);
   const [users, setUsers] = useState([]);
   const [editUser, setEditUser] = useState(null);
+  const [deleteUserModal, setDeleteUserModal] = useState({ isOpen: false, userId: null, userName: "" });
 
   const adminId = user?._id;
 
@@ -28,140 +30,141 @@ export default function Administrator() {
     );
   }
 
-const permissionLabels = {
-  // Utilisateurs
-  view_users: "Voir les utilisateurs",
-  create_users: "Créer des utilisateurs",
-  edit_users: "Modifier des utilisateurs",
-  delete_users: "Supprimer des utilisateurs",
+  const permissionLabels = {
+    // Utilisateurs
+    view_users: "Voir les utilisateurs",
+    create_users: "Créer des utilisateurs",
+    edit_users: "Modifier des utilisateurs",
+    delete_users: "Supprimer des utilisateurs",
 
-  // Documents
-  view_documents: "Consulter les documents",
-  upload_documents: "Téléverser des documents",
-  delete_documents: "Supprimer des documents",
+    // Documents
+    view_documents: "Consulter les documents",
+    upload_documents: "Téléverser des documents",
+    delete_documents: "Supprimer des documents",
 
-  // Projets
-  create_projects: "Créer des projets",
-  view_projects: "Voir les projets",
-  edit_projects: "Modifier des projets",
-  delete_projects: "Supprimer des projets",
+    // Projets
+    create_projects: "Créer des projets",
+    view_projects: "Voir les projets",
+    edit_projects: "Modifier des projets",
+    delete_projects: "Supprimer des projets",
 
-  // Maisons
-  create_homes: "Créer des maisons",
-  view_homes: "Voir les maisons",
-  edit_homes: "Modifier des maisons",
-  delete_homes: "Supprimer des maisons",
-  archive_homes: "Archiver des maisons",
+    // Maisons
+    create_homes: "Créer des maisons",
+    view_homes: "Voir les maisons",
+    edit_homes: "Modifier des maisons",
+    delete_homes: "Supprimer des maisons",
+    archive_homes: "Archiver des maisons",
 
-  // Locataires
-  create_tenants: "Créer des locataires",
-  view_tenants: "Voir les locataires",
-  edit_tenants: "Modifier des locataires",
-  delete_tenants: "Supprimer des locataires",
-  archive_tenants: "Archiver des locataires",
+    // Locataires
+    create_tenants: "Créer des locataires",
+    view_tenants: "Voir les locataires",
+    edit_tenants: "Modifier des locataires",
+    delete_tenants: "Supprimer des locataires",
+    archive_tenants: "Archiver des locataires",
 
-  // Paiements / locations
-  manage_payments: "Gérer les paiements",
-  view_payments: "Voir les paiements",
-  edit_payments:"Modifier les paiements",
-  delete_payments:"Supprimer les paiements",
+    // Paiements / locations
+    manage_payments: "Gérer les paiements",
+    view_payments: "Voir les paiements",
+    edit_payments: "Modifier les paiements",
+    delete_payments: "Supprimer les paiements",
 
-  // Rapports / paramètres
-  generate_reports: "Générer des rapports",
-  manage_settings: "Gérer les paramètres",
+    // Rapports / paramètres
+    generate_reports: "Générer des rapports",
+    manage_settings: "Gérer les paramètres",
 
-  view_archives:"Voir les archives"
-};
+    view_archives: "Voir les archives",
+    manage_work:"Autoriser les travaux"
+  };
 
-const fetchUsers = async () => {
-  if (!adminId || !user?.token) return;
+  const fetchUsers = async () => {
+    if (!adminId || !user?.token) return;
 
-  try {
-    const res = await fetch(`https://backend-ged-immo.onrender.com/admin/${adminId}/users`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${user.token}`, // <-- ici on envoie le token
-      },
-    });
+    try {
+      const res = await fetch(`http://localhost:4000/admin/${adminId}/users`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (Array.isArray(data.users)) {
-      setUsers(data.users);
-    } else if (Array.isArray(data)) {
-      setUsers(data);
-    } else {
-      console.warn("Réponse inattendue de l'API :", data);
+      if (Array.isArray(data.users)) {
+        setUsers(data.users);
+      } else if (Array.isArray(data)) {
+        setUsers(data);
+      } else {
+        console.warn("Réponse inattendue de l'API :", data);
+        setUsers([]);
+      }
+    } catch (err) {
+      toast.error("Erreur de chargement des utilisateurs");
+      console.error(err);
       setUsers([]);
     }
-  } catch (err) {
-    toast.error("Erreur de chargement des utilisateurs");
-    console.error(err);
-    setUsers([]);
-  }
-};
-// 🗑️ Suppression utilisateur avec toast de confirmation
-const handleDeleteUser = (userId, name) => {
-  const ConfirmDelete = ({ closeToast }) => (
-    <div>
-      <p>Voulez-vous vraiment supprimer {name} ?</p>
-      <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-        <button
-          style={{
-            background: "#dc2626",
-            color: "#fff",
-            border: "none",
-            padding: "5px 10px",
-            borderRadius: "5px",
-            cursor: "pointer"
-          }}
-          onClick={async () => {
-            closeToast();
-            try {
-              const res = await fetch(`https://backend-ged-immo.onrender.com/admin/${adminId}/users/${userId}`, {
-                method: "DELETE",
-              });
-              const data = await res.json();
+  };
 
-              if (data.success) {
-                toast.success(`Utilisateur ${name} supprimé ✅`);
-                setUsers((prev) => prev.filter((u) => u._id !== userId));
-              } else {
-                toast.error(data.message || "Erreur lors de la suppression.");
+  const handleDeleteUser = (userId, name) => {
+    const ConfirmDelete = ({ closeToast }) => (
+      <div style={{ padding: "8px 0" }}>
+        <p>Voulez-vous vraiment supprimer <strong>{name}</strong> ?</p>
+        <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+          <button
+            style={{
+              background: "#dc2626",
+              color: "#fff",
+              border: "none",
+              padding: "5px 10px",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
+            onClick={async () => {
+              closeToast();
+              try {
+                const res = await fetch(`http://localhost:4000/admin/${user._id}/users/${userId}`, {
+                  method: "DELETE",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${user.token}`,
+                  },
+                });
+                const data = await res.json();
+                if (data.success) {
+                  toast.success(data.message || `Utilisateur ${name} supprimé ✅`);
+                  setUsers((prev) => prev.filter((u) => u._id !== userId));
+                } else {
+                  toast.error(data.message || "Erreur lors de la suppression.");
+                }
+              } catch (error) {
+                console.error(error);
+                toast.error("Erreur de connexion au serveur.");
               }
-            } catch (error) {
-              console.error(error);
-              toast.error("Erreur de connexion au serveur.");
-            }
-          }}
-        >
-          Confirmer
-        </button>
-
-        <button
-          style={{
-            background: "#ccc",
-            color: "#111",
-            border: "none",
-            padding: "5px 10px",
-            borderRadius: "5px",
-            cursor: "pointer"
-          }}
-          onClick={closeToast}
-        >
-          Annuler
-        </button>
+            }}
+          >
+            Confirmer
+          </button>
+          <button
+            style={{
+              background: "#ccc",
+              color: "#111",
+              border: "none",
+              padding: "5px 10px",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
+            onClick={() => {
+              closeToast();
+              toast("Suppression annulée", { icon: "⚠️" });
+            }}
+          >
+            Annuler
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
 
-  toast.info(<ConfirmDelete />, {
-    autoClose: false,
-    closeButton: false,
-    position: "top-center",
-    draggable: false,
-  });
-};
+    toast.custom((t) => <ConfirmDelete closeToast={() => toast.dismiss(t.id)} />);
+  };
 
   return (
     <>
@@ -172,17 +175,15 @@ const handleDeleteUser = (userId, name) => {
             <h2>👨‍💼 Gestion des utilisateurs</h2>
             <p>Créez, gérez et attribuez les rôles & permissions de vos utilisateurs.</p>
           </div>
-          
-           <div>
+
+          <div>
             <Link to="/Actions">
-            <button className="btn-actions">
-            Actions
-          </button>
-          </Link>
-          <button onClick={() => setShowModal(true)} className="btn-create">
-            + Nouvel utilisateur
-          </button>
-           </div>
+              <button className="btn-actions">Actions</button>
+            </Link>
+            <button onClick={() => setShowModal(true)} className="btn-create">
+              + Nouvel utilisateur
+            </button>
+          </div>
         </div>
 
         <div className="admin-card">
@@ -229,11 +230,7 @@ const handleDeleteUser = (userId, name) => {
                         </span>
                       </td>
                       <td>
-                        {/* {u.permissions?.length
-                          ? u.permissions.map((perm) => permissionLabels[perm] || perm).join(", ")
-                          : "—"} */}
-
-                           {u.permissions?.length ? (
+                        {u.permissions?.length ? (
                           <ul>
                             {u.permissions.map((perm) => (
                               <li key={perm} className="list-permissions">
@@ -245,7 +242,7 @@ const handleDeleteUser = (userId, name) => {
                           "—"
                         )}
                       </td>
-                      <td >
+                      <td>
                         <button
                           onClick={() => setEditUser(u)}
                           style={{
@@ -256,13 +253,13 @@ const handleDeleteUser = (userId, name) => {
                             borderRadius: "6px",
                             cursor: "pointer",
                             fontSize: "0.8rem",
-                            marginRight:"2rem"
-                          }}>
+                            marginRight: "1rem",
+                          }}
+                        >
                           <i className="fa-regular fa-pen-to-square"></i>
                         </button>
-
                         <button
-                          onClick={() => handleDeleteUser(u._id, `${u.name} ${u.prenom}`)}
+                          onClick={() => setDeleteUserModal({ isOpen: true, userId: u._id, userName: `${u.name} ${u.prenom}` })}
                           style={{
                             background: "#dc2626",
                             color: "white",
@@ -283,7 +280,6 @@ const handleDeleteUser = (userId, name) => {
             </div>
           )}
         </div>
-      
 
         {showModalUser && (
           <CreateUserModal
@@ -294,40 +290,52 @@ const handleDeleteUser = (userId, name) => {
         )}
 
         {editUser && (
-  <EditPermissionsModal
-    user={editUser}
-    onClose={() => setEditUser(null)}
-    onUpdated={() => {
-      fetchUsers();
-      setEditUser(null);
-    }}
-    permissionLabels={permissionLabels}
-    allPermissions={[
-      // 👤 Utilisateurs
-      "manage_admins", "view_users", "create_users", "edit_users", "delete_users",
+          <EditPermissionsModal
+            user={editUser}
+            onClose={() => setEditUser(null)}
+            onUpdated={() => {
+              fetchUsers();
+              setEditUser(null);
+            }}
+            permissionLabels={permissionLabels}
+            allPermissions={[
+              "manage_admins", "view_users", "create_users", "edit_users", "delete_users",
+              "view_documents", "upload_documents", "delete_documents",
+              "create_projects", "view_projects", "edit_projects", "delete_projects",
+              "create_homes", "view_homes", "edit_homes", "delete_homes", "archive_homes",
+              "create_tenants", "view_tenants", "edit_tenants", "delete_tenants", "archive_tenants",
+              "manage_payments", "edit_payments", "view_payments", "delete_payments",
+              "generate_reports", "manage_settings","manage_work"
+            ]}
+          />
+        )}
 
-      // 📁 Documents
-      "view_documents", "upload_documents", "delete_documents",
-
-      // 🏗️ Projets
-      "create_projects", "view_projects", "edit_projects", "delete_projects",
-
-      // 🏠 Maisons
-      "create_homes", "view_homes", "edit_homes", "delete_homes","archive_homes",
-
-      // 👥 Locataires
-      "create_tenants", "view_tenants", "edit_tenants", "delete_tenants", "archive_tenants",
-
-      // 💸 Gestion des loyers et paiements
-       "manage_payments","edit_payments","view_payments","delete_payments",
-
-      // ⚙️ Paramètres et rapports
-      "generate_reports", "manage_settings"
-    ]}
-  />
-)}
+        <ConfirmDeleteModal
+  isOpen={deleteUserModal.isOpen}
+  userName={deleteUserModal.userName}
+  onClose={() => setDeleteUserModal({ isOpen: false, userId: null, userName: "" })}
+  onConfirm={async () => {
+    try {
+      const res = await fetch(`http://localhost:4000/admin/${user._id}/users/${deleteUserModal.userId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${user.token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || `Utilisateur ${deleteUserModal.userName} supprimé ✅`);
+        setUsers(prev => prev.filter(u => u._id !== deleteUserModal.userId));
+      } else {
+        toast.error(data.message || "Erreur lors de la suppression.");
+      }
+    } catch (err) {
+      toast.error("Erreur de connexion au serveur.");
+      console.error(err);
+    }
+    setDeleteUserModal({ isOpen: false, userId: null, userName: "" });
+  }}
+/>
       </div>
-        <Footer/>
+      <Footer/>
 
       <style jsx="true">{`
         .admin-dashboard {
@@ -441,6 +449,7 @@ const handleDeleteUser = (userId, name) => {
 }
 .role-badge.admin { background-color: #dc2626; }       /* Rouge pour Admin */
 .role-badge.agent { background-color: #2563eb; }        /* Bleu pour User */
+.role-badge.user { background-color: #dc2626; }        /* Bleu pour User */
 .role-badge.moderator { background-color: #f59e0b; }   /* Orange pour Modérateur */
 
 /* Liste des permissions */

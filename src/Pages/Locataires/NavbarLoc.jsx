@@ -118,7 +118,7 @@ export default function NavbarLoc() {
               </button>
             </>
           ) : (
-            <Link to="/" className="btn__login">Connexion</Link>
+            <Link to="/Mon__compte" className="btn__login">Connexion</Link>
           )}
         </div>
       </header>

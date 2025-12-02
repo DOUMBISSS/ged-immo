@@ -3,6 +3,7 @@ import { useUserContext } from "../contexts/UserContext";
 import toast, { Toaster } from "react-hot-toast";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import PlansTarifs from "./PlansTarifs";
 
 const API = "http://localhost:4000";
 
@@ -14,6 +15,7 @@ export default function Profil() {
 
   const [signatures, setSignatures] = useState([]);
   const [selectedSignature, setSelectedSignature] = useState(null);
+  const [showPlans, setShowPlans] = useState(false);
 
   const canvasRef = useRef(null);
   const isDrawing = useRef(false);
@@ -28,17 +30,31 @@ const [editAddress, setEditAddress] = useState("");
 const [password, setPassword] = useState("");
 const [confirmPassword, setConfirmPassword] = useState("");
 const [subscription, setSubscription] = useState(null);
+// 🔹 Logo
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
 
 // 🔹 Ouvrir le modal avec les valeurs actuelles
-const openEditModal = () => {
-  if (roleType !== "admin") {
-    toast.error("Seul l’administrateur peut modifier son profil");
-    return;
-  }
-  setEditNumber(adminData.number || "");
-  setEditAddress(adminData.address || "");
-  setEditModalOpen(true);
-};
+  // 🔹 Ouvrir le modal
+  const openEditModal = () => {
+    if (roleType !== "admin") {
+      toast.error("Seul l’administrateur peut modifier son profil");
+      return;
+    }
+    setEditNumber(adminData.number || "");
+    setEditAddress(adminData.address || "");
+    setLogoPreview(adminData?.companyInfo?.logo || null);
+    setEditModalOpen(true);
+  };
+
+
+  // 🖼️ Preview logo
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
 
 // 🔹 Enregistrer la mise à jour du profil
 const handleUpdateProfile = async (e) => {
@@ -50,17 +66,19 @@ const handleUpdateProfile = async (e) => {
   }
 
   try {
+    const formData = new FormData();
+    formData.append("number", editNumber);
+    formData.append("address", editAddress);
+    if (password) formData.append("password", password);
+    if (logoFile) formData.append("logo", logoFile); // ✅ le fichier
+
     const res = await fetch(`${API}/admin/${user._id}/update-profile`, {
       method: "PUT",
       headers: {
-        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        // ne pas mettre Content-Type ici, fetch le définit automatiquement pour FormData
       },
-      body: JSON.stringify({
-        number: editNumber,
-        address: editAddress,
-        password: password || undefined,
-      }),
+      body: formData,
     });
 
     const data = await res.json();
@@ -68,11 +86,17 @@ const handleUpdateProfile = async (e) => {
     if (!res.ok) throw new Error(data.message || "Erreur lors de la mise à jour");
 
     toast.success("Profil mis à jour avec succès ✅");
+
     setAdminData((prev) => ({
       ...prev,
       number: editNumber,
       address: editAddress,
+      companyInfo: {
+        ...prev.companyInfo,
+        logo: data.updatedAdmin.companyInfo?.logo || prev.companyInfo?.logo,
+      },
     }));
+
     setEditModalOpen(false);
     setPassword("");
     setConfirmPassword("");
@@ -246,11 +270,72 @@ useEffect(() => {
       <Navbar />
       <div className="profil-container">
         <Toaster position="top-right" />
+        <div>
+            {roleType === "admin" && (
+          <div className="profil-container-button">
+       
+          <button className="btn-save" style={{ marginTop: "1rem", backgroundColor: "#4b00cc" }} onClick={openEditModal}>
+            ✏️ Mettre à jour le profil
+            </button>
+
+             <button
+  className="btn-save"
+  style={{ marginTop: "1rem", backgroundColor: "red" }}
+  onClick={() => setShowPlans(true)}>
+  Mon abonnement
+</button>
+
+{showPlans && (
+  <PlansTarifs isOpen={showPlans} onClose={() => setShowPlans(false)} />
+)}
+
+          </div>
+            )}
+        </div>
         <h1>Mon Profil</h1>
 
     
         {/* Informations Admin */}
         <div className="profil-card">
+
+          {/* --- Logo ou icône --- */}
+          <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+            {adminData?.companyInfo?.logo ? (
+              <img
+                src={adminData.companyInfo.logo}
+                alt="Logo société"
+                style={{
+                  width: "100px",
+                  height: "100px",
+                  objectFit: "contain",
+                  borderRadius: "8px",
+                  background: "#fff",
+                  border: "1px solid #e0e0e0",
+                  padding: "5px",
+                  boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100px",
+                  height: "100px",
+                  borderRadius: "8px",
+                  background: "#f5f5f5",
+                  border: "1px dashed #ccc",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto",
+                  color: "#999",
+                  fontSize: "2rem",
+                }}
+              >
+                <i className="fa-solid fa-building"></i>
+              </div>
+            )}
+          </div>
+          
           <div className="profil-info">
             {roleType === "admin" ? (
               <>
@@ -273,20 +358,44 @@ useEffect(() => {
           </div>
         </div>
 
-  {roleType === "admin" && subscription && (
-  <div className="subscription-info" style={{ marginTop: "1rem", padding: "1rem", background: "#f0f0ff", borderRadius: 8 }}>
-    <h3>📦 Abonnement</h3>
-    <p><strong>Type :</strong> {subscription.subscriptionType}</p>
-    <p><strong>Début :</strong> {new Date(subscription.subscriptionStart).toLocaleDateString("fr-FR")}</p>
-    <p><strong>Fin :</strong> {new Date(subscription.subscriptionEnd).toLocaleDateString("fr-FR")}</p>
-    <p><strong>Statut paiement :</strong> {subscription.paymentStatus}</p>
-    <p><strong>État :</strong> 
-      {subscription.suspended
-        ? "⏸️ Suspendu"
-        : new Date(subscription.subscriptionEnd) < new Date()
-        ? "❌ Expiré"
-        : "✅ Actif"}
-    </p>
+ {/* 🔹 Abonnement */}
+        {roleType === "admin" && subscription && (
+          <div style={{ marginTop: "1rem" }}>
+            <div className="subscription-badge" style={{ padding: "1rem", background: "#e0f7fa", borderRadius: 8, marginBottom: 10 }}>
+              <h4>🎫 Abonnement actuel</h4>
+              <p><strong>Type:</strong> {subscription.subscriptionType}</p>
+              <p><strong>Début:</strong> {new Date(subscription.subscriptionStart).toLocaleDateString()}</p>
+              <p><strong>Fin:</strong> {new Date(subscription.subscriptionEnd).toLocaleDateString()}</p>
+            </div>
+
+            {subscription.scheduledStart && new Date(subscription.scheduledStart) > new Date() && (
+              <div className="subscription-badge" style={{ padding: "1rem", background: "#fff3e0", borderRadius: 8 }}>
+                <h4>🕒 Abonnement programmé</h4>
+                <p><strong>Type:</strong> {subscription.subscriptionType}</p>
+                <p><strong>Début programmé:</strong> {new Date(subscription.scheduledStart).toLocaleDateString()}</p>
+                <p><strong>Fin:</strong> {new Date(subscription.subscriptionEnd).toLocaleDateString()}</p>
+              </div>
+            )}
+
+            {subscription.features?.length > 0 && (
+              <div className="subscription-features">
+                <h3>📌 Fonctions incluses</h3>
+                <ul>
+                  {subscription.features.map((f, i) => <li key={i}>✅ {f}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+{roleType === "admin" && subscription?.features?.length > 0 && (
+  <div className="subscription-features">
+    <h3>📌 Fonctions incluses dans votre abonnement</h3>
+    <ul>
+      {subscription.features.map((feature, index) => (
+        <li key={index}>✅ {feature}</li>
+      ))}
+    </ul>
   </div>
 )}
 
@@ -308,15 +417,7 @@ useEffect(() => {
           </div>
         )}
 
-        {roleType === "admin" && (
-  <button
-    className="btn-save"
-    style={{ marginTop: "1rem", backgroundColor: "#4b00cc" }}
-    onClick={openEditModal}
-  >
-    ✏️ Mettre à jour le profil
-  </button>
-)}
+      
 
         {/* 🎨 Gestion Signature */}
         <div className="signature-section">
@@ -394,57 +495,59 @@ useEffect(() => {
           )}
         </div>
 
+ {/* 🧩 Modal mise à jour */}
         {editModalOpen && (
-  <div className="modal-overlay">
-    <div className="modal-content">
-      <h2>🔧 Mettre à jour le profil</h2>
-      <form onSubmit={handleUpdateProfile}>
-        <div className="form-group">
-          <label>Téléphone</label>
-          <input
-            type="text"
-            value={editNumber}
-            onChange={(e) => setEditNumber(e.target.value)}
-          />
-        </div>
-        <div className="form-group">
-          <label>Adresse</label>
-          <input
-            type="text"
-            value={editAddress}
-            onChange={(e) => setEditAddress(e.target.value)}
-          />
-        </div>
-        <div className="form-group">
-          <label>Nouveau mot de passe (facultatif)</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        <div className="form-group">
-          <label>Confirmer le mot de passe</label>
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-        </div>
-        <div className="modal-actions">
-          <button type="submit" className="btn-save">Enregistrer</button>
-          <button
-            type="button"
-            className="btn-cancel"
-            onClick={() => setEditModalOpen(false)}
-          >
-            Annuler
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h2>🔧 Mettre à jour le profil</h2>
+              <form onSubmit={handleUpdateProfile}>
+                <div className="form-group">
+                  <label>Téléphone</label>
+                  <input type="text" value={editNumber} onChange={(e) => setEditNumber(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Adresse</label>
+                  <input type="text" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
+                </div>
+
+                {/* 🔹 Upload Logo */}
+                <div className="form-group">
+                  <label>Logo de l’entreprise</label>
+                  <input type="file" accept="image/*" onChange={handleLogoChange} />
+                  {logoPreview && (
+                    <img
+                      src={logoPreview}
+                      alt="Aperçu logo"
+                      style={{
+                        marginTop: "10px",
+                        width: "100px",
+                        height: "100px",
+                        objectFit: "contain",
+                        border: "1px solid #ddd",
+                        borderRadius: "8px",
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label>Nouveau mot de passe (facultatif)</label>
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Confirmer le mot de passe</label>
+                  <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                </div>
+                <div className="modal-actions">
+                  <button type="submit" className="btn-save">Enregistrer</button>
+                  <button type="button" className="btn-cancel" onClick={() => setEditModalOpen(false)}>
+                    Annuler
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         <style>{`
         .modal-overlay {
@@ -542,6 +645,19 @@ useEffect(() => {
           .btn-save:hover {
             background: #35008f;
           }
+            .subscription-features ul {
+  padding-left: 1.2rem;
+}
+.subscription-features li {
+  color: #333;
+  font-weight: 500;
+}
+  .profil-container-button{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between
+  }
         `}</style>
       </div>
       <Footer />

@@ -20,6 +20,9 @@ export default function User() {
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedHome, setSelectedHome] = useState(null);
   const [countryCode, setCountryCode] = useState("+225");
+  const [projectTypes, setProjectTypes] = useState([]);
+  const [searchType, setSearchType] = useState(""); // Filtre par type de projet
+  const [typePersonne, setTypePersonne] = useState("particulier");
 
   // Champs formulaire locataire
   const [name, setFullName] = useState("");
@@ -39,6 +42,7 @@ export default function User() {
   const [city, setCity] = useState("");
   const [tel_urgency, setUrgency] = useState("");
   const [situation, setSituation] = useState("");
+  const [modalError, setModalError] = useState("");
 
   const [currentPage, setCurrentPage] = useState(() => {
     const savedPage = localStorage.getItem("currentPage");
@@ -52,77 +56,88 @@ export default function User() {
   useEffect(() => { localStorage.setItem("currentPage", currentPage); }, [currentPage]);
 
   // 🔹 Récupération unifiée (Admin ou User)
-useEffect(() => {
-  if (!user?._id || !user?.token) return;
+  useEffect(() => {
+    if (!user?._id || !user?.token) return;
 
-  const fetchAllData = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`http://localhost:4000/data/${user._id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${user.token}`, // ✅ ajout du token
-        },
-      });
+    const fetchAllData = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`http://localhost:4000/data/${user._id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${user.token}`,
+          },
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (!res.ok) {
-        toast.error(data.message || "Erreur lors de la récupération des données.");
-        return;
+        if (!res.ok) {
+          toast.error(data.message || "Erreur lors de la récupération des données.");
+          return;
+        }
+
+        if (data.success) {
+          setProjects(data.projects || []);
+          setPersons(data.persons || []);
+        } else {
+          toast.error(data.message || "Aucune donnée trouvée.");
+        }
+      } catch (err) {
+        toast.error("Erreur serveur : " + err.message);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      if (data.success) {
-        setProjects(data.projects || []);
-        setPersons(data.persons || []);
-      } else {
-        toast.error(data.message || "Aucune donnée trouvée.");
-      }
-    } catch (err) {
-      toast.error("Erreur serveur : " + err.message);
-    } finally {
-      setLoading(false);
+    fetchAllData();
+  }, [user]);
+
+  // 🔹 Déterminer les types de projet disponibles
+  useEffect(() => {
+    if (projects.length > 0) {
+      const types = [...new Set(projects.map(p => p.categorie || p.type || "autre"))];
+      setProjectTypes(types);
     }
-  };
+  }, [projects]);
 
-  fetchAllData();
-}, [user]);
-
-  // console.log(user)
-
-  // Récupération des biens disponibles pour le projet sélectionné
-useEffect(() => {
-  if (!selectedProject) {
-    setHomes([]);
-    return;
-  }
-
- const fetchHomes = async () => {
-  try {
-    const res = await fetch(`http://localhost:4000/projects/${selectedProject}/homes`, {
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${user?.token}`,
-      },
-    });
-
-    const data = await res.json();
-
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || `Erreur HTTP ${res.status}`);
+  // 🔹 Récupération des biens disponibles pour le projet sélectionné
+  useEffect(() => {
+    if (!selectedProject) {
+      setHomes([]);
+      return;
     }
 
-    // Filtrer les maisons libres
-    const availableHomes = data.homes.filter((home) => !home.personId || home.personId.length === 0);
-    setHomes(availableHomes);
-  } catch (err) {
-    console.error("Erreur récupération biens :", err);
-    setHomes([]);
-  }
-};
+    const fetchHomes = async () => {
+      try {
+        const res = await fetch(`http://localhost:4000/projects/${selectedProject}/homes`, {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${user?.token}`,
+          },
+        });
 
-  fetchHomes();
-}, [selectedProject, user?.token]);
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || `Erreur HTTP ${res.status}`);
+        }
+
+        // Filtrer les maisons libres
+        const availableHomes = data.homes.filter((home) => !home.personId || home.personId.length === 0);
+        setHomes(availableHomes);
+      } catch (err) {
+        console.error("Erreur récupération biens :", err);
+        setHomes([]);
+      }
+    };
+
+    fetchHomes();
+  }, [selectedProject, user?.token]);
+
+  // 🔹 Projets filtrés selon le type sélectionné
+  const filteredProjects = searchType
+    ? projects.filter((p) => (p.categorie || p.type || "").toLowerCase() === searchType.toLowerCase())
+    : projects;
 
   const handleSearch = (event) => { setSearch(event.target.value); setCurrentPage(1); };
   const logoutHandler = () => { clearUser(); navigate("/"); };
@@ -143,116 +158,125 @@ useEffect(() => {
   const currentUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
-// ✅ Fonction pour réinitialiser le formulaire
-const resetForm = () => {
-  setSelectedProject("");
-  setSelectedHome(null);
-  setFullName("");
-  setPrenom("");
-  setDate("");
-  setLieu("");
-  setNationality("");
-  setSexe("");
-  setTel("");
-  setUrgency("");
-  setProfession("");
-  setAddresse("");
-  setEmail("");
-  setPiece("");
-  setDateEntrance("");
-  setEmission("");
-  setExpiration("");
-  setCity("");
-  setSituation("");
-};
+  // ✅ Fonction pour réinitialiser le formulaire
+  const resetForm = () => {
+    setSelectedProject("");
+    setSelectedHome(null);
+    setFullName("");
+    setPrenom("");
+    setDate("");
+    setLieu("");
+    setNationality("");
+    setSexe("");
+    setTel("");
+    setUrgency("");
+    setProfession("");
+    setAddresse("");
+    setEmail("");
+    setPiece("");
+    setDateEntrance("");
+    setEmission("");
+    setExpiration("");
+    setCity("");
+    setSituation("");
+  };
 
-// helper : génère une chaîne aléatoire (pour username / password)
-function generateRandomString(length = 8) {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let s = "";
-  for (let i = 0; i < length; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
-  return s;
-}
-
-// ⚡ Nouvelle state pour afficher l'erreur dans le modal
-  const [modalError, setModalError] = useState("");
-
-const handleAddLocataire = async (e) => {
-  e.preventDefault();
-  setModalError("");
-
-  if (!selectedProject) return setModalError("Sélectionnez un projet.");
-  if (!selectedHome) return setModalError("Sélectionnez un bien.");
-  if (!user || !user._id) return setModalError("Vous devez être connecté.");
-
-  try {
-    const adminId = user.adminId || user._id;
-    const generatedUsername = `${(name || 'user').toLowerCase().replace(/\s+/g, '')}_${generateRandomString(4)}`;
-    const generatedPassword = generateRandomString(10);
-
-    const payload = {
-      name, lastname, email,
-      username: generatedUsername,
-      password: generatedPassword,
-      homes: selectedHome._id || selectedHome,
-      adminId,
-      userId: user._id,
-      birth, lieu, nationality, sexe,
-      tel: `${countryCode}${tel}`,
-      tel_urgency, profession, address,
-      pieces, date_entrance, date_emission, date_expiration,
-      situation, city,
-      projectId: selectedProject
-    };
-
-    const res = await fetch("http://localhost:4000/New/Locataire", {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${user?.token}` 
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const result = await res.json();
-
-    if (!res.ok || !result.success) {
-      setModalError(result.message || "Échec de l'ajout du locataire.");
-      return;
-    }
-
-    toast.success("Locataire ajouté avec succès ✅");
-    setShowAddModal(false);
-
-    // ✅ Recharger proprement la liste des locataires
-    const refresh = await fetch(`http://localhost:4000/data/${adminId}`, {
-      headers: { "Authorization": `Bearer ${user?.token}` }
-    });
-
-    const refreshData = await refresh.json();
-    if (refresh.ok && refreshData.success) {
-      setPersons(refreshData.persons || []);
-    } else if (result.person) {
-      // fallback
-      setPersons(prev => [result.person, ...prev]);
-    }
-
-    resetForm();
-
-  } catch (err) {
-    setModalError("Erreur serveur : " + err.message);
+  // helper : génère une chaîne aléatoire (pour username / password)
+  function generateRandomString(length = 8) {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let s = "";
+    for (let i = 0; i < length; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+    return s;
   }
-};
 
-// 🔹 Réinitialiser automatiquement si l'utilisateur change
-useEffect(() => {
-  resetForm();
-}, [user]);
+  const handleAddLocataire = async (e) => {
+    e.preventDefault();
+    setModalError("");
 
-// Réinitialiser automatiquement si l'utilisateur connecté change
-useEffect(() => {
-  resetForm();
-}, [user]);
+    if (!selectedProject) return setModalError("Sélectionnez un projet.");
+    if (!selectedHome) return setModalError("Sélectionnez un bien.");
+    if (!user || !user._id) return setModalError("Vous devez être connecté.");
+
+    try {
+      const adminId = user.adminId || user._id;
+      const generatedUsername = `${(name || 'user').toLowerCase().replace(/\s+/g, '')}_${generateRandomString(4)}`;
+      const generatedPassword = generateRandomString(10);
+
+      const payload = {
+        typePersonne,
+        name,
+        lastname,
+        email,
+        username: generatedUsername,
+        password: generatedPassword,
+        homes: selectedHome._id || selectedHome,
+        adminId,
+        userId: user._id,
+        birth,
+        lieu,
+        nationality,
+        sexe,
+        tel: `${countryCode}${tel}`,
+        tel_urgency,
+        profession,
+        address,
+        pieces,
+        date_entrance,
+        date_emission,
+        date_expiration,
+        situation,
+        city,
+        projectId: selectedProject,
+      };
+
+      if (typePersonne === "societe") {
+        payload.raisonSociale = name;
+        payload.responsable = lastname;
+        payload.rccm = lieu;
+        payload.ifu = nationality;
+        payload.siegeSocial = address;
+        payload.domaineActivite = profession;
+      }
+
+      const res = await fetch("http://localhost:4000/New/Locataire", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${user?.token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        setModalError(result.message || "Échec de l'ajout du locataire.");
+        return;
+      }
+
+      toast.success("Locataire ajouté avec succès ✅");
+      setShowAddModal(false);
+
+      const refresh = await fetch(`http://localhost:4000/data/${adminId}`, {
+        headers: { "Authorization": `Bearer ${user?.token}` },
+      });
+
+      const refreshData = await refresh.json();
+      if (refresh.ok && refreshData.success) {
+        setPersons(refreshData.persons || []);
+      } else if (result.person) {
+        setPersons(prev => [result.person, ...prev]);
+      }
+
+      resetForm();
+    } catch (err) {
+      setModalError("Erreur serveur : " + err.message);
+    }
+  };
+
+  useEffect(() => {
+    resetForm();
+  }, [user]);
 
   return (
     <div>
@@ -268,34 +292,31 @@ useEffect(() => {
 
           {/* Filtres */}
           <div className="filter-section">
-
-             {/* <label>Type de projet</label> */}
-          <select className="select-field">
-            <option value="">Sélectionner un type</option>
-            <option value="immobilier">Immobilier</option>
-            <option value="magasin">Magasin</option>
-          </select>
-
-            {/* <select
-              value={searchProject}
-              onChange={(e) => { setSearchProject(e.target.value); setCurrentPage(1); }}
-              className="select-field">
-              <option value="">Sélectionner une propriété</option>
-              {projects.map(project => (
-                <option key={project._id} value={project._id}>{project.name}</option>
+            {/* Filtrer par type de projet */}
+            <select
+              value={searchType}
+              onChange={(e) => { setSearchType(e.target.value); setSearchProject(""); setSelectedProject(""); setCurrentPage(1); }}
+              className="select-field"
+            >
+              <option value="">Tous les types</option>
+              {projectTypes.map((type, idx) => (
+                <option key={idx} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
               ))}
-            </select> */}
+            </select>
 
+            {/* Projets filtrés selon le type choisi */}
             <select
               value={searchProject}
-              onChange={(e) => { setSearchProject(e.target.value); setCurrentPage(1); }}
-              className="select-field">
-              <option value="">Sélectionner une propriété</option>
-              {projects.map(project => (
+              onChange={(e) => { setSearchProject(e.target.value); setSelectedProject(e.target.value); setCurrentPage(1); }}
+              className="select-field"
+            >
+              <option value="">Sélectionner un projet</option>
+              {filteredProjects.map((project) => (
                 <option key={project._id} value={project._id}>{project.name}</option>
               ))}
             </select>
 
+            {/* Barre de recherche */}
             <div className="search-wrapper">
               <input type="text" placeholder="Rechercher un locataire..." value={search} onChange={handleSearch} />
               <i className="fa-solid fa-magnifying-glass search-icon"></i>
@@ -305,13 +326,16 @@ useEffect(() => {
           {/* Tableau locataires */}
           <div className="table-section">
             {loading ? (
-              <div className="loading"><Blocks visible={true} height="80" width="80" /></div>
+              <div className="loading">
+                <Blocks visible={true} height="80" width="80" />
+              </div>
             ) : (
               <table className="saas-table">
                 <thead>
                   <tr>
                     <th>Nom</th>
                     <th>Prénom(s)</th>
+                    <th>Type</th>
                     <th>Contacts</th>
                     <th>Email</th>
                     <th>Adresse</th>
@@ -320,14 +344,21 @@ useEffect(() => {
                 </thead>
                 <tbody>
                   {!searchProject ? (
-                    <tr><td colSpan="6" style={{ textAlign: "center", fontStyle: "italic" }}>
-                      Veuillez sélectionner une propriété pour voir les locataires
-                    </td></tr>
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: "center", fontStyle: "italic" }}>
+                        Veuillez sélectionner une propriété pour voir les locataires
+                      </td>
+                    </tr>
                   ) : currentUsers.length > 0 ? (
-                    currentUsers.map(person => (
+                    currentUsers.map((person) => (
                       <tr key={person._id}>
                         <td>{person.name}</td>
                         <td>{person.lastname}</td>
+                        <td>
+                          <span className={`badge-type ${person.typePersonne === "societe" ? "badge-societe" : "badge-particulier"}`}>
+                            {person.typePersonne === "societe" ? "Société" : "Particulier"}
+                          </span>
+                        </td>
                         <td>{person.tel}</td>
                         <td>{person.email}</td>
                         <td>{person.address}</td>
@@ -339,9 +370,11 @@ useEffect(() => {
                       </tr>
                     ))
                   ) : (
-                    <tr><td colSpan="6" style={{ textAlign: "center", fontStyle: "italic" }}>
-                      Aucun locataire trouvé
-                    </td></tr>
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: "center", fontStyle: "italic" }}>
+                        Aucun locataire trouvé
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
@@ -352,7 +385,9 @@ useEffect(() => {
               <div className="pagination">
                 <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)}>Précédent</button>
                 {Array.from({ length: totalPages }, (_, i) => (
-                  <button key={i + 1} className={currentPage === i + 1 ? "active" : ""} onClick={() => setCurrentPage(i + 1)}>{i + 1}</button>
+                  <button key={i + 1} className={currentPage === i + 1 ? "active" : ""} onClick={() => setCurrentPage(i + 1)}>
+                    {i + 1}
+                  </button>
                 ))}
                 <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)}>Suivant</button>
               </div>
@@ -362,184 +397,356 @@ useEffect(() => {
       </div>
       <Footer />
 
- {showAddModal && (
-        <div className="modal-container">
-          <div className="modal-contents">
-            <div className="modal-header">
-              <h2><i className="fa-solid fa-user-plus"></i> Ajouter un nouveau locataire</h2>
-              <button className="btn-close" onClick={() => setShowAddModal(false)}>×</button>
-            </div>
-            {/* ⚠️ Affichage des erreurs dans le modal */}
-                {modalError && (
-                  <div style={{ margin: '10px 0', padding: '10px', background: '#fee2e2', color: '#b91c1c', borderRadius: '6px' }}>
-                    {modalError}
-                  </div>
-                )}
-            <form className="modal-body form-grid" onSubmit={handleAddLocataire}>
-              {/* Champs formulaire */}
-              <div className="form-group">
-                <label>Noms</label>
-                <input type="text" required value={name} onChange={(e) => setFullName(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Prénom(s)</label>
-                <input type="text" required value={lastname} onChange={(e) => setPrenom(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Date de naissance</label>
-                <input type="date" required value={birth} onChange={(e) => setDate(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Lieu</label>
-                <input type="text" required value={lieu} onChange={(e) => setLieu(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Sexe</label>
-                <select required value={sexe} onChange={(e) => setSexe(e.target.value)}>
-                  <option value="">Sélectionner</option>
-                  <option value="M">M</option>
-                  <option value="F">F</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Nationalité</label>
-                <input type="text" required value={nationality} onChange={(e) => setNationality(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Ville</label>
-                <input type="text" required value={city} onChange={(e) => setCity(e.target.value)} />
-              </div>
-            
-              <div className="form-group">
-        <label>Indicatif</label>
-        <select value={countryCode} onChange={e => setCountryCode(e.target.value)} className="select-field">
-          <option value="+225">Côte d’Ivoire (+225)</option>
-          <option value="+33">France (+33)</option>
-          <option value="+1">USA (+1)</option>
-          {/* ajouter d’autres pays si nécessaire */}
-        </select>
+{showAddModal && (
+  <div className="modal-container">
+    <div className="modal-contents">
+      <div className="modal-header">
+        <h2><i className="fa-solid fa-user-plus"></i> Ajouter un nouveau locataire</h2>
+        <button className="btn-close" onClick={() => setShowAddModal(false)}>×</button>
       </div>
-             <div className="form-group">
-              <label>Tel(WhatsApp)</label>
+
+      {/* ⚠️ Message d’erreur */}
+      {modalError && (
+        <div style={{ margin: '10px 0', padding: '10px', background: '#fee2e2', color: '#b91c1c', borderRadius: '6px' }}>
+          {modalError}
+        </div>
+      )}
+
+      <form className="modal-body form-grid" onSubmit={handleAddLocataire}>
+        {/* Sélection du type de personne */}
+        <div className="form-group">
+          <label>Type de personne</label>
+          <select
+            value={typePersonne}
+            onChange={(e) => setTypePersonne(e.target.value)}
+            required
+          >
+            <option value="particulier">Particulier</option>
+            <option value="societe">Société</option>
+          </select>
+        </div>
+
+        {/* 🧩 Champs dynamiques selon type de personne */}
+        {typePersonne === "particulier" ? (
+          <>
+            <div className="form-group">
+              <label>Noms</label>
+              <input type="text" required value={name} onChange={(e) => setFullName(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Prénom(s)</label>
+              <input type="text" required value={lastname} onChange={(e) => setPrenom(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Date de naissance</label>
+              <input type="date" required value={birth} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Lieu</label>
+              <input type="text" required value={lieu} onChange={(e) => setLieu(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Sexe</label>
+              <select required value={sexe} onChange={(e) => setSexe(e.target.value)}>
+                <option value="">Sélectionner</option>
+                <option value="M">M</option>
+                <option value="F">F</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Nationalité</label>
+              <input type="text" required value={nationality} onChange={(e) => setNationality(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Situation matrimoniale</label>
+              <select required value={situation} onChange={(e) => setSituation(e.target.value)}>
+                <option value="">Sélectionner</option>
+                <option value="Célibataire">Célibataire</option>
+                <option value="Marié(e)">Marié(e)</option>
+                <option value="Veuf(ve)">Veuf(ve)</option>
+              </select>
+            </div>
+
+            {/* 🆕 Profession et Adresse ajoutés */}
+    <div className="form-group">
+      <label>Profession</label>
+      <input
+        type="text"
+        value={profession}
+        onChange={(e) => setProfession(e.target.value)}
+        placeholder="Ex : Enseignant, Chauffeur, Étudiant..."
+      />
+    </div>
+
+    <div className="form-group">
+      <label>Adresse</label>
+      <input
+        type="text"
+        value={address}
+        onChange={(e) => setAddresse(e.target.value)}
+        placeholder="Adresse de résidence"
+      />
+    </div>
+          </>
+        ) : (
+          <>
+            {/* 🏢 Formulaire pour Société */}
+            <div className="form-group">
+              <label>Raison sociale</label>
               <input
                 type="text"
                 required
-                value={tel}
-                onChange={(e) => setTel(e.target.value.replace(/\D/g, ""))} // supprime tout ce qui n’est pas un chiffre
-                placeholder="Numéro sans indicatif"
+                value={name}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Ex : ABC Immo SARL"
               />
             </div>
-              <div className="form-group">
-                <label>Tel (En cas d'urgence)</label>
-                <input type="text" required value={tel_urgency} onChange={(e) => setUrgency(e.target.value)} />
-              </div>
-               <div className="form-group">
-                <label>Situation matrimoniale</label>
-                <select required value={situation} onChange={(e) => setSituation(e.target.value)}>
-                  <option value="">Sélectionner</option>
-                  <option value="Célibataire">Célibataire</option>
-                  <option value="Marié(e)">Marié(e)</option>
-                  <option value="Veuf(ve)">Veuf(ve)</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Email</label>
-                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Domicile</label>
-                <input type="text" required value={address} onChange={(e) => setAddresse(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Profession</label>
-                <input type="text" required value={profession} onChange={(e) => setProfession(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>N° CNI ou PASSEPORT</label>
-                <input type="text" required value={pieces} onChange={(e) => setPiece(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Date d'émission</label>
-                <input type="date" required value={date_emission} onChange={(e) => setEmission(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Date d'expiration</label>
-                <input type="date" required value={date_expiration} onChange={(e) => setExpiration(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Date d'entrée</label>
-                <input type="date" required value={date_entrance} onChange={(e) => setDateEntrance(e.target.value)} />
-              </div>
+            <div className="form-group">
+              <label>Responsable</label>
+              <input
+                type="text"
+                required
+                value={lastname}
+                onChange={(e) => setPrenom(e.target.value)}
+                placeholder="Nom du représentant légal"
+              />
+            </div>
+            <div className="form-group">
+              <label>RCCM</label>
+              <input
+                type="text"
+                required
+                value={lieu}
+                onChange={(e) => setLieu(e.target.value)}
+                placeholder="Ex : CI-ABJ-2024-B-00001"
+              />
+            </div>
+            <div className="form-group">
+              <label>IFU</label>
+              <input
+                type="text"
+                required
+                value={nationality}
+                onChange={(e) => setNationality(e.target.value)}
+                placeholder="Numéro IFU"
+              />
+            </div>
+            <div className="form-group">
+              <label>Domaine d'activité</label>
+              <input
+                type="text"
+                value={profession}
+                onChange={(e) => setProfession(e.target.value)}
+                placeholder="Ex : BTP, Commerce, Nettoyage..."
+              />
+            </div>
+            <div className="form-group">
+              <label>Siège social</label>
+              <input
+                type="text"
+                required
+                value={address}
+                onChange={(e) => setAddresse(e.target.value)}
+                placeholder="Adresse du siège social"
+              />
+            </div>
+          </>
+        )}
 
-              {/* Projet */}
-              <div className="form-group">
-                <label>Projet</label>
-                <select
-                  required
-                  value={selectedProject}
-                  onChange={(e) => { setSelectedProject(e.target.value); setSelectedHome(null); }}
-                  className="select-field"
-                >
-                  <option value="">Sélectionner un projet</option>
-                  {projects.map((proj) => (
-                    <option key={proj._id} value={proj._id}>{proj.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Biens disponibles */}
-              {selectedProject && (
-                <div className="form-group">
-                  <label>Biens disponibles</label>
-                  <select
-                    required
-                    value={selectedHome?._id || ""}
-                    onChange={handleHouseChange}
-                    className="select-field"
-                  >
-                    <option value="">Sélectionner un bien</option>
-                    {homes.map((home) => (
-                      <option key={home._id} value={home._id}>
-                        {home.nameHome} - {home.reference} - {home.categorie}
-                      </option>
-                    ))}
-                  </select>
-
-                  {selectedHome && (
-                    <div style={{
-                      marginTop: 15,
-                      padding: 15,
-                      border: "1px solid #ddd",
-                      borderRadius: 10,
-                      boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                      background: "#fff",
-                    }}>
-                      {selectedHome.img && (
-                        <img
-                          src={selectedHome.img.startsWith("http") ? selectedHome.img : `http://localhost:4000/${selectedHome.img}`}
-                          alt={selectedHome.nameHome}
-                          style={{ width: 220, height: 150, borderRadius: 8, objectFit: "cover", marginBottom: 10 }}
-                        />
-                      )}
-                      <h4>{selectedHome.nameHome}</h4>
-                      <p><strong>Référence:</strong> {selectedHome.reference}</p>
-                      <p><strong>Catégorie:</strong> {selectedHome.categorie}</p>
-                      <p><strong>Nombre de pièces:</strong> {selectedHome.NmbrePieces || "N/A"}</p>
-                      <p><strong>Loyer Mensuel:</strong> {selectedHome.rent ? `${selectedHome.rent.toLocaleString()} FCFA` : "N/A"}</p>
-                      <p><strong>Disponibilité:</strong> Libre</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Annuler</button>
-                <button type="submit" className="btn-primary">Enregistrer</button>
-              </div>
-            </form>
-          </div>
+        {/* Champs communs à tous les types */}
+        <div className="form-group">
+          <label>Ville</label>
+          <input type="text" required value={city} onChange={(e) => setCity(e.target.value)} />
         </div>
+
+        <div className="form-group">
+          <label>Indicatif</label>
+          <select
+            value={countryCode}
+            onChange={(e) => setCountryCode(e.target.value)}
+            className="select-field"
+          >
+            <option value="+225">Côte d’Ivoire (+225)</option>
+            <option value="+33">France (+33)</option>
+            <option value="+1">USA (+1)</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Tel (WhatsApp)</label>
+          <input
+            type="text"
+            required
+            value={tel}
+            onChange={(e) => setTel(e.target.value.replace(/\D/g, ""))}
+            placeholder="Numéro sans indicatif"
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Tel (urgence)</label>
+          <input type="text" value={tel_urgency} onChange={(e) => setUrgency(e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label>Email</label>
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label>N° CNI / Passeport / Registre</label>
+          <input type="text" required value={pieces} onChange={(e) => setPiece(e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label>Date d'émission</label>
+          <input type="date" required value={date_emission} onChange={(e) => setEmission(e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label>Date d'expiration</label>
+          <input type="date" required value={date_expiration} onChange={(e) => setExpiration(e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label>Date d'entrée</label>
+          <input type="date" required value={date_entrance} onChange={(e) => setDateEntrance(e.target.value)} />
+        </div>
+
+        <div className="form-group">
+  <label>Type de projet</label>
+  <select
+    className="select-field"
+    value={searchType}
+    onChange={(e) => {
+      const selectedType = e.target.value;
+      setSearchType(selectedType);
+      setSelectedProject("");
+      setSearchProject("");
+      setSelectedHome(null);
+    }}
+    required
+  >
+    <option value="">Sélectionner un type</option>
+    {projectTypes.map((type, idx) => (
+      <option key={idx} value={type}>
+        {type.charAt(0).toUpperCase() + type.slice(1)}
+      </option>
+    ))}
+  </select>
+</div>
+
+{/* 2️⃣ Projet filtré selon le type sélectionné */}
+<div className="form-group">
+  <label>Projet</label>
+  <select
+    required
+    value={selectedProject}
+    onChange={(e) => {
+      const projId = e.target.value;
+      setSelectedProject(projId);
+      setSearchProject(projId);
+      setSelectedHome(null);
+    }}
+    className="select-field"
+  >
+    <option value="">Sélectionner un projet</option>
+    {projects
+      .filter((proj) =>
+        searchType ? (proj.categorie || proj.type) === searchType : true
+      )
+      .map((proj) => (
+        <option key={proj._id} value={proj._id}>
+          {proj.name}
+        </option>
+      ))}
+  </select>
+</div>
+
+{/* 3️⃣ Biens disponibles selon le projet choisi */}
+{selectedProject && (
+  <div className="form-group">
+    <label>Bien disponible</label>
+    <select
+      required
+      value={selectedHome?._id || ""}
+      onChange={handleHouseChange}
+      className="select-field"
+    >
+      <option value="">Sélectionner un bien</option>
+      {homes.length > 0 ? (
+        homes.map((home) => (
+          <option key={home._id} value={home._id}>
+            {home.nameHome} - {home.reference} - {home.categorie}
+          </option>
+        ))
+      ) : (
+        <option disabled>Aucun bien disponible</option>
       )}
+    </select>
+
+    {/* ✅ Détails du bien sélectionné */}
+    {selectedHome && (
+      <div
+        style={{
+          marginTop: 15,
+          padding: 15,
+          border: "1px solid #ddd",
+          borderRadius: 10,
+          boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+          background: "#fff",
+        }}
+      >
+        {selectedHome.img && (
+          <img
+            src={
+              selectedHome.img.startsWith("http")
+                ? selectedHome.img
+                : `http://localhost:4000/${selectedHome.img}`
+            }
+            alt={selectedHome.nameHome}
+            style={{
+              width: 220,
+              height: 150,
+              borderRadius: 8,
+              objectFit: "cover",
+              marginBottom: 10,
+            }}
+          />
+        )}
+        <h4>{selectedHome.nameHome}</h4>
+        <p>
+          <strong>Référence :</strong> {selectedHome.reference}
+        </p>
+        <p>
+          <strong>Catégorie :</strong> {selectedHome.categorie}
+        </p>
+        <p>
+          <strong>Nombre de pièces :</strong>{" "}
+          {selectedHome.NmbrePieces || "N/A"}
+        </p>
+        <p>
+          <strong>Loyer Mensuel :</strong>{" "}
+          {selectedHome.rent
+            ? `${selectedHome.rent.toLocaleString()} FCFA`
+            : "N/A"}
+        </p>
+        <p>
+          <strong>Disponibilité :</strong> Libre
+        </p>
+      </div>
+    )}
+  </div>
+)}
+
+        <div className="modal-footer">
+          <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Annuler</button>
+          <button type="submit" className="btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
 
       {/* --- CSS intégré --- */}
       <style>{`
@@ -564,6 +771,24 @@ useEffect(() => {
         .pagination button { padding: .4rem .8rem; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; background: #fff; }
         .pagination button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
         .pagination button:disabled { opacity: .5; cursor: not-allowed; }
+        .badge-type {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: capitalize;
+  text-align: center;
+}
+
+.badge-particulier {
+  background-color: #22c55e; /* vert */
+}
+
+.badge-societe {
+  background-color: #2563eb; /* bleu */
+}
       `}</style>
 
     </div>

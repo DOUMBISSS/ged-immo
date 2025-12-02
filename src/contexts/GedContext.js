@@ -38,9 +38,9 @@ export function GedProvider({ children }) {
         return null;
       }
 
-      setGedUser(data.ged);
+     setGedUser({ ...data.ged, token: data.token });
       setToken(data.token);
-      localStorage.setItem("gedImmo", JSON.stringify(data.ged));
+      localStorage.setItem("gedImmo", JSON.stringify({ ...data.ged, token: data.token }));
       localStorage.setItem("gedToken", data.token);
 
       toast.success("Connexion réussie 🎉");
@@ -72,7 +72,7 @@ export function GedProvider({ children }) {
       const res = await fetch(`${API_BASE}/ged/data`, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${token}`,
         },
       });
 
