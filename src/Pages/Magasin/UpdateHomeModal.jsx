@@ -22,11 +22,11 @@ export function UpdateHomeModal({ home, onClose, onUpdated, token }) {
 
   const [img, setImg] = useState(null);
   const [imgPreview, setImgPreview] = useState(
-    home.img ? `http://localhost:4000/${home.img}` : null
+    home.img ? `https://backend-ged-immo.onrender.com/${home.img}` : null
   );
 
   const [existingImages, setExistingImages] = useState(
-    home.images ? home.images.map((img) => `http://localhost:4000/${img}`) : []
+    home.images ? home.images.map((img) => `https://backend-ged-immo.onrender.com/${img}`) : []
   );
 
   const [images, setImages] = useState([]);
@@ -108,9 +108,9 @@ export function UpdateHomeModal({ home, onClose, onUpdated, token }) {
       NmbrePieces: home.NmbrePieces || "",
     });
     setImg(null);
-    setImgPreview(home.img ? `http://localhost:4000/${home.img}` : null);
+    setImgPreview(home.img ? `https://backend-ged-immo.onrender.com/${home.img}` : null);
     setExistingImages(
-      home.images ? home.images.map((img) => `http://localhost:4000/${img}`) : []
+      home.images ? home.images.map((img) => `https://backend-ged-immo.onrender.com/${img}`) : []
     );
     setImages([]);
     setImagesPreview([]);
@@ -130,10 +130,10 @@ export function UpdateHomeModal({ home, onClose, onUpdated, token }) {
 
       // inclure les images secondaires restantes
       existingImages.forEach((imgPath) =>
-        data.append("existingImages[]", imgPath.replace("http://localhost:4000/", ""))
+        data.append("existingImages[]", imgPath.replace("https://backend-ged-immo.onrender.com/", ""))
       );
 
-      const res = await fetch(`http://localhost:4000/homes/${home._id}/update`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/${home._id}/update`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
         body: data,

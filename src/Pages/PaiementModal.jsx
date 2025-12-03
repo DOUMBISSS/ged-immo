@@ -86,7 +86,7 @@ export default function PaiementModal({pay,setPay}){
         const dataForm = {
           date_of_payment,month,status,time,person_id:id,mode
         }
-        fetch('https://mayedo.onrender.com/rents',{
+        fetch('https://backend-ged-immo.onrender.com/rents',{
               method:"POST",
               headers :{'Accept':"application/json",'Content-Type':"application/json"},
               body: JSON.stringify(dataForm)

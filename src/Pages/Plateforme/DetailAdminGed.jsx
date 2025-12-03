@@ -173,7 +173,7 @@ const scheduledSubscription = subscriptions.find(
             <div className="admin-info-card">
               <div className="profile-header">
                 {admin.photo ? (
-                  <img src={`http://localhost:4000/${admin.photo}`} alt="Profil" className="admin-photo" />
+                  <img src={`https://backend-ged-immo.onrender.com/${admin.photo}`} alt="Profil" className="admin-photo" />
                 ) : (
                   <div className="admin-photo-placeholder">
                     <i className="fa-solid fa-user-tie"></i>

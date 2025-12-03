@@ -107,7 +107,7 @@ const confirmSubscription = async () => {
   if (!selectedPlan) return toast.error("Aucun plan sélectionné");
 
   try {
-    const res = await fetch(`http://localhost:4000/send/notifications/${user._id}`, {
+    const res = await fetch(`https://backend-ged-immo.onrender.com/send/notifications/${user._id}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

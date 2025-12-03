@@ -65,7 +65,7 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
   // 🔹 Récupération loyers payés
   const fetchRents = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/rents/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/rents/${id}`);
       if (!res.ok) throw new Error("Erreur récupération loyers");
 
       const data = await res.json();
@@ -88,7 +88,7 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
     setLoading(true);
     try {
       // 🔹 Récupération locataire
-      const res = await fetch(`http://localhost:4000/detail/locataire/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/detail/locataire/${id}`);
       if (!res.ok) throw new Error("Erreur récupération locataire");
 
       const text = await res.text();
@@ -96,7 +96,7 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
       setPerson(data);
 
       // 🔹 Récupération documents
-      const docRes = await fetch(`http://localhost:4000/locataire/${id}/documents`);
+      const docRes = await fetch(`https://backend-ged-immo.onrender.com/locataire/${id}/documents`);
       if (docRes.ok) {
         const docData = await docRes.json();
         if (docData.success && docData.documents) {
@@ -121,7 +121,7 @@ const [showDocumentModal, setShowDocumentModal] = useState(false);
  // 🔹 Charger les travaux existants du locataire
   const fetchWorks = async () => {
     try {
-      const res = await fetch(`https://backend-ged-immo.onrender.com/works/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/works/locataire/${id}`);
       const data = await res.json();
       if (res.ok && data.success) {
         setWorks(data.works || []);
@@ -195,7 +195,7 @@ const handleArchive = async (id) => {
     warning: "Cette action est irréversible !",
     onConfirm: async () => {
       try {
-        const res = await fetch(`http://localhost:4000/locataire/${id}/archive`, {
+        const res = await fetch(`https://backend-ged-immo.onrender.com/locataire/${id}/archive`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -236,7 +236,7 @@ const deleteRent = async (rentId) => {
   }
 
   try {
-    const res = await fetch(`http://localhost:4000/rents/${rentId}`, {
+    const res = await fetch(`https://backend-ged-immo.onrender.com/rents/${rentId}`, {
       method: "DELETE",
       headers: {
         "Authorization": `Bearer ${user.token}`,
@@ -313,7 +313,7 @@ const handleAdd = async () => {
     };
 
     // 🔹 Appel API sécurisé avec token
-    const res = await fetch("http://localhost:4000/NewRents", {
+    const res = await fetch("https://backend-ged-immo.onrender.com/NewRents", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1200,7 +1200,7 @@ const toggleYear = (year) => {
                   {work.attachments.map((url, i) => (
                     <img
                       key={i}
-                      src={url.startsWith("http") ? url : `http://localhost:4000/${url}`}
+                      src={url.startsWith("http") ? url : `https://backend-ged-immo.onrender.com/${url}`}
                       alt={`Pièce jointe ${i + 1}`}
                       style={{
                         width: "70px",
@@ -1221,7 +1221,7 @@ const toggleYear = (year) => {
                     href={
                       work.invoice.startsWith("http")
                         ? work.invoice
-                        : `http://localhost:4000/${work.invoice}`
+                        : `https://backend-ged-immo.onrender.com/${work.invoice}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1449,7 +1449,7 @@ const toggleYear = (year) => {
               amount: selectedRent.amount, // montant conservé mais non modifiable
             };
 
-            const res = await fetch(`http://localhost:4000/updateRent/${selectedRent._id}`, {
+            const res = await fetch(`https://backend-ged-immo.onrender.com/updateRent/${selectedRent._id}`, {
               method: "PUT",
               headers: {
                 "Content-Type": "application/json",

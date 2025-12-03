@@ -37,13 +37,13 @@ export function UpdateHomeModal({ home, onClose, onUpdated, token }) {
   // Main image (file) et preview (base64 ou url)
   const [img, setImg] = useState(null);
   const [imgPreview, setImgPreview] = useState(
-    home.img ? (home.img.startsWith("http") ? home.img : `http://localhost:4000/${home.img}`) : null
+    home.img ? (home.img.startsWith("http") ? home.img : `https://backend-ged-immo.onrender.com/${home.img}`) : null
   );
 
   // Images secondaires existantes (full URLs) et nouvelles images
   const [existingImages, setExistingImages] = useState(
     Array.isArray(home.images)
-      ? home.images.map((p) => (p.startsWith("http") ? p : `http://localhost:4000/${p}`))
+      ? home.images.map((p) => (p.startsWith("http") ? p : `https://backend-ged-immo.onrender.com/${p}`))
       : []
   );
   const [images, setImages] = useState([]); // File[]
@@ -132,8 +132,8 @@ export function UpdateHomeModal({ home, onClose, onUpdated, token }) {
       securite: !!home.securite,
     });
     setImg(null);
-    setImgPreview(home.img ? (home.img.startsWith("http") ? home.img : `http://localhost:4000/${home.img}`) : null);
-    setExistingImages(Array.isArray(home.images) ? home.images.map((p) => (p.startsWith("http") ? p : `http://localhost:4000/${p}`)) : []);
+    setImgPreview(home.img ? (home.img.startsWith("http") ? home.img : `https://backend-ged-immo.onrender.com/${home.img}`) : null);
+    setExistingImages(Array.isArray(home.images) ? home.images.map((p) => (p.startsWith("http") ? p : `https://backend-ged-immo.onrender.com/${p}`)) : []);
     setImages([]);
     setImagesPreview([]);
     toast.info("Formulaire réinitialisé");
@@ -177,7 +177,7 @@ export function UpdateHomeModal({ home, onClose, onUpdated, token }) {
 
       // existingImages: remove base URL and send relative paths (same format as backend expects)
       existingImages.forEach((p) => {
-        const relative = p.replace("http://localhost:4000/", "").replace("https://backend-ged-immo.onrender.com/", "");
+        const relative = p.replace("https://backend-ged-immo.onrender.com/", "").replace("https://backend-ged-immo.onrender.com/", "");
         data.append("existingImages[]", relative);
       });
 
@@ -185,7 +185,7 @@ export function UpdateHomeModal({ home, onClose, onUpdated, token }) {
       images.forEach((f) => data.append("images", f));
 
       // call backend
-      const res = await fetch(`http://localhost:4000/homes/${home._id}/update`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/homes/${home._id}/update`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,

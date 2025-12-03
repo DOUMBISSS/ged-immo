@@ -80,10 +80,10 @@ export default function Administrator() {
     if (!adminId || !user?.token) return;
 
     try {
-      const res = await fetch(`http://localhost:4000/admin/${adminId}/users`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/admin/${adminId}/users`, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${user.token}`,
+          "Authorization": `Bearer ${user.token}`,
         },
       });
 
@@ -121,7 +121,7 @@ export default function Administrator() {
             onClick={async () => {
               closeToast();
               try {
-                const res = await fetch(`http://localhost:4000/admin/${user._id}/users/${userId}`, {
+                const res = await fetch(`https://backend-ged-immo.onrender.com/admin/${user._id}/users/${userId}`, {
                   method: "DELETE",
                   headers: {
                     "Content-Type": "application/json",
@@ -316,9 +316,11 @@ export default function Administrator() {
   onClose={() => setDeleteUserModal({ isOpen: false, userId: null, userName: "" })}
   onConfirm={async () => {
     try {
-      const res = await fetch(`http://localhost:4000/admin/${user._id}/users/${deleteUserModal.userId}`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/admin/${user._id}/users/${deleteUserModal.userId}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${user.token}` },
+        headers: { 
+          "Content-Type": "application/json", 
+          "Authorization": `Bearer ${user.token}` },
       });
       const data = await res.json();
       if (data.success) {

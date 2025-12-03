@@ -94,7 +94,7 @@ const currentPayments = Array.isArray(payments)
   const fetchPersonData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/archives/locataire/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/archives/locataire/${id}`);
       if (!res.ok) throw new Error("Erreur récupération locataire");
       const data = await res.json();
       setPerson(data);
@@ -123,7 +123,7 @@ const currentPayments = Array.isArray(payments)
     if (!user?._id) return;
     const fetchProjects = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/projects/admin/${user._id}`);
+        const res = await fetch(`https://backend-ged-immo.onrender.com/projects/admin/${user._id}`);
         const data = await res.json();
         if (data.success) setProjects(data.projects || []);
       } catch (err) { toast.error("Erreur récupération projets : " + err.message); }
@@ -135,7 +135,7 @@ const currentPayments = Array.isArray(payments)
   useEffect(() => {
     if (!user?._id) return;
     setLoading(true);
-    fetch(`http://localhost:4000/locataire/${user._id}`)
+    fetch(`https://backend-ged-immo.onrender.com/locataire/${user._id}`)
       .then(res => res.json())
       .then(setPersons)
       .catch(err => toast.error("Erreur récupération locataires : " + err.message))
@@ -147,7 +147,7 @@ const currentPayments = Array.isArray(payments)
     if (!selectedProject) { setHomes([]); return; }
     const fetchHomes = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/projects/${selectedProject}`);
+        const res = await fetch(`https://backend-ged-immo.onrender.com/projects/${selectedProject}`);
         if (!res.ok) throw new Error(`Erreur HTTP ${res.status}`);
         const data = await res.json();
         const availableHomes = Array.isArray(data.homes) ? data.homes.filter(home => !home.personId || home.personId.length === 0) : [];
@@ -172,7 +172,7 @@ const currentPayments = Array.isArray(payments)
             style={{ background: "#2563eb", color: "#fff", padding: "5px 10px", borderRadius: "5px" }}
             onClick={async () => {
               try {
-                const res = await fetch(`http://localhost:4000/persons/${personId}/duplicate`, {
+                const res = await fetch(`https://backend-ged-immo.onrender.com/persons/${personId}/duplicate`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${user.token}` },
                   body: JSON.stringify({ adminId: person.adminId || person._id }),
@@ -201,7 +201,7 @@ const currentPayments = Array.isArray(payments)
             style={{ background: "#ef4444", color: "#fff", padding: "5px 10px", borderRadius: "5px" }}
             onClick={async () => {
               try {
-                const res = await fetch(`http://localhost:4000/persons/${personId}/restore`, {
+                const res = await fetch(`https://backend-ged-immo.onrender.com/persons/${personId}/restore`, {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${user.token}` },
                 });
@@ -225,12 +225,18 @@ const currentPayments = Array.isArray(payments)
     if (!selectedProject) { toast.error("⚠️ Sélectionnez un projet avant d’ajouter un locataire"); return; }
     try {
       const payload = { name, lastname, email, homes: selectedHome?._id, adminId: user._id, birth, lieu, nationality, sexe, tel, tel_urgency, profession, address, pieces, date_entrance, date_emission, date_expiration, situation, city, typePersonne, raisonSociale, rccm, ifu, responsable, siegeSocial, domaineActivite, contratBail };
-      const res = await fetch("http://localhost:4000/NewLocataire", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${user.token}` }, body: JSON.stringify(payload) });
+      const res = await fetch("https://backend-ged-immo.onrender.com/NewLocataire", 
+        { method: "POST", 
+          headers: { 
+            "Content-Type": "application/json", 
+            "Authorization": `Bearer ${user.token}` }, 
+            body: JSON.stringify(payload) });
+
       const result = await res.json();
       if (!res.ok) { toast.error(result.message || "Erreur serveur"); return; }
       toast.success("✅ Locataire ajouté avec succès !");
       setShowAddModal(false);
-      fetch(`http://localhost:4000/locataire/${user._id}`).then(res => res.json()).then(setPersons);
+      fetch(`https://backend-ged-immo.onrender.com/locataire/${user._id}`).then(res => res.json()).then(setPersons);
     } catch (err) { console.error(err); toast.error("Erreur serveur : " + err.message); }
   };
 
@@ -309,7 +315,7 @@ const currentPayments = Array.isArray(payments)
                         uploadedFiles.map(file => (
                           <p key={file._id || file.name}>
                             <span>{file.type || "Document"} :</span>{" "}
-                            <a href={`http://localhost:4000/${file.path || file.filePath}`} target="_blank" rel="noopener noreferrer" download>Télécharger</a>
+                            <a href={`https://backend-ged-immo.onrender.com/${file.path || file.filePath}`} target="_blank" rel="noopener noreferrer" download>Télécharger</a>
                           </p>
                         ))}
                     </div>
@@ -324,7 +330,7 @@ const currentPayments = Array.isArray(payments)
       {person.homeInfo.img && (
         <div className="home-main-image">
           <img
-            src={person.homeInfo.img.startsWith("http") ? person.homeInfo.img : `http://localhost:4000/${person.homeInfo.img}`}
+            src={person.homeInfo.img.startsWith("http") ? person.homeInfo.img : `https://backend-ged-immo.onrender.com/${person.homeInfo.img}`}
             alt={person.homeInfo.nameHome}
             style={{ width: "100%", maxHeight: "300px", objectFit: "cover", borderRadius: "8px" }}
           />
@@ -351,7 +357,7 @@ const currentPayments = Array.isArray(payments)
             {person.homeInfo.images.map((img, idx) => (
               <img
                 key={idx}
-                src={img.startsWith("http") ? img : `http://localhost:4000/${img}`}
+                src={img.startsWith("http") ? img : `https://backend-ged-immo.onrender.com/${img}`}
                 alt={`Image ${idx + 1}`}
                 style={{ width: "150px", height: "100px", objectFit: "cover", borderRadius: "4px", marginRight: "8px", marginBottom: "8px" }}
               />
@@ -460,7 +466,7 @@ const currentPayments = Array.isArray(payments)
           {work.attachments.map((url, i) => (
             <img
               key={i}
-              src={url.startsWith("http") ? url : `http://localhost:4000/${url}`}
+              src={url.startsWith("http") ? url : `https://backend-ged-immo.onrender.com/${url}`}
               alt={`Pièce jointe ${i + 1}`}
               style={{
                 width: "70px",
@@ -478,7 +484,7 @@ const currentPayments = Array.isArray(payments)
       {work.invoice && (
         <div style={{ marginTop: "10px" }}>
           <a
-            href={work.invoice.startsWith("http") ? work.invoice : `http://localhost:4000/${work.invoice}`}
+            href={work.invoice.startsWith("http") ? work.invoice : `https://backend-ged-immo.onrender.com/${work.invoice}`}
             target="_blank"
             rel="noopener noreferrer"
             download
@@ -857,7 +863,7 @@ const currentPayments = Array.isArray(payments)
               <div className="home-preview">
                 {selectedHome.img && (
                   <img
-                    src={selectedHome.img.startsWith("http") ? selectedHome.img : `http://localhost:4000/${selectedHome.img}`}
+                    src={selectedHome.img.startsWith("http") ? selectedHome.img : `https://backend-ged-immo.onrender.com/${selectedHome.img}`}
                     alt={selectedHome.nameHome}
                   />
                 )}

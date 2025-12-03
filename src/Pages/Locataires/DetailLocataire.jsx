@@ -50,7 +50,7 @@ export default function DetailLocataire() {
       workForm.attachments.forEach((file) => formData.append("attachments", file));
 
     try {
-      const res = await fetch(`http://localhost:4000/works/report`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/works/report`, {
         method: "POST",
         body: formData,
       });
@@ -87,7 +87,7 @@ export default function DetailLocataire() {
   // 🔹 Récupération loyers payés
   const fetchRents = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/rents/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/rents/${id}`);
       const data = await res.json();
       if (res.ok && data.success) {
         setPerson((prev) => ({ ...prev, rentals: data.rents || [] }));
@@ -102,7 +102,7 @@ export default function DetailLocataire() {
 
 const fetchWorks = async () => {
   try {
-    const res = await fetch(`http://localhost:4000/works/locataire/${id}`);
+    const res = await fetch(`https://backend-ged-immo.onrender.com/works/locataire/${id}`);
     const data = await res.json();
     if (res.ok && data.success) setWorks(data.works || []);
   } catch (err) {
@@ -115,13 +115,13 @@ const fetchWorks = async () => {
   const fetchPersonData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/detail/locataire/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/detail/locataire/${id}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : { homeId: {}, rentals: [] };
       setPerson(data);
 
       // Documents
-      const docRes = await fetch(`http://localhost:4000/locataire/${id}/documents`);
+      const docRes = await fetch(`https://backend-ged-immo.onrender.com/locataire/${id}/documents`);
       if (docRes.ok) {
         const docData = await docRes.json();
         if (docData.success && docData.documents) setDocuments(docData.documents);
@@ -251,9 +251,9 @@ const fetchWorks = async () => {
               {person.homeId ? (
                 <div className="home-card">
                   <div className="images">
-                    {person.homeId.img && <img src={person.homeId.img.startsWith("http") ? person.homeId.img : `http://localhost:4000/${person.homeId.img}`} alt="Maison principale" />}
+                    {person.homeId.img && <img src={person.homeId.img.startsWith("http") ? person.homeId.img : `https://backend-ged-immo.onrender.com/${person.homeId.img}`} alt="Maison principale" />}
                     {Array.isArray(person.homeId.images) && person.homeId.images.map((url, i) => (
-                      <img key={i} src={url.startsWith("http") ? url : `http://localhost:4000/${url}`} alt={`Image ${i}`} />
+                      <img key={i} src={url.startsWith("http") ? url : `https://backend-ged-immo.onrender.com/${url}`} alt={`Image ${i}`} />
                     ))}
                   </div>
                   <div className="home-info">
@@ -378,8 +378,8 @@ const fetchWorks = async () => {
             <div className="section">
               <h3>Documents</h3>
               <div className="doc-grid">
-                <p><strong>Carte d’identité :</strong> {documents.CNI ? <a href={`http://localhost:4000/${documents.CNI}`} target="_blank">Voir</a> : "Aucun document"}</p>
-                <p><strong>Contrat de bail :</strong> {documents.Contrat ? <a href={`http://localhost:4000/${documents.Contrat}`} target="_blank">Voir</a> : "Aucun document"}</p>
+                <p><strong>Carte d’identité :</strong> {documents.CNI ? <a href={`https://backend-ged-immo.onrender.com/${documents.CNI}`} target="_blank">Voir</a> : "Aucun document"}</p>
+                <p><strong>Contrat de bail :</strong> {documents.Contrat ? <a href={`https://backend-ged-immo.onrender.com/${documents.Contrat}`} target="_blank">Voir</a> : "Aucun document"}</p>
               </div>
             </div>
 
@@ -495,7 +495,7 @@ const fetchWorks = async () => {
                               src={
                                 url.startsWith("http")
                                   ? url
-                                  : `http://localhost:4000/${url}`
+                                  : `https://backend-ged-immo.onrender.com/${url}`
                               }
                               alt={`Pièce jointe ${i + 1}`}
                               style={{
@@ -517,7 +517,7 @@ const fetchWorks = async () => {
                             href={
                               work.invoice.startsWith("http")
                                 ? work.invoice
-                                : `http://localhost:4000/${work.invoice}`
+                                : `https://backend-ged-immo.onrender.com/${work.invoice}`
                             }
                             target="_blank"
                             rel="noopener noreferrer"

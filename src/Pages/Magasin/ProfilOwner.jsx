@@ -4,7 +4,7 @@ import toast, { Toaster } from "react-hot-toast";
 import NavbarMagasin from "../../Pages/Magasin/NavbarMagasin";
 import Footer from '../../Pages/Footer';
 
-const API = "http://localhost:4000";
+const API = "https://backend-ged-immo.onrender.com";
 
 export default function ProfilOwner() {
   const { magasinUser, logoutMagasinUser } = useUserMagasin();

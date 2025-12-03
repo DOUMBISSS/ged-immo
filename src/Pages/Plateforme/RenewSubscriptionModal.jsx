@@ -33,7 +33,7 @@ const handleRenew = async () => {
     }
 
     const res = await fetch(
-      `${process.env.REACT_APP_BACKEND_URL || "http://localhost:4000"}/ged/admin/${admin._id}/renew`,
+      `${process.env.REACT_APP_BACKEND_URL || "https://backend-ged-immo.onrender.com"}/ged/admin/${admin._id}/renew`,
       {
         method: "POST",
         headers: {
@@ -83,7 +83,7 @@ const handleRenew = async () => {
       if (!token) return toast.error("Token manquant, reconnectez-vous.");
 
       const res = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL || "http://localhost:4000"}/ged/admin/${admin._id}/suspend`,
+        `${process.env.REACT_APP_BACKEND_URL || "https://backend-ged-immo.onrender.com"}/ged/admin/${admin._id}/suspend`,
         {
           method: "POST",
           headers: {

@@ -5,7 +5,7 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import PlansTarifs from "./PlansTarifs";
 
-const API = "http://localhost:4000";
+const API = "https://backend-ged-immo.onrender.com";
 
 export default function Profil() {
   const { user } = useUserContext();

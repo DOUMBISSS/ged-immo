@@ -3,7 +3,8 @@ import { useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import { QRCodeCanvas } from "qrcode.react";
 
-const API ="http://localhost:4000";
+// const API ="http://localhost:4000";
+const API = "https://backend-ged-immo.onrender.com"
 
 export default function ReceiptPage() {
 

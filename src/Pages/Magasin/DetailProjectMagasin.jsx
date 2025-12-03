@@ -54,7 +54,7 @@ const piecesOptions = {
 
   // Récupération du projet et maisons
   useEffect(() => {
-    fetch(`http://localhost:4000/projects/Magasin/project/${projectId}`)
+    fetch(`https://backend-ged-immo.onrender.com/projects/Magasin/project/${projectId}`)
       .then(res => res.json())
       .then(data => {
         if (data.project) {
@@ -133,7 +133,7 @@ const handleSubmitNew = async (e) => {
     }
 
     // 🔥 Envoi vers le backend
-    const res = await fetch("http://localhost:4000/magasins/new", {
+    const res = await fetch("https://backend-ged-immo.onrender.com/magasins/new", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${magasinUser.token}`,
@@ -235,7 +235,7 @@ const handleSubmitNew = async (e) => {
           {currentHomes.length > 0 ? currentHomes.map(home => (
             <div key={home._id} className="card">
               <Link to={`/detailHome/${home._id}`}>
-                <img src={home.img.startsWith("http") ? home.img : `http://localhost:4000/${home.img}`} alt={home.nameHome} />
+                <img src={home.img.startsWith("http") ? home.img : `https://backend-ged-immo.onrender.com/${home.img}`} alt={home.nameHome} />
               </Link>
               <div className="card-info">
                 <h3>{home.nameHome}</h3>

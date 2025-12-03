@@ -32,7 +32,7 @@ useEffect(() => {
 
   const fetchMagasins = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/projects/Magasin/owner/${magasinUser._id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/projects/Magasin/owner/${magasinUser._id}`);
       
       // Vérifier le statut HTTP
       if (!res.ok) {
@@ -107,7 +107,7 @@ const handleNewMagasinSubmit = async (e) => {
   }
 
   try {
-    const res = await fetch("http://localhost:4000/NewProject/Magasin", {
+    const res = await fetch("https://backend-ged-immo.onrender.com/NewProject/Magasin", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

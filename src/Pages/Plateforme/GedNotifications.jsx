@@ -26,7 +26,7 @@ export default function GedNotifications() {
     if (!gedUser?.token) return;
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:4000/gedimmo/notifications", {
+      const res = await fetch("https://backend-ged-immo.onrender.com/gedimmo/notifications", {
         headers: { Authorization: `Bearer ${gedUser.token}` },
       });
       const data = await res.json();
@@ -84,7 +84,7 @@ const handleActionConfirmed = async () => {
 
   try {
     const res = await fetch(
-      `http://localhost:4000/update/notifications/subscriptions/${modal.adminId}`,
+      `https://backend-ged-immo.onrender.com/update/notifications/subscriptions/${modal.adminId}`,
       {
         method: "PUT",
         headers: {

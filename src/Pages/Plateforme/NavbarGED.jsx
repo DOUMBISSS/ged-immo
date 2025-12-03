@@ -16,7 +16,7 @@ const [loading, setLoading] = useState(false);
     if (!gedUser?.token) return;
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:4000/gedimmo/notifications", {
+      const res = await fetch("https://backend-ged-immo.onrender.com/gedimmo/notifications", {
         headers: { Authorization: `Bearer ${gedUser.token}` },
       });
       const data = await res.json();

@@ -34,10 +34,10 @@ export default function Statistiques() {
     const fetchData = async () => {
       try {
         const [projectsRes, personsRes] = await Promise.all([
-          fetch(`http://localhost:4000/projects/admin/${user._id}`, {
+          fetch(`https://backend-ged-immo.onrender.com/projects/admin/${user._id}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${user?.token}` },
           }),
-          fetch(`http://localhost:4000/locataire/${user._id}`, {
+          fetch(`https://backend-ged-immo.onrender.com/locataire/${user._id}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${user?.token}` },
           }),
         ]);

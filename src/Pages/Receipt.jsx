@@ -9,7 +9,8 @@ import { useUserContext } from "../contexts/UserContext";
 import { QRCodeCanvas } from "qrcode.react";
 import printJS from 'print-js';
 
-const API = "http://localhost:4000";
+// const API = "http://localhost:4000";
+const API = "https://backend-ged-immo.onrender.com";
 
 export default function Receipt({ admin }) {
   

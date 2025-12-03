@@ -38,7 +38,7 @@ export default function ListeMagasin() {
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:4000/magasins/${magasinUser._id}`);
+        const res = await fetch(`https://backend-ged-immo.onrender.com/magasins/${magasinUser._id}`);
         const data = await res.json();
 
         if (!res.ok) {
@@ -119,7 +119,7 @@ export default function ListeMagasin() {
         adminId: magasinUser._id,
       };
 
-      const res = await fetch("http://localhost:4000/New/Magasin", {
+      const res = await fetch("https://backend-ged-immo.onrender.com/New/Magasin", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${magasinUser?.token}` },
         body: JSON.stringify(payload),

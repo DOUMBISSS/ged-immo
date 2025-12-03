@@ -16,7 +16,7 @@ export default function DetailArchivedHome() {
   const fetchHomeData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/detail/homeArchive/${id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/detail/homeArchive/${id}`);
       if (!res.ok) throw new Error("Erreur récupération maison");
 
       const text = await res.text();
@@ -131,7 +131,7 @@ const restoreHome = (homeId, projectId) => {
                     <div className="home-images">
                       {home.img && (
                         <img
-                          src={home.img.startsWith("http") ? home.img : `http://localhost:4000/${home.img}`}
+                          src={home.img.startsWith("http") ? home.img : `https://backend-ged-immo.onrender.com/${home.img}`}
                           alt="Image principale"
                           style={{ width: "150px", height: "150px", objectFit: "cover", marginRight: "8px" }}
                         />
@@ -139,7 +139,7 @@ const restoreHome = (homeId, projectId) => {
                       {Array.isArray(home.images) && home.images.map((img, idx) => (
                         <img
                           key={idx}
-                          src={img.startsWith("http") ? img : `http://localhost:4000/${img}`}
+                          src={img.startsWith("http") ? img : `https://backend-ged-immo.onrender.com/${img}`}
                           alt={`Image secondaire ${idx}`}
                           style={{ width: "100px", height: "100px", objectFit: "cover", marginRight: "5px" }}
                         />

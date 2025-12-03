@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const backend = "http://localhost:4000"; // 🧩 Ton URL backend
+const backend = "https://backend-ged-immo.onrender.com"; // 🧩 Ton URL backend
 
 export default function RegisterMagasin() {
   const navigate = useNavigate();

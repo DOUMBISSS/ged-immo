@@ -20,7 +20,7 @@ export default function DetailHome() {
      const { user ,hasFeature } = useUserContext(); // ✅ récupération de l’admin connecté
 
   useEffect(() => {
-    fetch(`http://localhost:4000/api/homes/${id}`)
+    fetch(`https://backend-ged-immo.onrender.com/api/homes/${id}`)
       .then((res) => res.json())
       .then((data) => setRentHome(data))
       .catch((err) => console.log(err));
@@ -71,7 +71,7 @@ const handleArchive = () => {
           }}
           onClick={async () => {
             try {
-              const res = await fetch(`http://localhost:4000/homes/${id}/archive`, {
+              const res = await fetch(`https://backend-ged-immo.onrender.com/homes/${id}/archive`, {
                 method: "PATCH",
                 headers: {
                   "Content-Type": "application/json",
@@ -120,7 +120,7 @@ const handleDuppliquer = async () => {
   }
 
   try {
-    const res = await fetch(`http://localhost:4000/homes/${id}/duplicate`, {
+    const res = await fetch(`https://backend-ged-immo.onrender.com/homes/${id}/duplicate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

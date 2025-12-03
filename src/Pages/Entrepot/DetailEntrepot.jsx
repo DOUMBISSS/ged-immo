@@ -6,7 +6,8 @@ import { toast } from "react-toastify";
 import { useUserContext } from "../../contexts/UserContext";
 import "react-toastify/dist/ReactToastify.css";
 
-const API = "http://localhost:4000";
+// const API = "http://localhost:4000";
+const API = "https://backend-ged-immo.onrender.com"
 
 export default function DetailEntrepot() {
   const { id: projectId } = useParams();

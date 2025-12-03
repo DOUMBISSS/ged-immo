@@ -27,7 +27,7 @@ export default function Tracabilite() {
     const fetchTraces = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:4000/actions", {
+        const res = await fetch("https://backend-ged-immo.onrender.com/actions", {
           headers: { Authorization: `Bearer ${user.token}` },
         });
         const data = await res.json();

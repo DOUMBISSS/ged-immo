@@ -128,7 +128,7 @@ export default function EditPermissionsModal({ user, onClose, onUpdated }) {
     try {
       setLoading(true);
       const res = await axios.put(
-        `http://localhost:4000/users/${user._id}/permissions`,
+        `https://backend-ged-immo.onrender.com/users/${user._id}/permissions`,
         { role, permissions },
         { headers: { Authorization: `Bearer ${currentUser.token}` } }
       );

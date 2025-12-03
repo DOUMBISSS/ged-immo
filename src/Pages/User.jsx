@@ -62,7 +62,7 @@ export default function User() {
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:4000/data/${user._id}`, {
+        const res = await fetch(`https://backend-ged-immo.onrender.com/data/${user._id}`, {
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${user.token}`,
@@ -109,7 +109,7 @@ export default function User() {
 
     const fetchHomes = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/projects/${selectedProject}/homes`, {
+        const res = await fetch(`https://backend-ged-immo.onrender.com/projects/${selectedProject}/homes`, {
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${user?.token}`,
@@ -238,7 +238,7 @@ export default function User() {
         payload.domaineActivite = profession;
       }
 
-      const res = await fetch("http://localhost:4000/New/Locataire", {
+      const res = await fetch("https://backend-ged-immo.onrender.com/New/Locataire", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -257,7 +257,7 @@ export default function User() {
       toast.success("Locataire ajouté avec succès ✅");
       setShowAddModal(false);
 
-      const refresh = await fetch(`http://localhost:4000/data/${adminId}`, {
+      const refresh = await fetch(`https://backend-ged-immo.onrender.com/data/${adminId}`, {
         headers: { "Authorization": `Bearer ${user?.token}` },
       });
 
@@ -702,7 +702,7 @@ export default function User() {
             src={
               selectedHome.img.startsWith("http")
                 ? selectedHome.img
-                : `http://localhost:4000/${selectedHome.img}`
+                : `https://backend-ged-immo.onrender.com/${selectedHome.img}`
             }
             alt={selectedHome.nameHome}
             style={{

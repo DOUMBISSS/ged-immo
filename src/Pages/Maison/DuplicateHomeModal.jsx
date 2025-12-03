@@ -152,10 +152,10 @@ const [formData, setFormData] = useState({
   };
 
   const mainImage =
-    home.img?.startsWith("http") ? home.img : `http://localhost:4000/${home.img}`;
+    home.img?.startsWith("http") ? home.img : `https://backend-ged-immo.onrender.com/${home.img}`;
   const existingImages =
     home.images?.map((img) =>
-      img.startsWith("http") ? img : `http://localhost:4000/${img}`
+      img.startsWith("http") ? img : `https://backend-ged-immo.onrender.com/${img}`
     ) || [];
 
   const handleSubmit = async (e) => {
@@ -173,7 +173,7 @@ const [formData, setFormData] = useState({
       if (img) form.append("img", img);
       images.forEach((f) => form.append("images", f));
 
-      const response = await fetch(`http://localhost:4000/homes/${home._id}/duplicate`, {
+      const response = await fetch(`https://backend-ged-immo.onrender.com/homes/${home._id}/duplicate`, {
         method: "POST",
         headers: { Authorization: `Bearer ${user.token}` },
         body: form,

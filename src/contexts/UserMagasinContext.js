@@ -35,7 +35,7 @@ export const UserMagasinProvider = ({ children }) => {
   const refreshMagasinUser = async () => {
     if (!magasinUser?._id) return;
     try {
-      const res = await fetch(`http://localhost:4000/owner/${magasinUser._id}`);
+      const res = await fetch(`https://backend-ged-immo.onrender.com/owner/${magasinUser._id}`);
       const data = await res.json();
       if (res.ok && data.success) {
         setMagasinUser(data.owner);

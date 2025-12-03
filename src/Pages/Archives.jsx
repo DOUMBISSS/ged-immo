@@ -57,7 +57,7 @@ export default function Archives() {
         if (searchProject) queryParams.append("projectId", searchProject);
         if (selectedType) queryParams.append("type", selectedType);
 
-        const url = `http://localhost:4000/archives/admin/${adminId}?${queryParams.toString()}`;
+        const url = `https://backend-ged-immo.onrender.com/archives/admin/${adminId}?${queryParams.toString()}`;
         const res = await fetch(url, { headers: { Authorization: `Bearer ${user.token}` } });
         const data = await res.json();
 

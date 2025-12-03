@@ -9,7 +9,7 @@ import DuplicateHomeProjectModal from "./Maison/DuplicateHomeProjectModal"
 import DuplicateHomeModal from "./Magasin/DuplicateHomeModal";
 import DetailGeneric from "./DetailGeneric";
 
-const API = "http://localhost:4000"
+const API = "https://backend-ged-immo.onrender.com"
 
 export default function DetailProject() {
   const { id: projectId } = useParams(); // ID du projet depuis l'URL
@@ -90,7 +90,7 @@ const handleSubmit = async (e) => {
     if (img) formData.append("img", img);
     if (images.length > 0) Array.from(images).forEach(file => formData.append("images", file));
 
-    const response = await fetch(`http://localhost:4000/newHome/${projectId}`, {
+    const response = await fetch(`https://backend-ged-immo.onrender.com/newHome/${projectId}`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${user?.token}` },
       body: formData
@@ -134,7 +134,7 @@ const handleSubmit = async (e) => {
 useEffect(() => {
   if (!user?.token) return;
 
-  fetch(`http://localhost:4000/projects/${projectId}`, {
+  fetch(`https://backend-ged-immo.onrender.com/projects/${projectId}`, {
     headers: {
       Authorization: `Bearer ${user.token}`
     }

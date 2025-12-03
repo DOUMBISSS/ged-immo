@@ -83,8 +83,8 @@ const [sending, setSending] = useState(false);
     try {
       const endpoint =
         role === "admin"
-          ? "http://localhost:4000/admin/login"
-          : "http://localhost:4000/user/login";
+          ? "https://backend-ged-immo.onrender.com/admin/login"
+          : "https://backend-ged-immo.onrender.com/user/login";
 
       const body =
         role === "admin"
@@ -155,7 +155,7 @@ const handleRegister = async (e) => {
       if (logo) formData.append("logo", logo);
     }
 
-    const res = await fetch("http://localhost:4000/admin/register", {
+    const res = await fetch("https://backend-ged-immo.onrender.com/admin/register", {
       method: "POST",
       body: formData,
     });

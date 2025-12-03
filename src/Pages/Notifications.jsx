@@ -24,7 +24,7 @@ export default function Notifications() {
     try {
       const adminId = user.role === "admin" ? user._id : user.adminId;
 
-      const res = await fetch(`http://localhost:4000/works/admin/${adminId}`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/works/admin/${adminId}`, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${user.token}`,
@@ -199,7 +199,7 @@ export default function Notifications() {
           {req.attachments.map((img, i) => (
             <img
               key={i}
-              src={img.startsWith("http") ? img : `http://localhost:4000/${img}`}
+              src={img.startsWith("http") ? img : `https://backend-ged-immo.onrender.com/${img}`}
               alt="photo"
               style={{
                 width: "70px",
@@ -481,7 +481,7 @@ export default function Notifications() {
             {selectedWork.attachments.map((url, i) => (
               <img
                 key={i}
-                src={url.startsWith("http") ? url : `http://localhost:4000/${url}`}
+                src={url.startsWith("http") ? url : `https://backend-ged-immo.onrender.com/${url}`}
                 alt={`Pièce jointe ${i + 1}`}
                 style={{
                   width: "80px",
@@ -499,7 +499,7 @@ export default function Notifications() {
                     ...selectedWork,
                     lightboxImage: url.startsWith("http")
                       ? url
-                      : `http://localhost:4000/${url}`,
+                      : `https://backend-ged-immo.onrender.com/${url}`,
                   })
                 }
               />
@@ -585,7 +585,7 @@ export default function Notifications() {
 
           try {
             const res = await fetch(
-              `http://localhost:4000/works/${selectedWork._id}/respond`,
+              `https://backend-ged-immo.onrender.com/works/${selectedWork._id}/respond`,
               {
                 method: "PUT",
                 headers: { "Authorization": `Bearer ${user.token}` },

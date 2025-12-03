@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const backend = 'http://localhost:4000'; // ou votre URL backend
+const backend = 'https://backend-ged-immo.onrender.com'; // ou votre URL backend
 
 export default function LoginMagasin() {
   const [email, setEmail] = useState('');

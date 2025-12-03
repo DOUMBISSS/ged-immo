@@ -22,7 +22,7 @@ export default function UploadDocumentModal({ personId, onClose }) {
         return;
       }
 
-      const res = await fetch(`http://localhost:4000/locataire/${personId}/documents`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/locataire/${personId}/documents`, {
         headers: { "Authorization": `Bearer ${user.token}` },
       });
 
@@ -62,7 +62,7 @@ export default function UploadDocumentModal({ personId, onClose }) {
     formData.append("type", customType.trim());
 
     try {
-      const res = await fetch(`http://localhost:4000/UploadDocument/${personId}`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/UploadDocument/${personId}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${user.token}` },
         body: formData,
@@ -92,7 +92,7 @@ export default function UploadDocumentModal({ personId, onClose }) {
   // 🔹 Téléchargement
   const handleDownload = (filePath) => {
     const filename = filePath.split("/").pop();
-    window.open(`http://localhost:4000/documents/${filename}/download`, "_blank");
+    window.open(`https://backend-ged-immo.onrender.com/documents/${filename}/download`, "_blank");
   };
 
   // 🔹 Suppression
@@ -112,7 +112,7 @@ export default function UploadDocumentModal({ personId, onClose }) {
                   return;
                 }
 
-                const res = await fetch(`http://localhost:4000/Document/${docId}`, {
+                const res = await fetch(`https://backend-ged-immo.onrender.com/Document/${docId}`, {
                   method: "DELETE",
                   headers: { Authorization: `Bearer ${user.token}` },
                 });

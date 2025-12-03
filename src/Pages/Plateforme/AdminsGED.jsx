@@ -28,7 +28,7 @@ export default function AdminsGED() {
     e.preventDefault();
     try {
       const payload = { fullname, email, phone, password, company };
-      const res = await fetch("http://localhost:4000/ged/admins", {
+      const res = await fetch("https://backend-ged-immo.onrender.com/ged/admins", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -49,7 +49,7 @@ export default function AdminsGED() {
   const handleDelete = async (id) => {
     if (!window.confirm("Supprimer cet administrateur ?")) return;
     try {
-      const res = await fetch(`http://localhost:4000/ged/admins/${id}`, {
+      const res = await fetch(`https://backend-ged-immo.onrender.com/ged/admins/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

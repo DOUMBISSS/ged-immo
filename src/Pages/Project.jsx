@@ -32,7 +32,7 @@ export default function Project() {
     if (!user?._id) return;
     const fetchData = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/data/${user._id}`);
+        const res = await fetch(`https://backend-ged-immo.onrender.com/data/${user._id}`);
         const data = await res.json();
 
         if (data.success) {
@@ -94,7 +94,7 @@ const handleNewProjectSubmit = async (e) => {
       adminId: user._id,
     });
 
-    const res = await fetch("http://localhost:4000/NewProject", {
+    const res = await fetch("https://backend-ged-immo.onrender.com/NewProject", {
       method: "POST",
       headers: { "Content-Type": "application/json",
         "Authorization": `Bearer ${user?.token}`

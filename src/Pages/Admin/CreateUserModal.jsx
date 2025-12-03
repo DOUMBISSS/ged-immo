@@ -137,7 +137,7 @@ export default function CreateUserModal({ adminId, onClose, onUserCreated }) {
       if (form.password) payload.password = form.password;
 
       const res = await axios.post(
-        `http://localhost:4000/create/${adminId}/users`,
+        `https://backend-ged-immo.onrender.com/create/${adminId}/users`,
         payload,
         {
           headers: { Authorization: `Bearer ${user?.token}` },

@@ -6,7 +6,8 @@ import Navbar from "./Navbar";
 import Footer from "../Pages/Footer";
 import 'react-toastify/dist/ReactToastify.css';
 
-const API = "http://localhost:4000";
+// const API = "http://localhost:4000";
+const API = "https://backend-ged-immo.onrender.com"
 
 export default function Receipt() {
   const { rentId } = useParams();

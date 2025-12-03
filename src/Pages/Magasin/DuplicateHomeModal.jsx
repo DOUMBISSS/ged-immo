@@ -134,7 +134,7 @@ const handleSubmit = async (e) => {
     if (images.length > 0) images.forEach((file) => form.append("images", file));
 
     const response = await fetch(
-      `http://localhost:4000/homes/${home._id}/duplicate`,
+      `https://backend-ged-immo.onrender.com/homes/${home._id}/duplicate`,
       {
         method: "POST",
         headers: {

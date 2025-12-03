@@ -14,7 +14,7 @@ export function GedProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ search: "", projectId: "", type: "" });
 
-  const API_BASE = "http://localhost:4000";
+  const API_BASE = "https://backend-ged-immo.onrender.com";
 
   // 🔹 Login GED et stockage dans le contexte
   const loginGed = async (email, password) => {
