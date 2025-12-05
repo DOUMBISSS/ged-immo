@@ -1,0 +1,40 @@
+# --- Redirection vers index.html pour React Router ---
+<IfModule mod_rewrite.c>
+  Options -MultiViews
+  RewriteEngine On
+
+  # Si la requête ne correspond pas à un fichier physique
+  RewriteCond %{REQUEST_FILENAME} !-f
+  # ni à un dossier physique
+  RewriteCond %{REQUEST_FILENAME} !-d
+  # on renvoie index.html
+  RewriteRule ^ index.html [QSA,L]
+</IfModule>
+
+# --- Empêcher la mise en cache d'index.html ---
+<FilesMatch "index\.html$">
+  FileETag None
+  <IfModule mod_headers.c>
+    Header unset ETag
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+  </IfModule>
+</FilesMatch>
+
+# --- Cache longue durée pour les assets fingerprintés ---
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css             "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/*              "access plus 1 year"
+  ExpiresByType font/woff2           "access plus 1 year"
+  ExpiresByType font/woff            "access plus 1 year"
+</IfModule>
+
+# --- Compression Gzip (optionnel, accélère le chargement) ---
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript
+  AddOutputFilterByType DEFLATE application/json
+  AddOutputFilterByType DEFLATE text/javascript text/xml application/xml application/xml+rss
+</IfModule>

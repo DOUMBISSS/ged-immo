@@ -141,7 +141,7 @@ function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
         <Route path="/DetailMagasin/:id" element={<ProtectedRoute authRequired={true}><DetailMagasin /></ProtectedRoute>} />
         <Route path="/Actions" element={<ProtectedRoute authRequired={true}><Tracabilite /></ProtectedRoute>} />
         <Route path="/mon-profil" element={<ProtectedRoute authRequired={true}><Profil /></ProtectedRoute>} />
-        <Route path="/users" element={<ProtectedRoute authRequired={true} allowedRoles={['user','admin']} adminId={currentAdminId}><User /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute authRequired={true}><User /></ProtectedRoute>} />
         <Route path="/update/:id" element={<ProtectedRoute authRequired={true}><Update /></ProtectedRoute>} />
         <Route path="/detailUser/:id" element={<ProtectedRoute authRequired={true}><DetailUser /></ProtectedRoute>} />
         <Route path="/detailHome/:id" element={<ProtectedRoute authRequired={true}><DetailHome /></ProtectedRoute>} />

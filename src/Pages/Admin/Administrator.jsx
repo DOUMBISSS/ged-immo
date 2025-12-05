@@ -30,51 +30,41 @@ export default function Administrator() {
     );
   }
 
-  const permissionLabels = {
-    // Utilisateurs
-    view_users: "Voir les utilisateurs",
-    create_users: "Créer des utilisateurs",
-    edit_users: "Modifier des utilisateurs",
-    delete_users: "Supprimer des utilisateurs",
-
-    // Documents
-    view_documents: "Consulter les documents",
-    upload_documents: "Téléverser des documents",
-    delete_documents: "Supprimer des documents",
-
-    // Projets
-    create_projects: "Créer des projets",
-    view_projects: "Voir les projets",
-    edit_projects: "Modifier des projets",
-    delete_projects: "Supprimer des projets",
-
-    // Maisons
-    create_homes: "Créer des maisons",
-    view_homes: "Voir les maisons",
-    edit_homes: "Modifier des maisons",
-    delete_homes: "Supprimer des maisons",
-    archive_homes: "Archiver des maisons",
-
-    // Locataires
-    create_tenants: "Créer des locataires",
-    view_tenants: "Voir les locataires",
-    edit_tenants: "Modifier des locataires",
-    delete_tenants: "Supprimer des locataires",
-    archive_tenants: "Archiver des locataires",
-
-    // Paiements / locations
-    manage_payments: "Gérer les paiements",
-    view_payments: "Voir les paiements",
-    edit_payments: "Modifier les paiements",
-    delete_payments: "Supprimer les paiements",
-
-    // Rapports / paramètres
-    generate_reports: "Générer des rapports",
-    manage_settings: "Gérer les paramètres",
-
-    view_archives: "Voir les archives",
-    manage_work:"Autoriser les travaux"
-  };
+const permissionLabels = {
+  view_users: "Voir utilisateurs",
+  create_users: "Créer utilisateurs",
+  edit_users: "Modifier utilisateurs",
+  delete_users: "Supprimer utilisateurs",
+  view_documents: "Voir documents",
+  upload_documents: "Uploader documents",
+  delete_documents: "Supprimer documents",
+  create_projects: "Créer projets",
+  view_projects: "Voir projets",
+  edit_projects: "Modifier projets",
+  delete_projects: "Supprimer projets",
+  create_homes: "Créer maisons",
+  view_homes: "Voir maisons",
+  edit_homes: "Modifier maisons",
+  delete_homes: "Supprimer maisons",
+  archive_homes: "Archiver maisons",
+  create_tenants: "Créer locataires",
+  view_tenants: "Voir locataires",
+  edit_tenants: "Modifier locataires",
+  delete_tenants: "Supprimer locataires",
+  archive_tenants: "Archiver locataires",
+  manage_rentals: "Gérer loyers",
+  manage_payments: "Gérer paiements",
+  edit_payments: "Modifier paiements",
+  delete_payments: "Supprimer paiements",
+  view_payments: "Voir paiements",
+  generate_reports: "Générer rapports",
+  manage_settings: "Paramètres généraux",
+  view_archives: "Voir archives",
+  allow_signatures:"Autoriser les signatures",
+  manage_work:"Autoriser les travaux",
+   send_receipt:"Envoi reçu/mail",
+   edit_rent:"Modifier Loyer",
+};
 
   const fetchUsers = async () => {
     if (!adminId || !user?.token) return;
@@ -299,13 +289,14 @@ export default function Administrator() {
             }}
             permissionLabels={permissionLabels}
             allPermissions={[
-              "manage_admins", "view_users", "create_users", "edit_users", "delete_users",
-              "view_documents", "upload_documents", "delete_documents",
-              "create_projects", "view_projects", "edit_projects", "delete_projects",
-              "create_homes", "view_homes", "edit_homes", "delete_homes", "archive_homes",
-              "create_tenants", "view_tenants", "edit_tenants", "delete_tenants", "archive_tenants",
-              "manage_payments", "edit_payments", "view_payments", "delete_payments",
-              "generate_reports", "manage_settings","manage_work"
+              "view_users", "create_users", "edit_users", "delete_users",
+    "view_documents", "upload_documents", "delete_documents",
+    "create_projects", "view_projects", "edit_projects", "delete_projects",
+    "create_homes", "view_homes", "edit_homes", "delete_homes", "archive_homes",
+    "create_tenants", "view_tenants", "edit_tenants", "delete_tenants", "archive_tenants",
+    "manage_rentals", "manage_payments", "view_payments",
+    "generate_reports", "manage_settings", "view_archives", "allow_signatures","manage_work",
+    "send_receipt","edit_rent"
             ]}
           />
         )}

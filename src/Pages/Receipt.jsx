@@ -9,8 +9,8 @@ import { useUserContext } from "../contexts/UserContext";
 import { QRCodeCanvas } from "qrcode.react";
 import printJS from 'print-js';
 
-// const API = "http://localhost:4000";
-const API = "https://backend-ged-immo.onrender.com";
+const API = "http://localhost:4000";
+// const API = "https://backend-ged-immo.onrender.com";
 
 export default function Receipt({ admin }) {
   
@@ -434,6 +434,8 @@ const handleSendWhatsapp = async ({
   }
 };
 
+const platformLogoPath = "/logo4 copie.jpg"; // chemin relatif depuis le dossier public
+
 const handleSendEmail = async () => {
   try {
     if (!person) return toast.error("Données du locataire manquantes.");
@@ -448,12 +450,15 @@ const handleSendEmail = async () => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${user?.token}`,
       },
-      body: JSON.stringify({
-        person_email: email,
-        rentId,
-        adminName: user?.name || "",
-        adminEmail: user?.email || "",
-      }),
+     body: JSON.stringify({
+  person_email: email,
+  rentId,
+  adminName: user?.name || "",
+  adminEmail: user?.email || "",
+  watermarkLogo: watermarkLogo,       // <— ajouter !
+   platformLogo: platformLogoPath,     // <-- variable pour l'image plateforme // <— ajouter !
+  signature: selectedSignature || adminSignature
+}),
     });
 
     // 🛑 Gestion permission refusée (403)
@@ -521,6 +526,17 @@ const watermarkLogo =
                 </>
               )}
             </button>
+             {/* <button onClick={handleSendEmail} className="btn__email" disabled={sendingEmail}>
+              {sendingEmail ? (
+                <>
+                  <div className="spinner"></div> Envoi en cours...
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-envelope"></i> Envoyer le reçu par mail
+                </>
+              )}
+            </button> */}
             <button className="btn__whatsapp" onClick={handleSendWhatsapp}>
               <i className="fa-brands fa-whatsapp"></i> Envoyer sur WhatsApp
             </button>
@@ -561,7 +577,7 @@ const watermarkLogo =
   </div>
   <div>
     <h5>Le locataire</h5>
-    <p><strong>Mme/M. {person.name || "N/A"} {person.prenom || ""}</strong></p>
+    <p><strong>Mme/M. {person.name || "N/A"} {person.lastname || ""}</strong></p>
     <p><strong>{person.tel || person.number || "N/A"}</strong></p>
     <p><strong>{person.email || "N/A"}</strong></p>
     <p><strong>{person.address || "N/A"}</strong></p>

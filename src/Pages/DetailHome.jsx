@@ -6,6 +6,7 @@ import { toast, Toaster } from "react-hot-toast";
 import { UpdateHomeModal } from "./Maison/UpdateHomeModal";
 import { useUserContext } from "../contexts/UserContext"
 import DuplicateHomeModal from "./Maison/DuplicateHomeModal";
+import IncreaseHistoryModal from "./Maison/IncreaseHistoryModal";
 
 export default function DetailHome() {
     // ✅ Image par défaut (logo)
@@ -18,6 +19,16 @@ export default function DetailHome() {
    const [showUpdateModal, setShowUpdateModal] = useState(false);
    const [showDuplicateModal, setShowDuplicateModal] = useState(false);
      const { user ,hasFeature } = useUserContext(); // ✅ récupération de l’admin connecté
+       const [showIncreaseHistory, setShowIncreaseHistory] = useState(false);
+
+     const [pendingRentUpdate, setPendingRentUpdate] = useState(null);
+
+useEffect(() => {
+  if (pendingRentUpdate) {
+    setRentHome(pendingRentUpdate);
+    setPendingRentUpdate(null);
+  }
+}, [pendingRentUpdate]);
 
   useEffect(() => {
     fetch(`https://backend-ged-immo.onrender.com/api/homes/${id}`)
@@ -112,6 +123,52 @@ const handleArchive = () => {
   ), { duration: 50000 });
 };
 
+const handleUpdateProject = () => {
+  // ici tu peux ouvrir un modal pour modifier le projet
+  toast("⚡ Fonction de mise à jour du projet à implémenter !");
+};
+
+const handleArchiveProject = async () => {
+  if (!user?.permissions?.includes("archive_projects") && user.role !== "admin") {
+    toast.error("⛔ Vous n'avez pas la permission d’archiver ce projet.");
+    return;
+  }
+
+  // Confirmation avec toast
+  toast((t) => (
+    <div style={{ padding: "1rem" }}>
+      <p>⚠️ Attention ! Cette action va archiver le projet. Continuer ?</p>
+      <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+        <button
+          style={{ backgroundColor: "#ef4444", color: "#fff", padding: "5px 10px", borderRadius: "5px" }}
+          onClick={async () => {
+            try {
+              const res = await fetch(`http://localhost:4000/projects/${rentHome.projectId}/archive`, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${user.token}`,
+                },
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.message || "Erreur lors de l'archivage");
+              toast.success("✅ Projet archivé avec succès !");
+            } catch (err) {
+              console.error(err);
+              toast.error("Erreur serveur, réessayez plus tard.");
+            } finally {
+              toast.dismiss(t.id);
+            }
+          }}
+        >
+          Oui
+        </button>
+        <button style={{ backgroundColor: "#6b7280", color: "#fff", padding: "5px 10px", borderRadius: "5px" }} onClick={() => toast.dismiss(t.id)}>Non</button>
+      </div>
+    </div>
+  ), { duration: 50000 });
+};
+
 
 const handleDuppliquer = async () => {
   if (!hasFeature("duplicateHomes")) {
@@ -175,6 +232,7 @@ const handleDuppliquer = async () => {
             <div style={styles.btnGroup}>
              <button style={styles.btnUpdate} onClick={() => setShowUpdateModal(true)}>Mettre à jour</button>
               <button style={styles.btnArchive} onClick={handleArchive}>Archiver</button>
+              
                   <button
           onClick={() => setShowDuplicateModal(true)}
           disabled={!hasFeature("duplicateHomes")}
@@ -194,6 +252,12 @@ const handleDuppliquer = async () => {
         >
           <i className="fa-solid fa-copy"></i> Dupliquer
         </button>
+        <button
+            className="btn-toggle-history"
+            onClick={() => setShowIncreaseHistory(true)}
+          >
+            Historique des augmentations
+          </button>
             </div>
           </div>
         </div>
@@ -322,7 +386,7 @@ const handleDuppliquer = async () => {
     <p><strong>Type :</strong> {rentHome.nameHomeType || "N/A"}</p>
     <p><strong>Catégorie :</strong> {rentHome.categorie || "N/A"}</p>
     <p><strong>Référence ou N°Porte :</strong> {rentHome.reference || "N/A"}</p>
-    <p><strong>Loyer :</strong> {rentHome.rent || "N/A"} FCFA</p>
+    <p><strong>Loyer :</strong> {(rentHome.currentRent ?? rentHome.rent ?? "N/A")} FCFA</p>
     {/* <p><strong>Prix :</strong> {rentHome.price ? `${rentHome.price} FCFA` : "N/A"}</p> */}
     <p><strong>Adresse :</strong> {rentHome.addressHome || "N/A"}</p>
     <p><strong>Ville :</strong> {rentHome.city || "N/A"}</p>
@@ -477,6 +541,15 @@ const handleDuppliquer = async () => {
         />
       )}
 
+{showIncreaseHistory && (
+  <IncreaseHistoryModal
+    homeId={rentHome._id}
+    history={rentHome?.rentIncreaseHistory || []}
+    onClose={() => setShowIncreaseHistory(false)}
+    onRentUpdated={(updatedHome) => setTimeout(() => setPendingRentUpdate(updatedHome), 0)}
+  />
+)}
+
       <Footer />
 
       {/* ======= CSS intégré ======= */}
@@ -487,6 +560,168 @@ const handleDuppliquer = async () => {
         .breadcrumb { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
         .breadcrumb li::after { content: ">"; margin-left: 0.5rem; }
         .breadcrumb li:last-child::after { content: ""; }
+        .btn-increase {
+  background: #3498db;
+  border: none;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+  .percentage-input {
+  width: 200px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+    /* ========== MODAL BACKDROP ========== */
+.modal-overlay-history {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5000;
+}
+
+/* ========== MODAL BOX ========== */
+.modal-box-history {
+  background: #fff;
+  width: 90%;
+  max-width: 750px;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Animation d’apparition */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== TITRE ========== */
+.modal-box h2 {
+  margin-bottom: 1rem;
+  color: #1f2937;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* ========== TABLEAU ========== */
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.history-table th, 
+.history-table td {
+  padding: 0.6rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.history-table th {
+  background: #f3f4f6;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.history-table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+/* ========== BOUTON FERMER ========== */
+.modal-close-btn {
+  background: #dc2626;
+  border: none;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.modal-close-btn:hover {
+  background: #b91c1c;
+}
+
+/* ========== BOUTON D'OUVERTURE ========== */
+.btn-toggle-history {
+  background-color: #16a34a;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-toggle-history:hover {
+  background-color: #15803d;
+}
+  /* -- CONFIRMATION MODAL OVERLAY -- */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9000;
+}
+
+/* -- CONFIRMATION BOX -- */
+.confirm-box {
+  background: #fff;
+  padding: 1.4rem;
+  border-radius: 10px;
+  width: 330px;
+  box-shadow: 0 10px 35px rgba(0,0,0,0.2);
+  animation: fadeIn 0.2s ease;
+}
+
+/* -- BUTTONS -- */
+.confirm-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.confirm-yes {
+  background: #16a34a;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.confirm-yes:hover {
+  background: #15803d;
+}
+
+.confirm-no {
+  background: #dc2626;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.confirm-no:hover {
+  background: #b91c1c;
+}
         ${Object.entries(styles).map(([k, v]) => `.${k} { ${Object.entries(v).map(([prop, val]) => `${prop}: ${val};`).join(' ')} }`).join(' ')}
       `}</style>
     </div>

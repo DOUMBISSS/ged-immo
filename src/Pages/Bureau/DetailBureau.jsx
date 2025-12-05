@@ -37,6 +37,9 @@ export default function DetailBureau() {
   const [state, setState] = useState("Disponible");
   const [img, setImg] = useState(null);
   const [images, setImages] = useState([]);
+    const [updateModalOpen, setUpdateModalOpen] = useState(false);
+const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+const [newProjectName, setNewProjectName] = useState("");
 
   useEffect(() => {
     if (!user?.token) return;
@@ -126,7 +129,24 @@ export default function DetailBureau() {
                   <button className="btn-add-home" onClick={() => setShowModal(true)}>
                     <i className="fa-solid fa-plus"></i> Ajouter un bureau
                   </button>
-                )}
+                )
+                }
+                    <button
+  className="btn-arc-maj"
+  onClick={() => {
+    setNewProjectName(project?.name || "");
+    setUpdateModalOpen(true);
+  }}
+>
+  <i className="fa-solid fa-pen"></i> Mise à jour
+</button>
+
+<button
+  className="btn-arc-maj"
+  onClick={() => setArchiveModalOpen(true)}
+>
+  <i className="fa-solid fa-archive"></i> Archiver
+</button>
                 {/* <button
                   className="btn-archives"
                   onClick={() => navigate("/Mes__archives")}
@@ -326,6 +346,99 @@ export default function DetailBureau() {
         </div>
       )}
 
+          {updateModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <button className="modal-close" onClick={() => setUpdateModalOpen(false)}>
+              &times;
+            </button>
+            <h2>Modifier le nom du projet</h2>
+            <input
+              type="text"
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+            />
+            <div style={{ marginTop: "15px", display: "flex", gap: "10px" }}>
+              <button
+                className="btn-confirm"
+                onClick={async () => {
+                  if (!newProjectName.trim()) return toast.error("Nom obligatoire !");
+                  try {
+                    const res = await fetch(`${API}/update/project/${project._id}`, {
+                      method: "PUT",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${user.token}`,
+                      },
+                      body: JSON.stringify({ name: newProjectName }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      toast.success("Projet mis à jour !");
+                      setProject((prev) => ({ ...prev, name: newProjectName }));
+                      setUpdateModalOpen(false);
+                    } else {
+                      toast.error(data.message || "Erreur lors de la mise à jour");
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    toast.error("Erreur serveur");
+                  }
+                }}
+              >
+                Confirmer
+              </button>
+              <button className="btn-cancel" onClick={() => setUpdateModalOpen(false)}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {archiveModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <button className="modal-close" onClick={() => setArchiveModalOpen(false)}>
+              &times;
+            </button>
+            <h2>Confirmer l'archivage</h2>
+            <p>Voulez-vous vraiment archiver ce projet ?</p>
+            <div style={{ marginTop: "15px", display: "flex", gap: "10px" }}>
+              <button
+                className="btn-confirm"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`${API}/projects/${project._id}/archive`, {
+                      method: "PATCH",
+                      headers: {
+                        Authorization: `Bearer ${user.token}`,
+                      },
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      toast.success("Projet archivé !");
+                      setArchiveModalOpen(false);
+                      navigate("/Mes__archives");
+                    } else {
+                      toast.error(data.message || "Erreur lors de l'archivage");
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    toast.error("Erreur serveur");
+                  }
+                }}
+              >
+                Confirmer
+              </button>
+              <button className="btn-cancel" onClick={() => setArchiveModalOpen(false)}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .modal-overlay {
           position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -455,6 +568,16 @@ export default function DetailBureau() {
   overflow-x: auto;
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+    .btn-arc-maj {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .table {

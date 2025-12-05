@@ -50,11 +50,14 @@ export default function Project() {
   }, [user]);
 
   // 🔹 Filtrage projets
-  const filteredProjects = search
-    ? projects.filter(project =>
+// 🔹 Filtrage projets actifs
+const filteredProjects = search
+  ? projects
+      .filter(project => !project.archived) // <- exclure projets archivés
+      .filter(project =>
         project.name.toLowerCase().includes(search.toLowerCase())
       )
-    : projects;
+  : projects.filter(project => !project.archived); // <- exclure projets archivés
 
   // 🔹 Pagination
   const indexOfLastItem = currentPage * itemsPerPage;

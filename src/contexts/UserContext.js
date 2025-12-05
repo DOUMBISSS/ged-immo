@@ -2,10 +2,10 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { SUBSCRIPTION_LIMITS } from "../subscriptionLimits";
+import { v4 as uuidv4 } from "uuid";
 
-const SESSION_DURATION = 60 * 60 * 1000;
-const WARNING_DURATION = 60 * 1000;
-const INACTIVITY_LIMIT = SESSION_DURATION;
+const SESSION_DURATION = 60 * 60 * 1000; // 1h
+const WARNING_DURATION = 60 * 1000; // 1 min avant expiration
 
 const UserContext = createContext();
 
@@ -19,40 +19,36 @@ export function UserProvider({ children }) {
     }
   });
 
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSessionWarning, setShowSessionWarning] = useState(false);
   const [countdown, setCountdown] = useState(60);
 
   const countdownInterval = useRef(null);
   const logoutTimeout = useRef(null);
   const warningTimeout = useRef(null);
-  const lastActivity = useRef(Date.now());
-  const activityAttached = useRef(false);
 
+  // 🔹 Sauvegarde user dans localStorage
   useEffect(() => {
     if (user) localStorage.setItem("user", JSON.stringify(user));
     else localStorage.removeItem("user");
   }, [user]);
 
-  // 🔥 Vérifier l’abonnement actif
+  // 🔥 Vérifier si l’abonnement est actif
   const isSubscriptionActive = () => {
     if (!user || !user.subscriptionDetails) return false;
 
     const sub = user.subscriptionDetails;
-
     if (!sub.active || sub.suspended) return false;
 
     const now = new Date();
     return now >= new Date(sub.subscriptionStart) && now <= new Date(sub.subscriptionEnd);
   };
 
+  // 🔹 Vérifier si une fonctionnalité est disponible selon le plan
   const hasFeature = (key, options = {}) => {
     if (!user) return false;
-
     if (!isSubscriptionActive()) {
-      if (options.toastMessage !== false) {
-        toast.error("🚫 Aucun abonnement actif à cette date. Veuillez souscrire à un plan.");
-      }
+      if (options.toastMessage !== false)
+        toast.error("🚫 Aucun abonnement actif. Souscrivez à un plan.");
       return false;
     }
 
@@ -77,18 +73,25 @@ export function UserProvider({ children }) {
     return true;
   };
 
+  // 🔹 Login frontend : sauvegarde user + token + sessionToken
   const login = (userData) => {
-    setUser({
+    const sessionToken = uuidv4();
+
+    const newUser = {
       ...userData,
       id: userData._id,
       adminId: userData.role === "admin" ? userData._id : userData.adminId,
       subscription: userData.subscriptionType || "gratuit",
       subscriptionDetails: userData.subscriptionDetails || null,
-    });
+      sessionToken,
+    };
 
+    setUser(newUser);
+    localStorage.setItem("token", userData.token);
     startSessionTimer();
   };
 
+  // 🔹 Logout complet
   const logout = () => {
     clearSessionTimers();
     setUser(null);
@@ -97,9 +100,9 @@ export function UserProvider({ children }) {
     window.location.href = "/";
   };
 
+  // 🔹 Timer session + avertissement
   const startSessionTimer = () => {
     clearSessionTimers();
-    lastActivity.current = Date.now();
 
     warningTimeout.current = setTimeout(() => {
       setShowSessionWarning(true);
@@ -125,12 +128,13 @@ export function UserProvider({ children }) {
     clearInterval(countdownInterval.current);
   };
 
+  // 🔹 LoginHandler : commun pour admin et user
   const loginHandler = async (role, emailOrUsername, password, navigate) => {
     try {
       const endpoint =
         role === "admin"
-          ? "https://backend-ged-immo.onrender.com/admin/login"
-          : "https://backend-ged-immo.onrender.com/user/login";
+          ? "http://localhost:4000/admin/login"
+          : "http://localhost:4000/user/login";
 
       const body =
         role === "admin"
@@ -149,15 +153,12 @@ export function UserProvider({ children }) {
         return null;
       }
 
-      // ⚠️ IMPORTANT : Backend doit envoyer subscriptionDetails complet
       login({
         ...data.user,
         token: data.token,
         role,
         subscriptionDetails: data.user.subscriptionDetails,
       });
-
-      localStorage.setItem("token", data.token);
 
       navigate(role === "admin" ? "/administrator" : "/");
       return data.user;
@@ -166,6 +167,28 @@ export function UserProvider({ children }) {
       return null;
     }
   };
+
+  // 🔹 Pour tests uniquement : simuler un user déjà dans MongoDB
+// useEffect(() => {
+//   const mockUser = {
+//     _id: "693038c73e84193b945fecf2",
+//     name: "DOUMBIA",
+//     lastname: "FODE",
+//     role: "user",
+//     adminId: "68dc2708eaf944edfc5fdde5",
+//     token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MzAzOGM3M2U4NDE5M2I5NDVmZWNmMiIsInNlc3Npb24iOiIyMzIxZjM0NDFlODVkNTY3NzVmMTc4OGE5N2M5ZDI4MTY5OGY3ZjAzYWI2OTcwYzE3NjY2ZjU4YWY5ZmJkOWZhIiwicm9sZSI6InVzZXIiLCJpYXQiOjE3NjQ3ODA2NjksImV4cCI6MTc2NDc4NDI2OX0.6QHhrf98dKw8vPffgrhCDu7F75YBbt4slxY7q9aUWIU",
+//     sessionToken: "2321f3441e85d56775f1788a97c9d281698f7f03ab6970c17666f58af9fbd9fa",
+//     subscription: "gratuit",
+//     subscriptionDetails: {
+//       active: true,
+//       suspended: false,
+//       subscriptionStart: new Date(),
+//       subscriptionEnd: new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000) // 30 jours
+//     },
+//   };
+
+//   setUser(mockUser);
+// }, []);
 
   return (
     <UserContext.Provider
@@ -176,6 +199,8 @@ export function UserProvider({ children }) {
         loginHandler,
         hasFeature,
         isSubscriptionActive,
+        showSessionWarning,
+        countdown,
       }}
     >
       {children}

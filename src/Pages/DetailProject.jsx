@@ -9,7 +9,7 @@ import DuplicateHomeProjectModal from "./Maison/DuplicateHomeProjectModal"
 import DuplicateHomeModal from "./Magasin/DuplicateHomeModal";
 import DetailGeneric from "./DetailGeneric";
 
-const API = "https://backend-ged-immo.onrender.com"
+const API = "http://localhost:4000"
 
 export default function DetailProject() {
   const { id: projectId } = useParams(); // ID du projet depuis l'URL
@@ -48,6 +48,10 @@ const [meta, setMeta] = useState({});
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [selectedHome, setSelectedHome] = useState(null);
   const [duplicateHomeModalOpen, setDuplicateModalOpen] = useState(false);
+  // Etats pour les modals
+const [updateModalOpen, setUpdateModalOpen] = useState(false);
+const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+const [newProjectName, setNewProjectName] = useState("");
 
 
   const piecesOptions = {
@@ -90,7 +94,7 @@ const handleSubmit = async (e) => {
     if (img) formData.append("img", img);
     if (images.length > 0) Array.from(images).forEach(file => formData.append("images", file));
 
-    const response = await fetch(`https://backend-ged-immo.onrender.com/newHome/${projectId}`, {
+    const response = await fetch(`http://localhost:4000/newHome/${projectId}`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${user?.token}` },
       body: formData
@@ -212,6 +216,59 @@ const totalPages = Math.ceil(filteredHomes.length / itemsPerPage);;
   //   }
   // };
 
+  // 🔹 Mettre à jour le projet
+const handleUpdateProject = async (projectId) => {
+  const newName = prompt("Nouveau nom du projet :", project?.name);
+  if (!newName) return;
+
+  try {
+    const res = await fetch(`http://localhost:4000/projects/${projectId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${user.token}`,
+      },
+      body: JSON.stringify({ name: newName }),
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      toast.success("Projet mis à jour !");
+      setProject((prev) => ({ ...prev, name: newName }));
+    } else {
+      toast.error(data.message || "Erreur lors de la mise à jour");
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error("Erreur serveur");
+  }
+};
+
+// 🔹 Archiver le projet
+const handleArchiveProject = async (projectId) => {
+  if (!window.confirm("Voulez-vous vraiment archiver ce projet ?")) return;
+
+  try {
+    const res = await fetch(`http://localhost:4000/projects/${projectId}/archive`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${user.token}`,
+      },
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      toast.success("Projet archivé !");
+      navigate("/Mes__archives"); // Redirection vers archives
+    } else {
+      toast.error(data.message || "Erreur lors de l'archivage");
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error("Erreur serveur");
+  }
+};
+
   return (
     <>
       <div className="renthome-page">
@@ -225,19 +282,36 @@ const totalPages = Math.ceil(filteredHomes.length / itemsPerPage);;
                   {project ? `Maisons du projet : ${project.name}` : "Chargement..."}
                 </h1>
 
-                <div style={{ display: "flex", gap: "10px" }}>
-                  {project && (
-                    <button className="btn-add-home" style={{ height: "40px" }} onClick={() => setShowModal(true)}>
-                      <i className="fa-solid fa-plus"></i> Ajouter une maison
-                    </button>
-                  )}
-                  <button className="btn-archives" style={{ height: "40px" }} onClick={() => navigate("/Mes__archives")}>
-                    <i className="fa-solid fa-archive"></i> Voir archives
-                  </button>
-                  
-                  {/* <button onClick={() => setDuplicateModalOpen(true)}>📋 Dupliquer</button> */}
+               <div style={{ display: "flex", gap: "10px" }}>
+  {project && (
+    <>
+      <button className="btn-add-home" style={{ height: "40px" }} onClick={() => setShowModal(true)}>
+        <i className="fa-solid fa-plus"></i> Ajouter une maison
+      </button>
 
-                </div>
+      <button
+  className="btn-arc-maj"
+  onClick={() => {
+    setNewProjectName(project?.name || "");
+    setUpdateModalOpen(true);
+  }}
+>
+  <i className="fa-solid fa-pen"></i> Mise à jour
+</button>
+
+<button
+  className="btn-arc-maj"
+  onClick={() => setArchiveModalOpen(true)}
+>
+  <i className="fa-solid fa-archive"></i> Archiver
+</button>
+
+      <button className="btn-archives" style={{ height: "40px" }} onClick={() => navigate("/Mes__archives")}>
+        <i className="fa-solid fa-archive"></i> Voir archives
+      </button>
+    </>
+  )}
+</div>
               </div>
 
               <div className="stats-gauges">
@@ -626,6 +700,98 @@ const totalPages = Math.ceil(filteredHomes.length / itemsPerPage);;
           onDuplicated={(newHome) => setHomes((prev) => [...prev, newHome])}
         />
       )}
+      {updateModalOpen && (
+  <div className="modal-overlay">
+    <div className="modal-content">
+      <button className="modal-close" onClick={() => setUpdateModalOpen(false)}>
+        &times;
+      </button>
+      <h2>Modifier le nom du projet</h2>
+      <input
+        type="text"
+        value={newProjectName}
+        onChange={(e) => setNewProjectName(e.target.value)}
+      />
+      <div style={{ marginTop: "15px", display: "flex", gap: "10px" }}>
+        <button
+          className="btn-confirm"
+          onClick={async () => {
+            if (!newProjectName.trim()) return toast.error("Nom obligatoire !");
+            try {
+              const res = await fetch(`${API}/update/project/${project._id}`, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${user.token}`,
+                },
+                body: JSON.stringify({ name: newProjectName }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                toast.success("Projet mis à jour !");
+                setProject((prev) => ({ ...prev, name: newProjectName }));
+                setUpdateModalOpen(false);
+              } else {
+                toast.error(data.message || "Erreur lors de la mise à jour");
+              }
+            } catch (err) {
+              console.error(err);
+              toast.error("Erreur serveur");
+            }
+          }}
+        >
+          Confirmer
+        </button>
+        <button className="btn-cancel" onClick={() => setUpdateModalOpen(false)}>
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{archiveModalOpen && (
+  <div className="modal-overlay">
+    <div className="modal-content">
+      <button className="modal-close" onClick={() => setArchiveModalOpen(false)}>
+        &times;
+      </button>
+      <h2>Confirmer l'archivage</h2>
+      <p>Voulez-vous vraiment archiver ce projet ?</p>
+      <div style={{ marginTop: "15px", display: "flex", gap: "10px" }}>
+        <button
+          className="btn-confirm"
+          onClick={async () => {
+            try {
+              const res = await fetch(`${API}/projects/${project._id}/archive`, {
+                method: "PATCH",
+                headers: {
+                  Authorization: `Bearer ${user.token}`,
+                },
+              });
+              const data = await res.json();
+              if (data.success) {
+                toast.success("Projet archivé !");
+                setArchiveModalOpen(false);
+                navigate("/Mes__archives");
+              } else {
+                toast.error(data.message || "Erreur lors de l'archivage");
+              }
+            } catch (err) {
+              console.error(err);
+              toast.error("Erreur serveur");
+            }
+          }}
+        >
+          Confirmer
+        </button>
+        <button className="btn-cancel" onClick={() => setArchiveModalOpen(false)}>
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 {/* ✅ Modal duplication du projet entier */}
 {/* {duplicateHomeModalOpen && (
@@ -843,6 +1009,16 @@ const totalPages = Math.ceil(filteredHomes.length / itemsPerPage);;
 .badge.archived {
   background-color: #e5e7eb;
   color: #374151;
+}
+  .btn-arc-maj {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
       `}</style>
     </>

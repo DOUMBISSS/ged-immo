@@ -13,7 +13,7 @@ export const rolesPermissions = {
     "create_tenants", "view_tenants", "edit_tenants", "delete_tenants", "archive_tenants",
     "manage_rentals", "manage_payments", "view_payments",
     "generate_reports", "manage_settings", "view_archives", "allow_signatures",
-    "manage_work","send_receipt"
+    "manage_work","send_receipt","edit_rent"
   ],
   manager: [
     "view_users",
@@ -76,7 +76,8 @@ export const permissionLabels = {
   view_archives: "Voir archives",
   allow_signatures:"Autoriser les signatures",
   manage_work:"Autoriser les travaux",
-   send_receipt:"Envoi reçu/mail"
+   send_receipt:"Envoi reçu/mail",
+   edit_rent:"Modifier Loyer"
 };
 
 const allPermissions = Array.from(new Set(Object.values(rolesPermissions).flat()));

@@ -159,11 +159,11 @@ export default function Archives() {
             <h2><i className="fa-solid fa-box-archive"></i> Mes archives</h2>
           </div>
 
-          {/* --- Onglets Locataires / Biens --- */}
-          <div className="tabs-section">
-            <button className={activeTab === "locataires" ? "tab-active" : ""} onClick={() => setActiveTab("locataires")}>Locataires</button>
-            <button className={activeTab === "biens" ? "tab-active" : ""} onClick={() => setActiveTab("biens")}>Biens</button>
-          </div>
+<div className="tabs-section">
+  <button className={activeTab === "locataires" ? "tab-active" : ""} onClick={() => setActiveTab("locataires")}>Locataires</button>
+  <button className={activeTab === "biens" ? "tab-active" : ""} onClick={() => setActiveTab("biens")}>Biens</button>
+  <button className={activeTab === "projets" ? "tab-active" : ""} onClick={() => setActiveTab("projets")}>Projets</button>
+</div>
 
           {/* --- Filtres dynamiques --- */}
           <div className="filter-section">
@@ -198,32 +198,38 @@ export default function Archives() {
             />
           </div>
 
-          {loading ? (
-            <div style={{ textAlign: "center", marginTop: "2rem" }}>
-              <Blocks visible={true} height="80" width="80" />
-            </div>
-          ) : (
-            <>
-              {activeTab === "locataires" && (
-                <TableSection
-                  data={currentArchivesPage}
-                  totalPages={totalPagesArchives}
-                  currentPage={currentPageArchives}
-                  setCurrentPage={setCurrentPageArchives}
-                  type="locataire"
-                />
-              )}
-              {activeTab === "biens" && (
-                <TableSection
-                  data={currentHomesPage}
-                  totalPages={totalPagesHomes}
-                  currentPage={currentPageHomes}
-                  setCurrentPage={setCurrentPageHomes}
-                  type="bien"
-                />
-              )}
-            </>
-          )}
+         {/* --- Section contenu dynamique --- */}
+{loading ? (
+  <div style={{ textAlign: "center", marginTop: "2rem" }}>
+    <Blocks visible={true} height="80" width="80" />
+  </div>
+) : (
+  <>
+    {activeTab === "locataires" && (
+      <TableSection
+        data={currentArchivesPage}
+        totalPages={totalPagesArchives}
+        currentPage={currentPageArchives}
+        setCurrentPage={setCurrentPageArchives}
+        type="locataire"
+      />
+    )}
+    {activeTab === "biens" && (
+      <TableSection
+        data={currentHomesPage}
+        totalPages={totalPagesHomes}
+        currentPage={currentPageHomes}
+        setCurrentPage={setCurrentPageHomes}
+        type="bien"
+      />
+    )}
+    {activeTab === "projets" && (
+      <TableProjectsSection
+        projects={projects}
+      />
+    )}
+  </>
+)}
         </div>
       </div>
 
@@ -343,6 +349,44 @@ function TableSection({ data, totalPages, currentPage, setCurrentPage, type }) {
             <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>▶</button>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+function TableProjectsSection({ projects }) {
+  return (
+    <div className="tenant-section">
+      <div className="table-responsive">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Nom du projet</th>
+              <th>Catégorie</th>
+              <th>Date d'archivage</th>
+              <th>Archivé par</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {projects.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center" }}>Aucun projet archivé</td>
+              </tr>
+            ) : projects.map(proj => (
+              <tr key={proj._id}>
+                <td>{proj.name}</td>
+                <td>{proj.categorie || "—"}</td>
+                <td>{proj.dateArchived ? new Date(proj.dateArchived).toLocaleDateString("fr-FR") : "—"}</td>
+                <td>{proj.archivedByName || "—"}</td>
+                <td>
+                  <Link to={`/detailProjectArchive/${proj._id}`}>
+                    <button className="btn-details">Détails</button>
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

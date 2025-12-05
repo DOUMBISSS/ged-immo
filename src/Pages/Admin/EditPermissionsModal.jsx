@@ -13,7 +13,7 @@ export const rolesPermissions = {
     "create_homes", "view_homes", "edit_homes", "delete_homes", "archive_homes",
     "create_tenants", "view_tenants", "edit_tenants", "delete_tenants", "archive_tenants",
     "manage_rentals", "manage_payments", "view_payments","manage_work",
-    "generate_reports", "manage_settings", "view_archives", "allow_signatures","send_receipt"
+    "generate_reports", "manage_settings", "view_archives", "allow_signatures","send_receipt","edit_rent"
   ],
 
   // 🔸 Manager
@@ -85,7 +85,8 @@ export const permissionLabels = {
   view_archives: "Voir archives",
   allow_signatures:"Autoriser les signatures",
    manage_work:"Autoriser les travaux",
-   send_receipt:"Envoi reçu/mail"
+   send_receipt:"Envoi reçu/mail",
+   edit_rent:"Modifier Loyer"
 };
 
 export default function EditPermissionsModal({ user, onClose, onUpdated }) {
