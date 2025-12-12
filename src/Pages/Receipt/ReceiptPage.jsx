@@ -3,10 +3,12 @@ import { useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import { QRCodeCanvas } from "qrcode.react";
 
-// const API ="http://localhost:4000";
-const API = "https://backend-ged-immo.onrender.com"
+const API ="http://localhost:4000";
+// const API = "https://backend-ged-immo.onrender.com"
 
 export default function ReceiptPage() {
+
+  // const { id } = useParams();
 
     const formatCurrency = (amount) =>
     Number(amount || 0).toLocaleString("fr-FR") + " FCFA";
@@ -20,7 +22,7 @@ export default function ReceiptPage() {
         })
       : "N/A";
 
-  const { token } = useParams();
+  const { id } = useParams();
   const [receipt, setReceipt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,7 +42,7 @@ const handlePrint = useReactToPrint({
   useEffect(() => {
     const fetchReceipt = async () => {
       try {
-        const res = await fetch(`${API}/api/receipt/${token}`);
+        const res = await fetch(`${API}/receipt/temp/${id}`);
         if (!res.ok) throw new Error("Impossible de récupérer le reçu");
         const data = await res.json();
         setReceipt(data);
@@ -51,8 +53,8 @@ const handlePrint = useReactToPrint({
       }
     };
 
-    if (token) fetchReceipt();
-  }, [token]);
+    if (id) fetchReceipt();
+  }, [id]);
 
   if (loading)
     return (
@@ -144,8 +146,7 @@ const watermarkLogo =
 <p>
   Pour le loyer du/de{" "}
   <strong>
-    {receipt.homeCategorie || "Logement"}{" "}
-    - <strong>{receipt.homeReference}</strong> - {receipt.homeRooms ? `(${receipt.homeRooms} pièces)` : ""}
+    {receipt.homeCategorie || "Logement"}{" "} {receipt.homeRooms ? `(${receipt.homeRooms} pièces)` : ""}
   </strong>{" "}
   situé à : <strong>{receipt.homeAddress || "N/A"}</strong>
   {receipt.homeQuarter && (
@@ -168,12 +169,12 @@ const watermarkLogo =
             Paiement du mois de : <strong>{formatMonth(receipt.paymentDate)}</strong>
           </p>
           <p>
-            Paiement par <strong>{receipt.mode || "N/A"}</strong>
+            Paiement par <strong>{receipt?.paymentMethod || "N/A"}</strong>
           </p>
 
                <div className="receipt-xxl-footer">
           <p>
-            Fait le <strong>{formatDate(receipt.paymentDate)}</strong>
+            Fait à Abidjan le <strong>{formatDate(receipt.paymentDate)}</strong>
           </p>
           <p>
             <strong>Cachet & Signature du Propriétaire</strong>
@@ -193,7 +194,7 @@ const watermarkLogo =
      
           <div className="receipt-xxl-qr">
           <h6>Vérification du reçu</h6>
-          <QRCodeCanvas value={`${API}/receipt/${receipt._id || token}`} size={50} />
+          <QRCodeCanvas value={`${API}/receipt/${receipt._id || id}`} size={50} />
         </div>
 
             <div className="receipt-legal">

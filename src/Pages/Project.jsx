@@ -6,7 +6,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { useUserContext } from "../contexts/UserContext";
 
 export default function Project() {
-  const { user } = useUserContext();
+  const { user ,getAuthHeaders} = useUserContext();
   const [projects, setProjects] = useState([]);
 
   const [search, setSearch] = useState(() => localStorage.getItem("projectSearch") || "");
@@ -32,7 +32,9 @@ export default function Project() {
     if (!user?._id) return;
     const fetchData = async () => {
       try {
-        const res = await fetch(`https://backend-ged-immo.onrender.com/data/${user._id}`);
+        const res = await fetch(`http://localhost:4000/data/${user._id}`,
+          { headers: getAuthHeaders() }
+        );
         const data = await res.json();
 
         if (data.success) {
@@ -97,16 +99,15 @@ const handleNewProjectSubmit = async (e) => {
       adminId: user._id,
     });
 
-    const res = await fetch("https://backend-ged-immo.onrender.com/NewProject", {
+    const res = await fetch("http://localhost:4000/NewProject", {
       method: "POST",
-      headers: { "Content-Type": "application/json",
-        "Authorization": `Bearer ${user?.token}`
-       },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         name: newProjectName.trim(),
         description: newProjectDescription?.trim(),
         type:newProjectType,
         adminId: user._id,
+        
       }),
     });
 
@@ -429,8 +430,8 @@ const handleNewProjectSubmit = async (e) => {
   <option value="immobilier">Immobilier</option>
   <option value="magasin">Magasin</option>
   <option value="bureau">Bureau</option>
-  <option value="entrepot">Entrepôt</option>
-  <option value="terrain">Terrain</option>
+  {/* <option value="entrepot">Entrepôt</option>
+  <option value="terrain">Terrain</option> */}
 </select>
         </div>
 

@@ -6,13 +6,13 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useUserContext } from "../../contexts/UserContext";
 
-// const API = "http://localhost:4000";
-const API ="https://backend-ged-immo.onrender.com"
+const API = "http://localhost:4000";
+// const API ="https://backend-ged-immo.onrender.com"
 
 export default function DetailBureau() {
   const { id: projectId } = useParams();
   const navigate = useNavigate();
-  const { user } = useUserContext();
+  const { user ,getAuthHeaders } = useUserContext();
 
   const [project, setProject] = useState(null);
   const [bureaux, setBureaux] = useState([]);
@@ -40,11 +40,16 @@ export default function DetailBureau() {
     const [updateModalOpen, setUpdateModalOpen] = useState(false);
 const [archiveModalOpen, setArchiveModalOpen] = useState(false);
 const [newProjectName, setNewProjectName] = useState("");
+const [accesInternet,setAccesInternet] = useState(false);
+const [mezanine, setMezanine] = useState(false);
+const [serviceSecurite, setServiceSecurite] = useState(false);
+const [nombreCles, setNombreCles] = useState(1);
+const [salleBain, setSalleBain] = useState(1);
 
   useEffect(() => {
     if (!user?.token) return;
     fetch(`${API}/projects/${projectId}`, {
-      headers: { Authorization: `Bearer ${user.token}` },
+      headers: getAuthHeaders(),
     })
       .then((res) => res.json())
       .then((data) => {
@@ -59,56 +64,97 @@ const [newProjectName, setNewProjectName] = useState("");
   const handleFileChange = (e) => setImages(e.target.files);
   const handleMainImageChange = (e) => setImg(e.target.files[0]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!reference || !nameHome || !addressHome || !city || !rent) {
-      toast.error("Veuillez remplir tous les champs obligatoires !");
-      return;
+  // ✅ Vérification des champs obligatoires
+  if (!reference || !nameHome || !addressHome || !city || !rent) {
+    toast.error("Veuillez remplir tous les champs obligatoires !");
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+
+    // 🔹 Champs généraux
+    formData.append("reference", reference);
+    formData.append("nameHome", nameHome);
+    formData.append("categorie", "bureau");
+    formData.append("addressHome", addressHome);
+    formData.append("city", city);
+    formData.append("quarter", quarter);
+    formData.append("rent", rent);
+    formData.append("description", description);
+    formData.append("guarantee", guarantee);
+    formData.append("state", state);
+
+    // 🔹 Champs bureaux
+    formData.append("NmbreBureaux", NmbreBureaux);
+    formData.append("surfaceBureau", surfaceBureau);
+    formData.append("salleReunion", salleReunion ? "true" : "false");
+    formData.append("climatisation", climatisation ? "true" : "false");
+    formData.append("fibreOptique", fibreOptique ? "true" : "false");
+    formData.append("parking", parking ? "true" : "false");
+    formData.append("ascenseur", ascenseur ? "true" : "false");
+    formData.append("accesInternet", accesInternet ? "true" : "false");
+    formData.append("mezanine", mezanine ? "true" : "false");
+    formData.append("serviceSecurite", serviceSecurite ? "true" : "false");
+    formData.append("salleBain", salleBain);
+    formData.append("nombreCles", nombreCles);
+
+    // 🔹 Images
+    if (img) formData.append("img", img);
+    if (images.length > 0) {
+      Array.from(images).forEach((file) => formData.append("images", file));
     }
 
-    try {
-      const formData = new FormData();
-      formData.append("reference", reference);
-      formData.append("nameHome", nameHome);
-      formData.append("categorie", "bureau");
-      formData.append("addressHome", addressHome);
-      formData.append("city", city);
-      formData.append("quarter", quarter);
-      formData.append("rent", rent);
-      formData.append("description", description);
-      formData.append("guarantee", guarantee);
-      formData.append("surfaceBureau", surfaceBureau);
-      formData.append("NmbreBureaux", NmbreBureaux);
-      formData.append("salleReunion", salleReunion);
-      formData.append("climatisation", climatisation);
-      formData.append("fibreOptique", fibreOptique);
-      formData.append("parking", parking);
-      formData.append("ascenseur", ascenseur);
-      formData.append("state", state);
+    // 🔹 Envoi au backend
+    const res = await fetch(`${API}/newHome/${projectId}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${user.token}`, // ne pas mettre Content-Type pour FormData
+      },
+      body: formData,
+    });
 
-      if (img) formData.append("img", img);
-      if (images.length > 0) Array.from(images).forEach((f) => formData.append("images", f));
+    const data = await res.json();
 
-      const res = await fetch(`${API}/newHome/${projectId}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${user.token}` },
-        body: formData,
-      });
+    if (data.success) {
+      toast.success("🏢 Bureau ajouté avec succès !");
+      setBureaux((prev) => [...prev, data.home]);
+      setShowModal(false);
 
-      const data = await res.json();
-      if (data.success) {
-        toast.success("🏢 Bureau ajouté avec succès !");
-        setBureaux((prev) => [...prev, data.home]);
-        setShowModal(false);
-      } else {
-        toast.error(data.message || "Erreur lors de l’ajout du bureau");
-      }
-    } catch (err) {
-      console.error("Erreur ajout bureau:", err);
-      toast.error("Erreur serveur.");
+      // Reset formulaire si besoin
+      setReference("");
+      setNameHome("");
+      setAddressHome("");
+      setCity("");
+      setQuarter("");
+      setRent("");
+      setDescription("");
+      setGuarantee("");
+      setSurfaceBureau("");
+      setNmbreBureaux("");
+      setSalleReunion(false);
+      setClimatisation(false);
+      setFibreOptique(false);
+      setParking(false);
+      setAscenseur(false);
+      setAccesInternet(false);
+      setMezanine(false);
+      setServiceSecurite(false);
+      setSalleBain(1);
+      setNombreCles(1);
+      setImg(null);
+      setImages([]);
+    } else {
+      toast.error(data.message || "Erreur lors de l’ajout du bureau");
     }
-  };
+  } catch (err) {
+    console.error("Erreur ajout bureau:", err);
+    toast.error("Erreur serveur.");
+  }
+};
 
   return (
     <>
@@ -264,87 +310,116 @@ const [newProjectName, setNewProjectName] = useState("");
 
       <Footer />
 
-      {/* MODAL AJOUT BUREAU */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <button className="modal-close" onClick={() => setShowModal(false)}>
-              &times;
-            </button>
-            <form onSubmit={handleSubmit} className="form">
-              <h1 className="page-title">
-                <i className="fa-solid fa-building"></i> Ajouter un bureau
-              </h1>
+     {/* MODAL AJOUT BUREAU */}
+{showModal && (
+  <div className="modal-overlay">
+    <div className="modal-content">
+      <button className="modal-close" onClick={() => setShowModal(false)}>
+        &times;
+      </button>
+      <form onSubmit={handleSubmit} className="form">
+        <h1 className="page-title">
+          <i className="fa-solid fa-building"></i> Ajouter un bureau
+        </h1>
 
-              <div className="form-row">
-                <label>Nom du bureau</label>
-                <input type="text" value={nameHome} onChange={(e) => setNameHome(e.target.value)} required />
-              </div>
-
-              <div className="form-row">
-                <label>Référence</label>
-                <input type="text" value={reference} onChange={(e) => setReference(e.target.value)} required />
-              </div>
-
-              <div className="form-row">
-                <label>Ville</label>
-                <input type="text" value={city} onChange={(e) => setCity(e.target.value)} required />
-              </div>
-
-              <div className="form-row">
-                <label>Quartier</label>
-                <input type="text" value={quarter} onChange={(e) => setQuarter(e.target.value)} />
-              </div>
-
-              <div className="form-row">
-                <label>Adresse</label>
-                <input type="text" value={addressHome} onChange={(e) => setAddressHome(e.target.value)} />
-              </div>
-
-              <div className="form-row">
-                <label>Loyer (FCFA)</label>
-                <input type="text" value={rent} onChange={(e) => setRent(e.target.value)} />
-              </div>
-
-              <div className="form-row">
-                <label>Surface (m²)</label>
-                <input type="text" value={surfaceBureau} onChange={(e) => setSurfaceBureau(e.target.value)} />
-              </div>
-
-              <div className="form-row">
-                <label>Nombre de bureaux</label>
-                <input type="text" value={NmbreBureaux} onChange={(e) => setNmbreBureaux(e.target.value)} />
-              </div>
-
-              <div className="checkbox-grid">
-                <label><input type="checkbox" checked={salleReunion} onChange={() => setSalleReunion(!salleReunion)} /> Salle de réunion</label>
-                <label><input type="checkbox" checked={climatisation} onChange={() => setClimatisation(!climatisation)} /> Climatisation</label>
-                <label><input type="checkbox" checked={fibreOptique} onChange={() => setFibreOptique(!fibreOptique)} /> Fibre optique</label>
-                <label><input type="checkbox" checked={parking} onChange={() => setParking(!parking)} /> Parking</label>
-                <label><input type="checkbox" checked={ascenseur} onChange={() => setAscenseur(!ascenseur)} /> Ascenseur</label>
-              </div>
-
-              <label>Description</label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-
-              <label>Caution (FCFA)</label>
-              <input type="text" value={guarantee} onChange={(e) => setGuarantee(e.target.value)} />
-
-              <div className="form-row">
-                <label>Image principale</label>
-                <input type="file" onChange={handleMainImageChange} />
-              </div>
-
-              <div className="form-row">
-                <label>Images secondaires</label>
-                <input type="file" multiple onChange={handleFileChange} />
-              </div>
-
-              <button type="submit" className="btn-add-home">Ajouter le bureau</button>
-            </form>
-          </div>
+        {/* Informations générales */}
+        <div className="form-row">
+          <label>Nom du bureau</label>
+          <input type="text" value={nameHome} onChange={(e) => setNameHome(e.target.value)} required />
         </div>
-      )}
+
+        <div className="form-row">
+          <label>Référence</label>
+          <input type="text" value={reference} onChange={(e) => setReference(e.target.value)} required />
+        </div>
+
+        <div className="form-row">
+          <label>Ville</label>
+          <input type="text" value={city} onChange={(e) => setCity(e.target.value)} required />
+        </div>
+
+        <div className="form-row">
+          <label>Quartier</label>
+          <input type="text" value={quarter} onChange={(e) => setQuarter(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Adresse</label>
+          <input type="text" value={addressHome} onChange={(e) => setAddressHome(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Loyer (FCFA)</label>
+          <input type="text" value={rent} onChange={(e) => setRent(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Surface (m²)</label>
+          <input type="text" value={surfaceBureau} onChange={(e) => setSurfaceBureau(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Nombre de bureaux</label>
+          <input type="text" value={NmbreBureaux} onChange={(e) => setNmbreBureaux(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Nombre de salles de bain</label>
+          <input
+            type="number"
+            min={0}
+            value={salleBain}
+            onChange={e => setSalleBain(e.target.value)}
+          />
+        </div>
+
+        {/* Checkbox Caractéristiques */}
+        <section className="form-section">
+          <h3 className="form-section__title">Équipements et caractéristiques</h3>
+          <div className="checkbox-card">
+            <label><input type="checkbox" checked={salleReunion} onChange={e => setSalleReunion(e.target.checked)} /> Salle de réunion</label>
+            <label><input type="checkbox" checked={climatisation} onChange={e => setClimatisation(e.target.checked)} /> Climatisation</label>
+            <label><input type="checkbox" checked={fibreOptique} onChange={e => setFibreOptique(e.target.checked)} /> Fibre optique</label>
+            <label><input type="checkbox" checked={parking} onChange={e => setParking(e.target.checked)} /> Parking</label>
+            <label><input type="checkbox" checked={ascenseur} onChange={e => setAscenseur(e.target.checked)} /> Ascenseur</label>
+            <label><input type="checkbox" checked={mezanine} onChange={e => setMezanine(e.target.checked)} /> Mezzanine</label>
+            <label><input type="checkbox" checked={accesInternet} onChange={e => setAccesInternet(e.target.checked)} /> Accès Internet</label>
+            <label><input type="checkbox" checked={serviceSecurite} onChange={e => setServiceSecurite(e.target.checked)} /> Service Sécurité</label>
+          </div>
+        </section>
+
+        <div className="form-row">
+          <label>Description</label>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Caution (FCFA)</label>
+          <input type="text" value={guarantee} onChange={(e) => setGuarantee(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Nombre de clés</label>
+          <select value={nombreCles} onChange={e => setNombreCles(e.target.value)}>
+            {Array.from({length:10}, (_, i) => i+1).map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+
+        <div className="form-row">
+          <label>Image principale</label>
+          <input type="file" onChange={handleMainImageChange} />
+        </div>
+
+        <div className="form-row">
+          <label>Images secondaires</label>
+          <input type="file" multiple onChange={handleFileChange} />
+        </div>
+
+        <button type="submit" className="btn-add-home">Ajouter le bureau</button>
+      </form>
+    </div>
+  </div>
+)}
 
           {updateModalOpen && (
         <div className="modal-overlay">
@@ -366,10 +441,7 @@ const [newProjectName, setNewProjectName] = useState("");
                   try {
                     const res = await fetch(`${API}/update/project/${project._id}`, {
                       method: "PUT",
-                      headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${user.token}`,
-                      },
+                      headers: getAuthHeaders(),
                       body: JSON.stringify({ name: newProjectName }),
                     });
                     const data = await res.json();
@@ -411,9 +483,7 @@ const [newProjectName, setNewProjectName] = useState("");
                   try {
                     const res = await fetch(`${API}/projects/${project._id}/archive`, {
                       method: "PATCH",
-                      headers: {
-                        Authorization: `Bearer ${user.token}`,
-                      },
+                      headers: getAuthHeaders(),
                     });
                     const data = await res.json();
                     if (data.success) {
@@ -685,6 +755,72 @@ const [newProjectName, setNewProjectName] = useState("");
 .stat-card.occupe { border-top: 4px solid #f97316; }
 .stat-card.disponible { border-top: 4px solid #10b981; }
 .stat-card.taux { border-top: 4px solid #9333ea; }
+/* Container des checkbox */
+.checkbox-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+  padding: 10px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+/* Label de chaque checkbox */
+.checkbox-card label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* Effet hover sur le label */
+.checkbox-card label:hover {
+  background: #4b00cc;
+  color: #fff;
+}
+
+/* Style de l’input checkbox */
+.checkbox-card input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #4b00cc;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+/* Checkbox cochée */
+.checkbox-card input[type="checkbox"]:checked {
+  background: #4b00cc;
+  border-color: #4b00cc;
+}
+
+/* Petit checkmark */
+.checkbox-card input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  width: 4px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Réduction de l’espacement pour mobile */
+@media (max-width: 768px) {
+  .checkbox-card {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
       `}</style>
     </>
   );

@@ -6,7 +6,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 Mo
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 export default function DuplicateHomeProjectModal({ home, isOpen, onClose, API, onDuplicated }) {
-  const { user } = useUserContext();
+  const { user ,getAuthHeaders} = useUserContext();
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState("");
   const [loading, setLoading] = useState(false);
@@ -68,7 +68,7 @@ export default function DuplicateHomeProjectModal({ home, isOpen, onClose, API, 
     const fetchProjects = async () => {
       try {
         const res = await fetch(`${API}/projects/admin/${user._id}`, {
-          headers: { Authorization: `Bearer ${user.token}` },
+          headers: getAuthHeaders(),
         });
         const data = await res.json();
         if (res.ok) setProjects(data.projects || []);
@@ -132,7 +132,7 @@ export default function DuplicateHomeProjectModal({ home, isOpen, onClose, API, 
 
       const res = await fetch(`${API}/homes/${home?._id}/duplicate/${selectedProject}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${user.token}` },
+        headers: getAuthHeaders(),
         body: form,
       });
 

@@ -12,8 +12,8 @@ export const rolesPermissions = {
     "create_projects", "view_projects", "edit_projects", "delete_projects",
     "create_homes", "view_homes", "edit_homes", "delete_homes", "archive_homes",
     "create_tenants", "view_tenants", "edit_tenants", "delete_tenants", "archive_tenants",
-    "manage_rentals", "manage_payments", "view_payments","manage_work",
-    "generate_reports", "manage_settings", "view_archives", "allow_signatures","send_receipt","edit_rent"
+    "manage_payments", "view_payments","manage_work",
+    "generate_reports", "manage_settings", "view_archives", "allow_signatures","send_receipt","edit_rent",
   ],
 
   // 🔸 Manager
@@ -31,7 +31,7 @@ export const rolesPermissions = {
   agent: [
     "view_documents", "upload_documents", "view_archives",
     "view_projects", "create_homes", "view_homes", "archive_homes",
-    "create_tenants", "view_tenants", "edit_tenants",
+    "create_tenants", "view_tenants",
     "manage_payments"
   ],
 
@@ -44,11 +44,10 @@ export const rolesPermissions = {
   // 🔸 Utilisateur standard (fallback)
   user: [
     "view_documents", "upload_documents", "view_archives",
-    "create_tenants", "view_tenants", "edit_tenants",
+    "create_tenants", "view_tenants",
     "archive_homes", "edit_projects",
     "create_homes", "edit_homes", "view_homes",
-    "view_projects", "view_payments", "create_projects",
-    "manage_rentals", "manage_payments",
+    "view_projects", "view_payments","manage_payments",
   ]
 };
 
@@ -75,7 +74,6 @@ export const permissionLabels = {
   edit_tenants: "Modifier locataires",
   delete_tenants: "Supprimer locataires",
   archive_tenants: "Archiver locataires",
-  manage_rentals: "Gérer loyers",
   manage_payments: "Gérer paiements",
   edit_payments: "Modifier paiements",
   delete_payments: "Supprimer paiements",
@@ -90,7 +88,7 @@ export const permissionLabels = {
 };
 
 export default function EditPermissionsModal({ user, onClose, onUpdated }) {
-  const { user: currentUser } = useUserContext();
+  const { user: currentUser ,getAuthHeaders} = useUserContext();
   const [permissions, setPermissions] = useState(user.permissions || []);
   const [role, setRole] = useState(user.role || "agent");
   const [loading, setLoading] = useState(false);
@@ -131,7 +129,7 @@ export default function EditPermissionsModal({ user, onClose, onUpdated }) {
       const res = await axios.put(
         `https://backend-ged-immo.onrender.com/users/${user._id}/permissions`,
         { role, permissions },
-        { headers: { Authorization: `Bearer ${currentUser.token}` } }
+        { headers: getAuthHeaders(), }
       );
       toast.success("✅ Permissions mises à jour !");
       onUpdated(res.data.user);

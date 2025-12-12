@@ -11,12 +11,12 @@ export default function DetailArchivedHome() {
   const [home, setHome] = useState({ archived: true, rentals: [] });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-    const { user,clearUser } = useUserContext();
+    const { user,clearUser,getAuthHeaders} = useUserContext();
 
   const fetchHomeData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`https://backend-ged-immo.onrender.com/detail/homeArchive/${id}`);
+      const res = await fetch(`http://localhost:4000/detail/homeArchive/${id}`);
       if (!res.ok) throw new Error("Erreur récupération maison");
 
       const text = await res.text();
@@ -46,10 +46,7 @@ const restoreHome = (homeId, projectId) => {
             try {
               const res = await fetch(`https://backend-ged-immo.onrender.com/homes/${homeId}/restore`, {
                 method: "PATCH",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${user.token}`, // ✅ Ajout du token
-                },
+                headers: getAuthHeaders(),
               });
 
               const data = await res.json();
@@ -148,20 +145,21 @@ const restoreHome = (homeId, projectId) => {
                   </div>
 
                   {/* Historique des locataires */}
-                  <div className="home-section">
-                    <h3 className="section-title">Historique des locataires</h3>
-                    {home.rentals && home.rentals.length > 0 ? (
-                      <ul>
-                        {home.rentals.map((rental) => (
-                          <li key={rental._id}>
-                            {rental.name} {rental.prenom} - Entrée: {formatDate(rental.date_entrance)}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>Aucun locataire enregistré</p>
-                    )}
-                  </div>
+<div className="home-section">
+  <h3 className="section-title">Historique des locataires</h3>
+
+  {home.tenantHistory && home.tenantHistory.length > 0 ? (
+    <ul>
+      {home.tenantHistory.map((h, idx) => (
+        <li key={idx}>
+          {h.name} {h.lastname} — du {formatDate(h.startDate)} au {formatDate(h.endDate)}
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p>Aucun historique de locataire</p>
+  )}
+</div>
                 </div>
               </div>
             )}

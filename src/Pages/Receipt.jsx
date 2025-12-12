@@ -32,6 +32,22 @@ export default function Receipt({ admin }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [adminLogo, setAdminLogo] = useState(null);
+ const [whatsappToken, setWhatsappToken] = useState(null);
+  const [whatsappPhoneId, setWhatsappNumber] = useState(null);
+
+useEffect(() => {
+  if (user) {
+    setWhatsappNumber(user.whatsappPhoneId );
+    setWhatsappToken(user.whatsappToken);
+
+    console.log("Admin WhatsApp info :", {
+      whatsappPhoneId: user.whatsappPhoneId,
+      whatsappToken: user.whatsappToken,
+      fallbackToken: process.env.REACT_APP_GLOBAL_WHATSAPP_TOKEN,
+      fallbackNumber: "+225077880082",
+    });
+  }
+}, [user]);
   
 
   const [signatures, setSignatures] = useState([]);
@@ -41,6 +57,7 @@ export default function Receipt({ admin }) {
   const isDrawing = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const componentRef = useRef(null);
+
 
 
   const handlePrint = useReactToPrint({
@@ -136,6 +153,27 @@ useEffect(() => {
 
     fetchAdminSignatures();
   }, [user, token]);
+
+  useEffect(() => {
+  const fetchAdminSelectedSignature = async () => {
+    try {
+      const adminId = rental?.adminId?._id || rental?.adminId;
+
+      if (!adminId) return;
+
+      const res = await fetch(`${API}/admin/${adminId}/selected-signature`);
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setAdminSignature(data.selectedSignature || null);
+
+    } catch (err) {
+      console.error("Erreur signature admin :", err);
+    }
+  };
+
+  if (rental) fetchAdminSelectedSignature();
+}, [rental]);
 
   // ✍️ Gestion du canvas pour signature
   const getPos = (e) => {
@@ -287,150 +325,204 @@ const handleDeleteSignature = async (index) => {
 
   const home = person.homeId || {};
 
+  
+
+  
+
+// const handleSendWhatsapp = async () => {
+//     try {
+//       if (!person) return toast.error("Données du locataire manquantes.");
+//       if (!whatsappToken || !whatsappPhoneId) return toast.error("Token ou numéro WhatsApp non configuré pour cet admin.");
+
+//       // Normalisation numéro du locataire
+//       const normalizePhone = (raw, defaultCC = "+225") => {
+//         if (!raw) return "";
+//         let phone = raw.trim().replace(/\s+/g, "").replace(/[^\d+]/g, "");
+//         if (phone.startsWith("0")) phone = defaultCC.replace(/\D/g, "") + phone.slice(1);
+//         if (!phone.startsWith("+")) phone = "+" + phone;
+//         return phone;
+//       };
+
+//       const phone = normalizePhone(person.tel || person.number || "");
+//       if (!/^\+\d{8,15}$/.test(phone)) return toast.error("Numéro du locataire invalide pour WhatsApp.");
+
+//       const htmlTemplate = componentRef.current?.innerHTML;
+//       if (!htmlTemplate) return toast.error("Impossible de générer le template PDF.");
+
+//       toast.loading("Envoi du reçu WhatsApp…");
+
+//       const res = await fetch(`http://localhost:4000/rents/${rentId}/send-whatsapp-pdf`, {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: `Bearer ${user.token}`,
+//         },
+//         body: JSON.stringify({ htmlTemplate, phone, whatsappPhoneId, whatsappToken }),
+//       });
+
+//       toast.dismiss();
+
+//       if (!res.ok) {
+//         const errData = await res.json().catch(() => ({}));
+//         throw new Error(errData?.message || "Échec de l'envoi WhatsApp.");
+//       }
+
+//       const data = await res.json();
+//       toast.success(data.message || "Reçu envoyé sur WhatsApp ✔️");
+//       console.log("📤 Réponse backend WhatsApp :", data);
+//     } catch (err) {
+//       console.error("Erreur handleSendWhatsapp :", err);
+//       toast.error(err.message || "Erreur lors de l’envoi WhatsApp.");
+//     }
+//   };
+
+// const handleSendWhatsapp = async ({
+//   rentIdParam = rentId,
+//   personParam = person,
+//   apiBase = API,
+//   defaultCountryCode = "+225",
+// } = {}) => {
+//   try {
+//     if (!rentIdParam) return toast.error("ID du reçu manquant.");
+//     if (!personParam) return toast.error("Données du locataire manquantes.");
+
+//     // === Normalisation téléphone ===
+//     const normalizePhone = (raw, defaultCC = "+225") => {
+//       if (!raw) return "";
+//       let phone = raw.trim().replace(/\s+/g, "").replace(/[^\d+]/g, "");
+
+//       if (phone.startsWith("+")) return phone;
+//       if (phone.startsWith("00")) return "+" + phone.slice(2);
+//       if (phone.startsWith("0")) return `+${defaultCC.replace(/\D/g, "")}${phone.slice(1)}`;
+
+//       return `${defaultCountryCode}${phone}`;
+//     };
+
+//     const phone = normalizePhone(personParam.tel || personParam.number);
+//     if (!/^\+\d{8,15}$/.test(phone))
+//       return toast.error("Numéro du locataire invalide.");
+
+//     // === Demander lien + message au backend ===
+//     const tempRes = await fetch(`${apiBase}/rents/${rentIdParam}/temp-link`, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: `Bearer ${user?.token}`,
+//       },
+//     });
+
+//     if (!tempRes.ok) throw new Error("Impossible de générer le lien temporaire.");
+
+//     const { tempUrl, message: backendMessage } = await tempRes.json();
+
+//     if (!backendMessage) {
+//       return toast.error("Message serveur indisponible.");
+//     }
+
+//     // Encodage
+//     const encoded = encodeURIComponent(backendMessage);
+
+//     const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+
+//     const link = isMobile
+//       ? `https://api.whatsapp.com/send?phone=${phone.replace("+", "")}&text=${encoded}`
+//       : `https://web.whatsapp.com/send?phone=${phone.replace("+", "")}&text=${encoded}`;
+
+//     const opened = window.open(link, "_blank");
+
+//     if (!opened) {
+//       await navigator.clipboard.writeText(backendMessage);
+//       toast.success("Message copié — ouvrez WhatsApp manuellement.");
+//     } else {
+//       toast.success("WhatsApp ouvert — cliquez sur Envoyer.");
+//     }
+
+//   } catch (err) {
+//     console.error("Erreur handleSendWhatsapp:", err);
+//     toast.error(err.message || "Erreur WhatsApp.");
+//   }
+// };
+
 const handleSendWhatsapp = async ({
-  rentIdParam = rentId,
   personParam = person,
-  adminParam = user,
+  rentIdParam = rentId,
+  rentalParam = rental,
+  homeParam = home,
   apiBase = API,
   defaultCountryCode = "+225",
-  openInNewTab = true,
 } = {}) => {
   try {
-    if (!rentIdParam) return toast.error("ID du reçu manquant.");
     if (!personParam) return toast.error("Données du locataire manquantes.");
+    if (!rentIdParam) return toast.error("ID du reçu manquant.");
 
-    // 🔹 Fonction de normalisation du numéro AVEC LOGS
     const normalizePhone = (raw, defaultCC = "+225") => {
       if (!raw) return "";
-
-      console.group("📞 Normalisation du numéro WhatsApp");
-      console.log("Numéro brut reçu :", raw);
-
       let phone = raw.trim().replace(/\s+/g, "").replace(/[^\d+]/g, "");
-      const variants = new Set();
-
-      // ✅ 1. Format brut s’il commence par +
-      if (phone.startsWith("+")) {
-        variants.add(phone);
-        variants.add(phone.replace(/^(\+\d{1,3})0+/, "$1")); // sans 0 après indicatif
-      }
-
-      // ✅ 2. Format 00 → +
-      if (phone.startsWith("00")) {
-        const v = "+" + phone.slice(2);
-        variants.add(v);
-        variants.add(v.replace(/^(\+\d{1,3})0+/, "$1"));
-      }
-
-      // ✅ 3. Format commençant par 0 → ajouter indicatif
-      if (phone.startsWith("0")) {
-        const cc = defaultCC.replace(/\D/g, "");
-        variants.add(`+${cc}${phone.replace(/^0+/, "")}`);
-      }
-
-      // ✅ 4. Format sans indicatif
-      if (!phone.startsWith("+") && !phone.startsWith("00")) {
-        const cc = defaultCC.replace(/\D/g, "");
-        variants.add(`+${cc}${phone}`);
-      }
-
-      console.log("🔍 Variantes générées :", Array.from(variants));
-
-      // On choisit la plus longue (souvent la bonne)
-      const final = Array.from(variants).sort((a, b) => b.length - a.length)[0];
-      console.log("✅ Variante choisie :", final);
-      console.groupEnd();
-
-      return final;
+      if (phone.startsWith("+")) return phone;
+      if (phone.startsWith("00")) return "+" + phone.slice(2);
+      if (phone.startsWith("0")) return `+${defaultCC.replace(/\D/g, "")}${phone.slice(1)}`;
+      return `${defaultCountryCode}${phone}`;
     };
 
-    // 🔹 Extraction du numéro du locataire
-    const locataireRaw =
-      personParam.tel || personParam.number || personParam.contact || "";
+    const phone = normalizePhone(personParam.tel || personParam.number);
+    if (!/^\+\d{8,15}$/.test(phone))
+      return toast.error("Numéro du locataire invalide.");
 
-    const locataireDigits = normalizePhone(locataireRaw, defaultCountryCode);
+    // 🔹 Lien React frontend pour le locataire
+    const receiptLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/receiptPage/${rentIdParam}`;
 
-    console.log("✅ Numéro final normalisé :", locataireDigits);
+    const message = `
+Bonjour ${personParam.name || ""} ${personParam.lastname || ""},
 
-    // 🔹 Validation du format final
-    if (!/^\+\d{8,15}$/.test(locataireDigits)) {
-      console.warn("❌ Numéro rejeté (format invalide WhatsApp) :", locataireDigits);
-      return toast.error("Numéro du locataire invalide pour WhatsApp.");
-    }
+Voici votre reçu de paiement N° ${rentalParam?.receipt_number || rentIdParam} :
 
-    // 🔹 Génération du lien temporaire
-    const res = await fetch(`${apiBase}/rents/${rentIdParam}/temp-link`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
+🔹 Propriétaire :
+${rentalParam?.adminId?.fullname || "Néant"}
+Tel : ${rentalParam?.adminId?.number || "Néant"}
+Email : ${rentalParam?.adminId?.email || "Néant"}
+Adresse : ${rentalParam?.adminId?.address || "Néant"}
 
-    if (!res.ok) throw new Error("Impossible de générer le lien temporaire.");
-    const { tempUrl } = await res.json();
-    if (!tempUrl) throw new Error("Le serveur n'a pas retourné de tempUrl.");
+🔹 Locataire :
+${personParam.name || ""} ${personParam.lastname || ""} 
+Tel : ${personParam.tel || personParam.number || "N/A"} 
+Email : ${personParam.email || "N/A"} 
+Adresse : ${personParam.address || "N/A"}
 
-    // 🔹 Correction de l'URL absolue
-    const ensureAbsoluteUrl = (u) => {
-      try {
-        return new URL(u).href;
-      } catch {
-        return (
-          window.location.origin.replace(/\/$/, "") +
-          "/" +
-          u.replace(/^\//, "")
-        );
-      }
-    };
+🔹 Informations paiement :
+Montant payé : ${Number(rentalParam?.amount || homeParam?.rent || 0).toLocaleString()} FCFA
+Date paiement : ${new Date(rentalParam?.date_of_payment || Date.now()).toLocaleDateString()}
+Mois concerné : ${formatMonth(rentalParam?.month) || "N/A"}
+Mode de paiement : ${rentalParam?.mode || "N/A"}
 
-    const finalTempUrl = ensureAbsoluteUrl(tempUrl);
+🔹 Logement :
+Type : ${homeParam?.categorie || "Logement"}
+Nombre de pièces : ${homeParam?.NmbrePieces || "N/A"}
+Adresse : ${homeParam?.addressHome || "N/A"}
+Quartier : ${homeParam?.quarter || "N/A"}
 
-    // 🔹 Message WhatsApp
-   const message = [
-  `Bonjour ${personParam.name || personParam.nom || ""} ${personParam.prenom || ""}`.trim(),
-  "",
-  "Votre reçu de paiement est disponible ici :",
-  "",
-  finalTempUrl, // bien séparé sur une ligne seule
-  "",
-  "Si le lien ne s'ouvre pas, copiez-collez-le dans votre navigateur."
-].filter(Boolean).join("\n");
+📄 Consulter votre reçu : ${receiptLink}
 
-    // ✅ Correction ici : on n’encode pas entièrement l’URL pour la garder cliquable
-    const encodedMessage = message
-      .split(finalTempUrl)
-      .map((part) => encodeURIComponent(part))
-      .join(finalTempUrl);
+Merci pour votre paiement.
+`.trim();
 
-    // 🔹 Détection mobile / desktop
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const baseUrl = isMobile
-      ? "https://api.whatsapp.com/send"
-      : "https://web.whatsapp.com/send";
+    const encoded = encodeURIComponent(message);
 
-    const whatsappUrl = `${baseUrl}?phone=${locataireDigits.replace(
-      /\+/g,
-      ""
-    )}&text=${encodedMessage}`;
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    const link = isMobile
+      ? `https://api.whatsapp.com/send?phone=${phone.replace("+", "")}&text=${encoded}`
+      : `https://web.whatsapp.com/send?phone=${phone.replace("+", "")}&text=${encoded}`;
 
-    console.log("🌍 URL WhatsApp générée :", whatsappUrl);
-
-    // 🔹 Ouverture de WhatsApp
-    const opened = window.open(
-      whatsappUrl,
-      openInNewTab ? "_blank" : "_self",
-      "noopener,noreferrer"
-    );
-
+    const opened = window.open(link, "_blank");
     if (!opened) {
       await navigator.clipboard.writeText(message);
-      toast.success(
-        "WhatsApp n'a pas pu s'ouvrir (pop-up bloquée). Le message a été copié."
-      );
+      toast.success("Message copié — ouvrez WhatsApp manuellement.");
     } else {
       toast.success("WhatsApp ouvert — cliquez sur Envoyer.");
     }
+
   } catch (err) {
-    console.error("❌ handleSendWhatsapp error:", err);
-    toast.error(err.message || "Erreur lors de l'envoi via WhatsApp.");
+    console.error("Erreur handleSendWhatsapp:", err);
+    toast.error(err.message || "Erreur WhatsApp.");
   }
 };
 
@@ -492,6 +584,46 @@ const handleSendEmail = async () => {
     setSendingEmail(false);
   }
 };
+
+const handleSendSMS = async () => {
+  try {
+    if (!person) return toast.error("Données du locataire manquantes.");
+    const phone = person.tel || person.number;
+    if (!phone) return toast.error("Numéro du locataire manquant.");
+
+    const normalizePhone = (raw, defaultCC = "+225") => {
+      let p = raw.trim().replace(/\s+/g, "").replace(/[^\d+]/g, "");
+      if (p.startsWith("0")) p = defaultCC.replace(/\D/g, "") + p.slice(1);
+      if (!p.startsWith("+")) p = "+" + p;
+      return p;
+    };
+
+    const normalizedPhone = normalizePhone(phone);
+
+    const message = `Bonjour ${person.name || ""} ${person.lastname || ""},\nVotre reçu de paiement N° ${rental?.receipt_number || rental._id} est disponible.`;
+
+    // Si tu veux ouvrir l'appli SMS sur mobile :
+    window.open(`sms:${normalizedPhone}?body=${encodeURIComponent(message)}`);
+
+    // Optionnel : envoyer via backend SMS API
+    // await fetch(`${API}/send-sms`, {
+    //   method: "POST",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //     Authorization: `Bearer ${user?.token}`,
+    //   },
+    //   body: JSON.stringify({ phone: normalizedPhone, message }),
+    // });
+
+    toast.success("SMS prêt à être envoyé !");
+  } catch (err) {
+    console.error("Erreur handleSendSMS:", err);
+    toast.error(err.message || "Erreur lors de l'envoi du SMS.");
+  }
+};
+
+
+
   
 
 // Déterminer le watermark (logo admin ou logo par défaut)
@@ -540,6 +672,9 @@ const watermarkLogo =
             <button className="btn__whatsapp" onClick={handleSendWhatsapp}>
               <i className="fa-brands fa-whatsapp"></i> Envoyer sur WhatsApp
             </button>
+             <button className="btn__sms" onClick={handleSendSMS}>
+    <i className="fa-solid fa-sms"></i> Envoyer par SMS
+  </button>
           </div>
 
           <div className="receipt-header-logos">
@@ -599,16 +734,18 @@ const watermarkLogo =
             <p>Paiement par <strong>{rental?.mode || "N/A"}</strong></p>
 
             <div className="receipt-xxl-footer">
-              <p>Fait à Abidjan le <strong>{formatDate(rental?.date_of_payment)}</strong></p>
-              <p><strong>Cachet & Signature du Propriétaire</strong></p>
-              {selectedSignature ? (
-                <img src={selectedSignature} alt="Signature Admin" />
-              ) : adminSignature ? (
-                <img src={adminSignature} alt="Signature Admin" />
-              ) : (
-                <p>Signature non disponible</p>
-              )}
-            </div>
+            <p>Fait à Abidjan le <strong>{formatDate(rental?.date_of_payment)}</strong></p>
+            <p><strong>Cachet & Signature du Propriétaire</strong></p>
+            {adminSignature ? (
+  <img
+    src={adminSignature.startsWith("http") ? adminSignature : `${API}/${adminSignature}`}
+    alt="Signature Admin"
+    style={{ maxWidth: 180, marginTop: 10 }}
+  />
+) : (
+  <p>Aucune signature sélectionnée</p>
+)}
+          </div>
           </div>
 
           {/* ✅ Ajout du QR Code */}
@@ -803,6 +940,20 @@ const watermarkLogo =
   .platform-logo-header {
     height: 60px !important;
   }
+}
+  .btn__sms {
+  background-color: #f39c12;
+  color: #fff;
+  padding: 0.7rem 1.5rem;
+  border: none;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  margin: 0 0.5rem 2rem 0;
+  transition: 0.3s;
+}
+.btn__sms:hover {
+  background-color: #d68910;
 }
       `}</style>
     </>

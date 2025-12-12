@@ -8,13 +8,14 @@ import { useUserContext } from "../contexts/UserContext";
 import DuplicateHomeProjectModal from "./Maison/DuplicateHomeProjectModal"
 import DuplicateHomeModal from "./Magasin/DuplicateHomeModal";
 import DetailGeneric from "./DetailGeneric";
+import HomeForm from "./Maison/HomeForm";
 
 const API = "http://localhost:4000"
 
 export default function DetailProject() {
   const { id: projectId } = useParams(); // ID du projet depuis l'URL
   const navigate = useNavigate();
-  const { user } = useUserContext(); // ✅ récupération de l’admin connecté
+  const { user,getAuthHeaders } = useUserContext(); // ✅ récupération de l’admin connecté
 
   const [project, setProject] = useState(null);
   const [homes, setHomes] = useState([]);
@@ -67,64 +68,23 @@ const [newProjectName, setNewProjectName] = useState("");
   
 // console.log(user.isAdmin, user.userId, user.adminId);
  // -------------------- AJOUT D’UNE MAISON --------------------
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
+const handleSubmit = async (formData) => {
   if (!user?.token) return toast.error("Utilisateur non connecté !");
 
-  if (!reference || !nameHome || !sousCategorie || !addressHome || !city || !rent) {
-    return toast.error("Veuillez remplir tous les champs obligatoires !");
-  }
-
   try {
-    const formData = new FormData();
-    formData.append("reference", reference);
-    formData.append("nameHome", nameHome);
-    formData.append("sousCategorie", sousCategorie); // ✅ correspond à Villa / Appartement / etc.
-    formData.append("addressHome", addressHome);
-    formData.append("city", city);
-    formData.append("quarter", quarter || "");
-    formData.append("rent", rent);
-    formData.append("description", description || "");
-    formData.append("guarantee", guarantee || "");
-    formData.append("observations", observations || "");
-    formData.append("state", state || "Disponible");
-    formData.append("NmbrePieces", NmbrePieces || "");
-    if (works?.trim()) formData.append("works", works);
-    if (img) formData.append("img", img);
-    if (images.length > 0) Array.from(images).forEach(file => formData.append("images", file));
-
     const response = await fetch(`http://localhost:4000/newHome/${projectId}`, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${user?.token}` },
+      headers: {
+    Authorization: `Bearer ${user.token}`
+  },
       body: formData
     });
 
     const data = await response.json();
 
-    if (response.status === 403) {
-      return toast.error(data.message || "Vous n'avez pas la permission !");
-    }
-
     if (data.success) {
       toast.success("Maison ajoutée avec succès !");
       setHomes(prev => [...prev, data.home]);
-      // Réinitialisation du formulaire
-      setReference("");
-      setNameHome("");
-      setSousCategorie("");
-      setAddressHome("");
-      setCity("");
-      setQuarter("");
-      setRent("");
-      setDescription("");
-      setGuarantee("");
-      setObservations("");
-      setState("Disponible");
-      SetNmbrePieces("");
-      setWorks("");
-      setImg(null);
-      setImages([]);
       setShowModal(false);
     } else {
       toast.error(data.message || "Erreur lors de l'ajout de la maison");
@@ -139,9 +99,7 @@ useEffect(() => {
   if (!user?.token) return;
 
   fetch(`https://backend-ged-immo.onrender.com/projects/${projectId}`, {
-    headers: {
-      Authorization: `Bearer ${user.token}`
-    }
+    headers: getAuthHeaders(),
   })
     .then((res) => {
       if (!res.ok) throw new Error("Non autorisé");
@@ -447,7 +405,7 @@ const handleArchiveProject = async (projectId) => {
                       home.img
                         ? home.img.startsWith("http")
                           ? home.img
-                          : `https://backend-ged-immo.onrender.com/${home.img}`
+                          : `http://localhost:4000/${home.img}`
                         : "/logo4 copie.jpg"
                     }
                     alt={home.nameHome}
@@ -570,7 +528,7 @@ const handleArchiveProject = async (projectId) => {
   </div>
 )} */}
 
-      {showModal && (
+      {/* {showModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <button className="modal-close" onClick={() => setShowModal(false)}>
@@ -592,6 +550,7 @@ const handleArchiveProject = async (projectId) => {
                     <input type="text" className="form-input" value={reference} onChange={(e) => setReference(e.target.value)} />
                   </div>
                   <div className="form-col">
+                     <label>Type de Maison</label>
                   <select 
   className="form-input" 
   value={sousCategorie} 
@@ -686,7 +645,13 @@ const handleArchiveProject = async (projectId) => {
             </form>
           </div>
         </div>
-      )}
+      )} */}
+        {showModal && (
+              <HomeForm
+                onSubmit={handleSubmit}
+                onClose={() => setShowModal(false)}
+              />
+            )}
 
       {showDuplicateModal && selectedHome && (
         <DuplicateHomeModal

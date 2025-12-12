@@ -8,7 +8,7 @@ import Navbar from "./Navbar";
 export default function UpdateProfil() {
   let id = useParams().id;
   const navigate = useNavigate();
-  const { user, clearUser } = useUserContext(); // Access context
+  const { user, clearUser,getAuthHeaders } = useUserContext(); // Access context
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [username, setUserName] = useState('');
@@ -46,7 +46,7 @@ export default function UpdateProfil() {
     try {
       const response = await fetch(`https://backend-ged-immo.onrender.com/updateUser/${id}`, {
         method: "PUT",
-        headers: { 'Content-Type': "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(dataUpdate)
       });
 

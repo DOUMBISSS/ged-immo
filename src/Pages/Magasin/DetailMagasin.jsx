@@ -40,6 +40,12 @@ export default function DetailMagasin() {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
 const [archiveModalOpen, setArchiveModalOpen] = useState(false);
 const [newProjectName, setNewProjectName] = useState("");
+const [nombreCles, setNombreCles] = useState(1);
+const [salleBain, setSalleBain] = useState(1);
+const [parking, setParking] = useState(false);
+const [ascenseur, setAscenseur] = useState(false);
+const [serviceSecurite, setServiceSecurite] = useState(false);
+ const [charges, setCharges] = useState("");
 
   useEffect(() => {
     if (!user?.token) return;
@@ -56,56 +62,72 @@ const [newProjectName, setNewProjectName] = useState("");
       .catch((err) => console.error("Erreur chargement projet:", err));
   }, [projectId, user?.token]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!reference || !nameHome || !addressHome || !city || !rent) {
-      toast.error("Veuillez remplir tous les champs obligatoires !");
-      return;
+  if (!reference || !nameHome || !addressHome || !city || !rent) {
+    toast.error("Veuillez remplir tous les champs obligatoires !");
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+
+    // 🔹 Champs généraux
+    formData.append("reference", reference);
+    formData.append("nameHome", nameHome);
+    formData.append("categorie", "magasin");
+    formData.append("addressHome", addressHome);
+    formData.append("city", city);
+    formData.append("quarter", quarter);
+    formData.append("rent", rent);
+    formData.append("guarantee", guarantee || "");
+    formData.append("surfaceMagasin", surfaceMagasin || "");
+    formData.append("description", description || "");
+    formData.append("state", state);
+    formData.append("NmbrePieces", NmbrePieces || "");
+    formData.append("nombreCles", nombreCles || 1);
+    formData.append("salleBain", salleBain || 1);
+    formData.append("charges", charges); 
+
+    // 🔹 Checkbox → toujours envoyer en string "true" ou "false"
+    // formData.append("vitrine", vitrine.toString());
+    // formData.append("stockDisponible", stockDisponible.toString());
+    // formData.append("zoneCommerciale", zoneCommerciale.toString());
+    formData.append("mezanine", mezanine.toString());
+    formData.append("parking", parking.toString());
+    formData.append("ascenseur", ascenseur.toString());
+    formData.append("serviceSecurite", serviceSecurite.toString());
+
+    // 🔹 Autres champs spécifiques
+    formData.append("accesRoutier", accesRoutier || "");
+
+    // 🔹 Images
+    if (img) formData.append("img", img);
+    if (images.length > 0) Array.from(images).forEach(f => formData.append("images", f));
+
+    // 🔹 Envoi au backend
+    const res = await fetch(`${API}/newHome/${projectId}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${user.token}` },
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      toast.success("🏬 Magasin ajouté avec succès !");
+      setMagasins(prev => [...prev, data.home]);
+      setShowModal(false);
+    } else {
+      toast.error(data.message || "Erreur lors de l’ajout du magasin");
     }
 
-    try {
-      const formData = new FormData();
-      formData.append("reference", reference);
-      formData.append("nameHome", nameHome);
-      formData.append("categorie", "magasin");
-      formData.append("addressHome", addressHome);
-      formData.append("city", city);
-      formData.append("quarter", quarter);
-      formData.append("rent", rent);
-      formData.append("description", description);
-      formData.append("guarantee", guarantee);
-      formData.append("surfaceMagasin", surfaceMagasin);
-      
-      formData.append("accesRoutier", accesRoutier);
-      formData.append("vitrine", vitrine);
-      formData.append("stockDisponible", stockDisponible);
-      formData.append("zoneCommerciale", zoneCommerciale);
-      formData.append("state", state);
-      formData.append("NmbrePieces", NmbrePieces);
-formData.append("mezanine", mezanine);
-      if (img) formData.append("img", img);
-      if (images.length > 0) Array.from(images).forEach((f) => formData.append("images", f));
-
-      const res = await fetch(`${API}/newHome/${projectId}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${user.token}` },
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        toast.success("🏬 Magasin ajouté avec succès !");
-        setMagasins((prev) => [...prev, data.home]);
-        setShowModal(false);
-      } else {
-        toast.error(data.message || "Erreur lors de l’ajout du magasin");
-      }
-    } catch (err) {
-      console.error("Erreur ajout magasin:", err);
-      toast.error("Erreur serveur.");
-    }
-  };
+  } catch (err) {
+    console.error("Erreur ajout magasin:", err);
+    toast.error("Erreur serveur.");
+  }
+};
 
   return (
     <>
@@ -241,61 +263,131 @@ formData.append("mezanine", mezanine);
       <Footer />
 
       {/* MODAL */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <button className="modal-close" onClick={() => setShowModal(false)}>
-              &times;
-            </button>
-            <form onSubmit={handleSubmit} className="form">
-              <h1 className="page-title"><i className="fa-solid fa-store"></i> Ajouter un magasin</h1>
-              
-              <label>Nom</label>
-              <input type="text" value={nameHome} onChange={(e) => setNameHome(e.target.value)} required />
-              
-              <label>Référence</label>
-              <input type="text" value={reference} onChange={(e) => setReference(e.target.value)} required />
-              
-              <label>Surface (m²)</label>
-              <input type="text" value={surfaceMagasin} onChange={(e) => setSurfaceMagasin(e.target.value)} />
-              
-              <label>Ville</label>
-              <input type="text" value={city} onChange={(e) => setCity(e.target.value)} required />
-              
-              <label>Quartier</label>
-              <input type="text" value={quarter} onChange={(e) => setQuarter(e.target.value)} />
-              
-              <label>Adresse</label>
-              <input type="text" value={addressHome} onChange={(e) => setAddressHome(e.target.value)} />
-              
-              <label>Loyer</label>
-              <input type="text" value={rent} onChange={(e) => setRent(e.target.value)} />
+{showModal && (
+  <div className="modal-overlay">
+    <div className="modal-content">
+      <button className="modal-close" onClick={() => setShowModal(false)}>
+        &times;
+      </button>
 
-              <label>Caution</label>
-              <input type="text" value={guarantee} onChange={(e) => setGuarantee(e.target.value)} />
+      <form onSubmit={handleSubmit} className="form">
+        <h1 className="page-title"><i className="fa-solid fa-store"></i> Ajouter un magasin</h1>
 
-              <label>Nombre de pièces</label>
-            <input
-              type="number"
-              value={NmbrePieces || ""}
-              onChange={(e) => SetNmbrePieces(e.target.value)}
-            />
-                          
-              <div className="checkbox-grid">
-                <label><input type="checkbox" checked={vitrine} onChange={() => setVitrine(!vitrine)} /> Vitrine</label>
-                <label><input type="checkbox" checked={stockDisponible} onChange={() => setStockDisponible(!stockDisponible)} /> Stock disponible</label>
-                <label><input type="checkbox" checked={zoneCommerciale} onChange={() => setZoneCommerciale(!zoneCommerciale)} /> Zone commerciale</label>
-                <label><input type="checkbox" checked={mezanine} onChange={() => setMezanine(!mezanine)} /> Mezanine</label>
-              </div>
-
-              <label>Description</label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-              
-              <button type="submit" className="btn-add-home">Ajouter</button>
-            </form>
-          </div>
+        {/* Champs généraux */}
+        <div className="form-row">
+          <label>Nom du magasin*</label>
+          <input type="text" value={nameHome} onChange={e => setNameHome(e.target.value)} required />
         </div>
-      )}
+
+        <div className="form-row">
+          <label>Référence*</label>
+          <input type="text" value={reference} onChange={e => setReference(e.target.value)} required />
+        </div>
+
+        <div className="form-row">
+          <label>Surface (m²)</label>
+          <input type="number" value={surfaceMagasin} onChange={e => setSurfaceMagasin(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Ville*</label>
+          <input type="text" value={city} onChange={e => setCity(e.target.value)} required />
+        </div>
+
+        <div className="form-row">
+          <label>Quartier</label>
+          <input type="text" value={quarter} onChange={e => setQuarter(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Adresse</label>
+          <input type="text" value={addressHome} onChange={e => setAddressHome(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Loyer (FCFA)*</label>
+          <input type="text" value={rent} onChange={e => setRent(e.target.value)} required />
+        </div>
+
+        <div className="form-row">
+          <label>Caution (FCFA)</label>
+          <input type="text" value={guarantee} onChange={e => setGuarantee(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Nombre de pièces</label>
+          <input type="number" value={NmbrePieces} onChange={e => SetNmbrePieces(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Nombre de clés</label>
+          <input type="number" value={nombreCles} onChange={e => setNombreCles(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Nombre de salles de bain</label>
+          <input type="number" value={salleBain} onChange={e => setSalleBain(e.target.value)} />
+        </div>
+
+        {/* ✅ Checkbox équipements et caractéristiques */}
+        <section className="form-section">
+          <h3 className="form-section__title">Équipements et caractéristiques</h3>
+          <div className="checkbox-card">
+            <label>
+              <input type="checkbox" checked={vitrine} onChange={e => setVitrine(e.target.checked)} />
+              Vitrine
+            </label>
+            {/* <label>
+              <input type="checkbox" checked={stockDisponible} onChange={e => setStockDisponible(e.target.checked)} />
+              Stock disponible
+            </label>
+            <label>
+              <input type="checkbox" checked={zoneCommerciale} onChange={e => setZoneCommerciale(e.target.checked)} />
+              Zone commerciale
+            </label> */}
+            <label>
+              <input type="checkbox" checked={mezanine} onChange={e => setMezanine(e.target.checked)} />
+              Mezanine
+            </label>
+            <label>
+              <input type="checkbox" checked={parking} onChange={e => setParking(e.target.checked)} />
+              Parking
+            </label>
+            <label>
+              <input type="checkbox" checked={ascenseur} onChange={e => setAscenseur(e.target.checked)} />
+              Ascenseur
+            </label>
+            <label>
+              <input type="checkbox" checked={serviceSecurite} onChange={e => setServiceSecurite(e.target.checked)} />
+              Service de sécurité
+            </label>
+          </div>
+        </section>
+         <div className="form-row">
+          <label>Charges</label>
+          <textarea value={charges} onChange={e => setCharges(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Description</label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} />
+        </div>
+
+        <div className="form-row">
+          <label>Photo principale</label>
+          <input type="file" onChange={e => setImg(e.target.files[0])} />
+        </div>
+
+        <div className="form-row">
+          <label>Photos secondaires</label>
+          <input type="file" multiple onChange={e => setImages(e.target.files)} />
+        </div>
+
+        <button type="submit" className="btn-add-home">Ajouter le magasin</button>
+      </form>
+    </div>
+  </div>
+)}
 
           {updateModalOpen && (
         <div className="modal-overlay">
@@ -310,35 +402,38 @@ formData.append("mezanine", mezanine);
               onChange={(e) => setNewProjectName(e.target.value)}
             />
             <div style={{ marginTop: "15px", display: "flex", gap: "10px" }}>
-              <button
-                className="btn-confirm"
-                onClick={async () => {
-                  if (!newProjectName.trim()) return toast.error("Nom obligatoire !");
-                  try {
-                    const res = await fetch(`${API}/update/project/${project._id}`, {
-                      method: "PUT",
-                      headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${user.token}`,
-                      },
-                      body: JSON.stringify({ name: newProjectName }),
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                      toast.success("Projet mis à jour !");
-                      setProject((prev) => ({ ...prev, name: newProjectName }));
-                      setUpdateModalOpen(false);
-                    } else {
-                      toast.error(data.message || "Erreur lors de la mise à jour");
-                    }
-                  } catch (err) {
-                    console.error(err);
-                    toast.error("Erreur serveur");
-                  }
-                }}
-              >
-                Confirmer
-              </button>
+             <button
+  className="btn-confirm"
+  onClick={async () => {
+    try {
+      const res = await fetch(`${API}/projects/${project._id}/archive`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          originalProjectId: project._id, // 🔹 Obligatoire pour le backend
+          name: project.name,            // optionnel selon ton backend
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Projet archivé !");
+        setArchiveModalOpen(false);
+        navigate("/Mes__archives");
+      } else {
+        toast.error(data.message || "Erreur lors de l'archivage");
+      }
+    } catch (err) {
+      console.error("Erreur archivage projet :", err);
+      toast.error("Erreur serveur");
+    }
+  }}
+>
+  Confirmer
+</button>
               <button className="btn-cancel" onClick={() => setUpdateModalOpen(false)}>
                 Annuler
               </button>
@@ -542,6 +637,72 @@ formData.append("mezanine", mezanine);
 .stat-card.occupe { border-top: 4px solid #f97316; }
 .stat-card.disponible { border-top: 4px solid #10b981; }
 .stat-card.taux { border-top: 4px solid #9333ea; }
+ /* Container des checkbox */
+.checkbox-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+  padding: 10px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+/* Label de chaque checkbox */
+.checkbox-card label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* Effet hover sur le label */
+.checkbox-card label:hover {
+  background: #4b00cc;
+  color: #fff;
+}
+
+/* Style de l’input checkbox */
+.checkbox-card input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #4b00cc;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+/* Checkbox cochée */
+.checkbox-card input[type="checkbox"]:checked {
+  background: #4b00cc;
+  border-color: #4b00cc;
+}
+
+/* Petit checkmark */
+.checkbox-card input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  width: 4px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Réduction de l’espacement pour mobile */
+@media (max-width: 768px) {
+  .checkbox-card {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
       `}</style>
     </>
   );

@@ -126,7 +126,7 @@ if (typePersonne === "particulier") {
 }
 
     try {
-      const res = await fetch(`https://backend-ged-immo.onrender.com/update/locataire/${person._id}`, {
+      const res = await fetch(`http://localhost:4000/update/locataire/${person._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

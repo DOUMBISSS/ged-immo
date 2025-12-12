@@ -9,7 +9,7 @@ import { Link } from "react-router-dom";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 export default function Administrator() {
-  const { user } = useUserContext();
+  const { user,getAuthHeaders } = useUserContext();
   const [showModalUser, setShowModal] = useState(false);
   const [users, setUsers] = useState([]);
   const [editUser, setEditUser] = useState(null);
@@ -52,7 +52,6 @@ const permissionLabels = {
   edit_tenants: "Modifier locataires",
   delete_tenants: "Supprimer locataires",
   archive_tenants: "Archiver locataires",
-  manage_rentals: "Gérer loyers",
   manage_payments: "Gérer paiements",
   edit_payments: "Modifier paiements",
   delete_payments: "Supprimer paiements",
@@ -71,10 +70,7 @@ const permissionLabels = {
 
     try {
       const res = await fetch(`https://backend-ged-immo.onrender.com/admin/${adminId}/users`, {
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${user.token}`,
-        },
+        headers: getAuthHeaders(),
       });
 
       const data = await res.json();
@@ -113,10 +109,7 @@ const permissionLabels = {
               try {
                 const res = await fetch(`https://backend-ged-immo.onrender.com/admin/${user._id}/users/${userId}`, {
                   method: "DELETE",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${user.token}`,
-                  },
+                  headers: getAuthHeaders(),
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -293,8 +286,7 @@ const permissionLabels = {
     "view_documents", "upload_documents", "delete_documents",
     "create_projects", "view_projects", "edit_projects", "delete_projects",
     "create_homes", "view_homes", "edit_homes", "delete_homes", "archive_homes",
-    "create_tenants", "view_tenants", "edit_tenants", "delete_tenants", "archive_tenants",
-    "manage_rentals", "manage_payments", "view_payments",
+    "create_tenants", "view_tenants", "edit_tenants", "delete_tenants", "archive_tenants", "manage_payments", "view_payments",
     "generate_reports", "manage_settings", "view_archives", "allow_signatures","manage_work",
     "send_receipt","edit_rent"
             ]}
@@ -309,9 +301,7 @@ const permissionLabels = {
     try {
       const res = await fetch(`https://backend-ged-immo.onrender.com/admin/${user._id}/users/${deleteUserModal.userId}`, {
         method: "DELETE",
-        headers: { 
-          "Content-Type": "application/json", 
-          "Authorization": `Bearer ${user.token}` },
+        headers: getAuthHeaders(),
       });
       const data = await res.json();
       if (data.success) {

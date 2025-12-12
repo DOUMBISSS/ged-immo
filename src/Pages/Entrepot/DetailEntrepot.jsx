@@ -12,7 +12,7 @@ const API = "https://backend-ged-immo.onrender.com"
 export default function DetailEntrepot() {
   const { id: projectId } = useParams();
   const navigate = useNavigate();
-  const { user } = useUserContext();
+  const { user ,getAuthHeaders} = useUserContext();
 
   const [project, setProject] = useState(null);
   const [entrepots, setEntrepots] = useState([]);
@@ -40,7 +40,7 @@ export default function DetailEntrepot() {
   useEffect(() => {
     if (!user?.token) return;
     fetch(`${API}/projects/${projectId}`, {
-      headers: { Authorization: `Bearer ${user.token}` },
+      headers: getAuthHeaders(),
     })
       .then((res) => res.json())
       .then((data) => {
@@ -84,7 +84,7 @@ export default function DetailEntrepot() {
 
       const res = await fetch(`${API}/newHome/${projectId}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${user.token}` },
+        headers: getAuthHeaders(),
         body: formData,
       });
 

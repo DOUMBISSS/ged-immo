@@ -1,28 +1,24 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useUserContext } from "../contexts/UserContext";
 
-export default function ProtectedRoute({ children, roles = [], permissions = [] }) {
+export default function ProtectedRoute({ children, roles = [], permissions = [], authRequired = true, redirectIfAuthenticated = false }) {
   const { user } = useUserContext();
   const location = useLocation();
 
-  // ⛔ Pas connecté → redirection vers login
-  if (!user) {
+  // ⚠️ Si la route est pour les utilisateurs **non connectés uniquement** (ex: login/home)
+  if (redirectIfAuthenticated && user) {
+    // Rediriger vers la page par défaut après login (ex: /Accueil)
+    return <Navigate to="/Accueil" replace />;
+  }
+
+  // ⛔ Si la route est protégée et que l'utilisateur n'est pas connecté
+  if (authRequired && !user) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  // 🔒 Vérification des rôles autorisés (ex: ['admin', 'manager'])
-  if (roles.length && !roles.includes(user.role)) {
+  // 🔒 Vérification des rôles autorisés
+  if (roles.length && user && !roles.includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
-  }
-
-  // 🔐 Vérification des permissions (ex: ['edit_users', 'manage_admins'])
-  if (permissions.length) {
-    const hasPermission = permissions.some((perm) => user.permissions?.includes(perm));
-
-    // Les super_admin ont toujours tous les droits
-    if (user.role !== "admin" && !hasPermission) {
-      return <Navigate to="/unauthorized" replace />;
-    }
   }
 
   return children;

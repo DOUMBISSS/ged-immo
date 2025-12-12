@@ -7,7 +7,7 @@ const API = "https://backend-ged-immo.onrender.com"; // ou ton URL de backend
 
 export default function EmailModal({ isOpen, onClose, rentId }) {
 
-    const { user } = useUserContext();
+    const { user,getAuthHeaders } = useUserContext();
 
   const [email, setEmail] = useState(""); // email du destinataire
 
@@ -25,11 +25,7 @@ if (!token) {
     try {
       const res = await fetch(`${API}/send-receipt-email/${rentId}`, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          // ✅ Le token JWT doit être envoyé pour authentifier l'admin
-          Authorization: `Bearer ${localStorage.getItem("token")}` 
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ recipient: email }) // seulement le destinataire
       });
 

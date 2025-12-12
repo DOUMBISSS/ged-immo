@@ -8,228 +8,218 @@ import { useUserContext } from "../contexts/UserContext";
 import PermissionModal from "./PermissionModal";
 
 export default function Archives() {
-  const { user, hasFeature } = useUserContext();
-  const [archives, setArchives] = useState([]);
-  const [homes, setHomes] = useState([]);
-  const [projects, setProjects] = useState([]);
-
-  const [searchTerm, setSearchTerm] = useState(localStorage.getItem("archiveSearchTerm") || "");
-  const [selectedType, setSelectedType] = useState(localStorage.getItem("archiveSelectedType") || "");
-  const [searchProject, setSearchProject] = useState(localStorage.getItem("archiveSearchProject") || "");
-
-  const [currentPageArchives, setCurrentPageArchives] = useState(parseInt(localStorage.getItem("archiveCurrentPageArchives")) || 1);
-  const [currentPageHomes, setCurrentPageHomes] = useState(parseInt(localStorage.getItem("archiveCurrentPageHomes")) || 1);
+  const { user, hasFeature,getAuthHeaders } = useUserContext();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const [activeTab, setActiveTab] = useState("locataires"); // "locataires" ou "biens"
-  const navigate = useNavigate();
 
+  // ==== 3 jeux de données ====
+  const [tenants, setTenants] = useState([]);
+  const [homes, setHomes] = useState([]);
+  const [projects, setProjects] = useState([]);
+
+  // ==== Filtres ====
+  const [search, setSearch] = useState("");
+
+  const [tenantType, setTenantType] = useState("");
+  const [tenantProject, setTenantProject] = useState("");
+
+  const [homeType, setHomeType] = useState("");
+  const [homeProject, setHomeProject] = useState("");
+
+  // ==== Pagination séparée ====
+  const [pageTenant, setPageTenant] = useState(1);
+  const [pageHome, setPageHome] = useState(1);
+  const [pageProject, setPageProject] = useState(1);
   const itemsPerPage = 15;
 
-  // --- Persistance locale ---
-  useEffect(() => { localStorage.setItem("archiveSearchTerm", searchTerm); }, [searchTerm]);
-  useEffect(() => { localStorage.setItem("archiveSelectedType", selectedType); }, [selectedType]);
-  useEffect(() => { localStorage.setItem("archiveSearchProject", searchProject); }, [searchProject]);
-  useEffect(() => { localStorage.setItem("archiveCurrentPageArchives", currentPageArchives); }, [currentPageArchives]);
-  useEffect(() => { localStorage.setItem("archiveCurrentPageHomes", currentPageHomes); }, [currentPageHomes]);
+  const [activeTab, setActiveTab] = useState("locataires");
 
-  // --- Vérification permission ---
-  useEffect(() => {
-    if (!user) return;
-    const hasPermission = user.role === "admin" || user.permissions?.includes("view_archives");
-    if (!hasPermission) {
-      setShowPermissionModal(true);
-      toast.error("Vous n'êtes pas autorisé à accéder aux archives.");
-    }
-  }, [user]);
+  // // ==== Vérification permissions ====
+  // useEffect(() => {
+  //   if (!user) return;
 
-  // --- Récupération des données ---
+  //   const allowed =
+  //     user.role === "admin" || user.permissions?.includes("view_archives");
+
+  //   if (!allowed) {
+  //     setShowPermissionModal(true);
+  //     toast.error("Vous n'êtes pas autorisé à accéder aux archives.");
+  //   }
+  // }, [user]);
+
+  // ==== Charger données backend ====
   useEffect(() => {
-    if (!user?._id || !user?.token) return;
+    if (!user?.token) return;
+
     const adminId = user.role === "admin" ? user._id : user.adminId;
-    if (!adminId) return;
 
-    const fetchArchives = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const queryParams = new URLSearchParams();
-        if (searchProject) queryParams.append("projectId", searchProject);
-        if (selectedType) queryParams.append("type", selectedType);
 
-        const url = `https://backend-ged-immo.onrender.com/archives/admin/${adminId}?${queryParams.toString()}`;
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${user.token}` } });
+        const res = await fetch(
+          `http://localhost:4000/archives/admin/${adminId}`,
+          {
+            headers: getAuthHeaders(),
+          }
+        );
+
         const data = await res.json();
+        if (!data.success) throw new Error(data.message);
 
-        if (!data.success) throw new Error(data.message || "Erreur de chargement des archives");
-
-        setProjects(data.projects || []);
-        setArchives(data.archives || []);
+        setTenants(data.archivedTenants || []);
         setHomes(data.archivedHomes || []);
+        setProjects(data.archivedProjects || []);
       } catch (err) {
-        console.error("Erreur récupération archives :", err);
-        toast.error("Erreur récupération archives : " + err.message);
-        setArchives([]); setHomes([]); setProjects([]);
+        toast.error("Erreur: " + err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchArchives();
-  }, [user, selectedType, searchProject]);
+    fetchData();
+  }, [user]);
 
-  // --- Filtrage complet Archives ---
-  const filteredArchives = useMemo(() => {
-    const term = searchTerm.toLowerCase();
+  // ============= FILTRAGE INDEPENDANT ==================
 
-    return archives.filter(a => {
-      const fullText = `
-        ${a.name || ""}
-        ${a.lastname || ""}
-        ${a.raisonSociale || ""}
-        ${a.tel || ""}
-        ${a.homeInfo?.nameHome || ""}
-        ${a.homeId?.projectId?.name || ""}
-      `.toLowerCase();
+  // --- Locataires ---
+  const filteredTenants = useMemo(() => {
+    return tenants.filter((t) => {
+      const txt = `${t.name} ${t.lastname} ${t.raisonSociale} ${t.tel} ${
+        t.homeInfo?.nameHome
+      } ${t.homeId?.projectId?.name}`.toLowerCase();
 
-      const matchText = term === "" || fullText.includes(term);
-      const matchType = selectedType ? (a.typePersonne || "").toLowerCase() === selectedType.toLowerCase() : true;
-      const matchProject = searchProject ? (a.homeId?.projectId?._id === searchProject) : true;
+      const matchSearch = txt.includes(search.toLowerCase());
+      const matchType = tenantType ? t.typePersonne === tenantType : true;
+      const matchProject = tenantProject
+        ? t.homeId?.projectId?._id === tenantProject
+        : true;
 
-      return matchText && matchType && matchProject;
+      return matchSearch && matchType && matchProject;
     });
-  }, [archives, searchTerm, selectedType, searchProject]);
+  }, [tenants, search, tenantType, tenantProject]);
 
-  // --- Filtrage complet Maisons ---
+  // --- Maisons ---
   const filteredHomes = useMemo(() => {
-    const term = searchTerm.toLowerCase();
+    return homes.filter((h) => {
+      const txt = `${h.nameHome} ${h.addressHome} ${h.categorie} ${
+        h.projectId?.name
+      }`.toLowerCase();
 
-    return homes.filter(h => {
-      const fullText = `
-        ${h.nameHome || ""}
-        ${h.addressHome || ""}
-        ${h.categorie || ""}
-        ${h.projectId?.name || ""}
-      `.toLowerCase();
+      const matchSearch = txt.includes(search.toLowerCase());
+      const matchType = homeType ? h.categorie === homeType : true;
+      const matchProject = homeProject
+        ? h.projectId?._id === homeProject
+        : true;
 
-      const matchText = term === "" || fullText.includes(term);
-      const matchType = selectedType ? (h.categorie || "").toLowerCase() === selectedType.toLowerCase() : true;
-      const matchProject = searchProject ? (h.projectId?._id === searchProject) : true;
-
-      return matchText && matchType && matchProject;
+      return matchSearch && matchType && matchProject;
     });
-  }, [homes, searchTerm, selectedType, searchProject]);
+  }, [homes, search, homeType, homeProject]);
 
-  // --- Pagination ---
-  const indexLastArchive = currentPageArchives * itemsPerPage;
-  const indexFirstArchive = indexLastArchive - itemsPerPage;
-  const currentArchivesPage = filteredArchives.slice(indexFirstArchive, indexLastArchive);
-  const totalPagesArchives = Math.ceil(filteredArchives.length / itemsPerPage);
+  // --- Projets ---
+  const filteredProjects = useMemo(() => {
+    return projects.filter((p) => {
+      const txt = `${p.name} ${p.type} ${p.description}`.toLowerCase();
+      return txt.includes(search.toLowerCase());
+    });
+  }, [projects, search]);
 
-  const indexLastHome = currentPageHomes * itemsPerPage;
-  const indexFirstHome = indexLastHome - itemsPerPage;
-  const currentHomesPage = filteredHomes.slice(indexFirstHome, indexLastHome);
-  const totalPagesHomes = Math.ceil(filteredHomes.length / itemsPerPage);
+  // ============= PAGINATION ==================
 
-  // --- Vérification du plan ---
-  useEffect(() => {
-    if (!hasFeature("archives")) {
-      toast.error("🔒 Fonction non disponible dans le plan Gratuit. Passez à Standard pour l’activer.");
-    }
-  }, [hasFeature, navigate]);
+  const paginatedTenants = filteredTenants.slice(
+    (pageTenant - 1) * itemsPerPage,
+    pageTenant * itemsPerPage
+  );
 
- 
+  const paginatedHomes = filteredHomes.slice(
+    (pageHome - 1) * itemsPerPage,
+    pageHome * itemsPerPage
+  );
+
+  const paginatedProjects = filteredProjects.slice(
+    (pageProject - 1) * itemsPerPage,
+    pageProject * itemsPerPage
+  );
+
+  // ============= RENDU ==================
 
   return (
-    
     <div>
       <Navbar />
-      <Toaster position="top-right" reverseOrder={false} />
+      <Toaster position="top-right" />
 
-      <div className="saas-container">
-        <div className="saas-card">
-          <nav aria-label="breadcrumb" className="breadcrumb-custom">
-            <ol>
-              <li><Link to="/Accueil">Accueil</Link></li>
-              <li className="active"><i className="fa-solid fa-box-archive"></i> Mes archives</li>
-            </ol>
-          </nav>
+      <div className="archives-container">
+        <div className="archives-card">
+          <h2>📦 Archives</h2>
 
-          <div className="header-actions">
-            <h2><i className="fa-solid fa-box-archive"></i> Mes archives</h2>
+          <div className="tabs">
+            <button
+              className={activeTab === "locataires" ? "active" : ""}
+              onClick={() => setActiveTab("locataires")}
+            >
+              Locataires
+            </button>
+            <button
+              className={activeTab === "biens" ? "active" : ""}
+              onClick={() => setActiveTab("biens")}
+            >
+              Biens
+            </button>
+            <button
+              className={activeTab === "projets" ? "active" : ""}
+              onClick={() => setActiveTab("projets")}
+            >
+              Projets
+            </button>
           </div>
 
-<div className="tabs-section">
-  <button className={activeTab === "locataires" ? "tab-active" : ""} onClick={() => setActiveTab("locataires")}>Locataires</button>
-  <button className={activeTab === "biens" ? "tab-active" : ""} onClick={() => setActiveTab("biens")}>Biens</button>
-  <button className={activeTab === "projets" ? "tab-active" : ""} onClick={() => setActiveTab("projets")}>Projets</button>
-</div>
+          {/* --- Barre de recherche globale --- */}
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="search-bar"
+            placeholder="Rechercher..."
+          />
 
-          {/* --- Filtres dynamiques --- */}
-          <div className="filter-section">
-            <select
-              className="select-field"
-              value={selectedType}
-              onChange={e => { setSelectedType(e.target.value); setCurrentPageArchives(1); setCurrentPageHomes(1); }}
-            >
-              <option value="">Tous les types</option>
-              {[...new Set(projects.map(p => p.categorie || p.type || ""))].map((type, idx) => (
-                <option key={idx} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-              ))}
-            </select>
+          {/* ================= CONTENU DES ONGLET ================= */}
 
-            <select
-              className="select-field"
-              value={searchProject}
-              onChange={e => { setSearchProject(e.target.value); setCurrentPageArchives(1); setCurrentPageHomes(1); }}
-            >
-              <option value="">Tous les projets</option>
-              {projects
-                .filter(p => !selectedType || (p.categorie || p.type || "").toLowerCase() === selectedType.toLowerCase())
-                .map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
-            </select>
+          {loading ? (
+            <div className="loader">
+              <Blocks visible height="80" width="80" />
+            </div>
+          ) : (
+            <>
+              {activeTab === "locataires" && (
+                <TableTenants
+                  data={paginatedTenants}
+                  total={filteredTenants.length}
+                  page={pageTenant}
+                  setPage={setPageTenant}
+                />
+              )}
 
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Rechercher..."
-              value={searchTerm}
-              onChange={e => { setSearchTerm(e.target.value); setCurrentPageArchives(1); setCurrentPageHomes(1); }}
-            />
-          </div>
+              {activeTab === "biens" && (
+                <TableHomes
+                  data={paginatedHomes}
+                  total={filteredHomes.length}
+                  page={pageHome}
+                  setPage={setPageHome}
+                />
+              )}
 
-         {/* --- Section contenu dynamique --- */}
-{loading ? (
-  <div style={{ textAlign: "center", marginTop: "2rem" }}>
-    <Blocks visible={true} height="80" width="80" />
-  </div>
-) : (
-  <>
-    {activeTab === "locataires" && (
-      <TableSection
-        data={currentArchivesPage}
-        totalPages={totalPagesArchives}
-        currentPage={currentPageArchives}
-        setCurrentPage={setCurrentPageArchives}
-        type="locataire"
-      />
-    )}
-    {activeTab === "biens" && (
-      <TableSection
-        data={currentHomesPage}
-        totalPages={totalPagesHomes}
-        currentPage={currentPageHomes}
-        setCurrentPage={setCurrentPageHomes}
-        type="bien"
-      />
-    )}
-    {activeTab === "projets" && (
-      <TableProjectsSection
-        projects={projects}
-      />
-    )}
-  </>
-)}
+              {activeTab === "projets" && (
+                <TableProjects
+                  data={paginatedProjects}
+                  total={filteredProjects.length}
+                  page={pageProject}
+                  setPage={setPageProject}
+                />
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -242,152 +232,239 @@ export default function Archives() {
 
       <Footer />
 
-      {/* --- Composant TableSection réutilisable --- */}
       <style>{`
-        .saas-container { padding: 2rem; background: #f8fafc; min-height: 100vh; }
-        .saas-card { background: #fff; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); padding: 2rem; }
-        .breadcrumb-custom ol { display: flex; gap: .5rem; list-style: none; padding: 0; }
-        .breadcrumb-custom li { font-size: .9rem; }
-        .breadcrumb-custom .active { color: #2563eb; font-weight: bold; }
-        .tabs-section { display: flex; gap: 1rem; margin-bottom: 1rem; }
-        .tabs-section button { padding: .5rem 1rem; border: none; border-radius: 8px; cursor: pointer; background: #e5e7eb; font-weight: 500; }
-        .tabs-section .tab-active { background: #2563eb; color: #fff; }
-        .filter-section { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
-        .search-input, .select-field { padding: .5rem 1rem; border-radius: 6px; border: 1px solid #e5e7eb; }
-        .table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        .table th, .table td { border: 1px solid #e5e7eb; padding: .6rem; text-align: center; }
-        .table th { background: #f1f5f9; }
-        .btn-details { padding: .3rem .6rem; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
-        .btn-details:hover { background: #1e40af; }
-        .pagination-section { display: flex; justify-content: center; align-items: center; gap: .5rem; margin-top: 1rem; }
-        .tenant-section { margin-top: 2rem; }
-        .table-responsive { overflow-x: auto; }
+        .archives-container {
+          background:#f5f7fb;
+          min-height:100vh;
+          padding:2rem;
+        }
+        .archives-card {
+          background:white;
+          padding:2rem;
+          border-radius:12px;
+          box-shadow:0 6px 20px rgba(0,0,0,0.06);
+        }
+        .tabs {
+          display:flex;
+          gap:1rem;
+          margin-bottom:1rem;
+        }
+        .tabs button {
+          padding:.6rem 1.2rem;
+          border-radius:6px;
+          border:none;
+          background:#e5e7eb;
+          cursor:pointer;
+          font-weight:500;
+        }
+        .tabs button.active {
+          background:#2563eb;
+          color:white;
+        }
+        .search-bar {
+          width:100%;
+          padding:.7rem 1rem;
+          border:1px solid #d1d5db;
+          border-radius:8px;
+          margin-bottom:1rem;
+        }
+        table {
+          width:100%;
+          border-collapse:collapse;
+          margin-top:1rem;
+        }
+        th, td {
+          padding:.7rem;
+          border:1px solid #e5e7eb;
+        }
+        th {
+          background:#f1f5f9;
+        }
+        .btn-details {
+          background:#2563eb;
+          color:white;
+          padding:.4rem .8rem;
+          border-radius:6px;
+          border:none;
+          cursor:pointer;
+        }
       `}</style>
     </div>
   );
 }
 
-// --- TableSection ---
-function TableSection({ data, totalPages, currentPage, setCurrentPage, type }) {
-  return (
-    <div className="tenant-section">
-      <div className="table-responsive">
-        <table className="table">
-          <thead>
-            {type === "locataire" ? (
-              <tr>
-                <th>Nom / Société</th>
-                <th>Contact</th>
-                <th>Type</th>
-                <th>Bien</th>
-                <th>Projet</th>
-                <th>Archivé par</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            ) : (
-              <tr>
-                <th>Nom</th>
-                <th>Adresse</th>
-                <th>Catégorie</th>
-                <th>Projet</th>
-                <th>Archivé par</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            )}
-          </thead>
-        <tbody>
-  {data.length === 0 ? (
-    <tr>
-      <td colSpan={type === "locataire" ? 8 : 7} style={{ textAlign: "center" }}>
-        Aucun élément trouvé
-      </td>
-    </tr>
-  ) : data.map(item => (
-    <tr key={item._id}>
-      {type === "locataire" ? (
-        <>
-          <td>{item.typePersonne === "societe" ? item.raisonSociale || "Société" : `${item.name || ""} ${item.lastname || ""}`}</td>
-          <td>{item.tel || "N/A"}</td>
-          <td>{item.typePersonne === "societe" ? "Société" : "Particulier"}</td>
-          <td>{item.homeInfo?.nameHome || "—"}</td>
-          <td>{item.homeId?.projectId?.name || "—"}</td>
-          <td>{item.createdBy || "—"}</td>
-          <td>{item.archivedAt ? new Date(item.archivedAt).toLocaleDateString("fr-FR") : "—"}</td>
-          <td>
-            <Link to={`/detailArchivedUser/${item._id}`}>
-              <button className="btn-details">Détails</button>
-            </Link>
-          </td>
-        </>
-      ) : (
-        <>
-          <td>{item.nameHome}</td>
-          <td>{item.addressHome}</td>
-          <td>{item.categorie}</td>
-          <td>{item.projectId?.name}</td>
-          <td>{item.archivedInfo?.archivedByName || "—"}</td> {/* <-- Affiche archivedByName */}
-          
-          <td>{item.dateArchived ? new Date(item.dateArchived).toLocaleDateString("fr-FR") : "—"}</td>
-          <td>
-            <Link to={`/detailArchivedHome/${item._id}`}>
-              <button className="btn-details">Détails</button>
-            </Link>
-          </td>
-        </>
-      )}
-    </tr>
-  ))}
-</tbody>
-        </table>
+function TableTenants({ data, total, page, setPage }) {
+  const totalPages = Math.ceil(total / 15);
 
-        {totalPages > 1 && (
-          <div className="pagination-section">
-            <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>◀</button>
-            <span>{currentPage} / {totalPages}</span>
-            <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>▶</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-function TableProjectsSection({ projects }) {
   return (
-    <div className="tenant-section">
-      <div className="table-responsive">
-        <table className="table">
-          <thead>
+    <div>
+      <table>
+        <thead>
+          <tr>
+            <th>Nom / Société</th>
+            <th>Contact</th>
+            <th>Bien</th>
+            <th>Projet</th>
+            <th>Archivé le</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {data.length === 0 ? (
             <tr>
-              <th>Nom du projet</th>
-              <th>Catégorie</th>
-              <th>Date d'archivage</th>
-              <th>Archivé par</th>
-              <th>Actions</th>
+              <td colSpan="6" style={{ textAlign: "center" }}>
+                Aucun locataire archivé
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {projects.length === 0 ? (
-              <tr>
-                <td colSpan={5} style={{ textAlign: "center" }}>Aucun projet archivé</td>
-              </tr>
-            ) : projects.map(proj => (
-              <tr key={proj._id}>
-                <td>{proj.name}</td>
-                <td>{proj.categorie || "—"}</td>
-                <td>{proj.dateArchived ? new Date(proj.dateArchived).toLocaleDateString("fr-FR") : "—"}</td>
-                <td>{proj.archivedByName || "—"}</td>
+          ) : (
+            data.map((t) => (
+              <tr key={t._id}>
                 <td>
-                  <Link to={`/detailProjectArchive/${proj._id}`}>
+                  {t.typePersonne === "societe"
+                    ? t.raisonSociale
+                    : `${t.name} ${t.lastname}`}
+                </td>
+                <td>{t.tel}</td>
+                <td>{t.homeInfo?.nameHome}</td>
+                <td>{t.homeId?.projectId?.name}</td>
+                <td>
+                  {t.archivedAt
+                    ? new Date(t.archivedAt).toLocaleDateString("fr-FR")
+                    : "—"}
+                </td>
+                <td>
+                  <Link to={`/detailArchivedUser/${t._id}`}>
                     <button className="btn-details">Détails</button>
                   </Link>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      {totalPages > 1 && (
+        <Pagination page={page} totalPages={totalPages} setPage={setPage} />
+      )}
+    </div>
+  );
+}
+
+function TableHomes({ data, total, page, setPage }) {
+  const totalPages = Math.ceil(total / 15);
+
+  return (
+    <div>
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Adresse</th>
+            <th>Catégorie</th>
+            <th>Projet</th>
+            <th>Archivé le</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {data.length === 0 ? (
+            <tr>
+              <td colSpan="6" style={{ textAlign: "center" }}>
+                Aucun bien archivé
+              </td>
+            </tr>
+          ) : (
+            data.map((h) => (
+              <tr key={h._id}>
+                <td>{h.nameHome}</td>
+                <td>{h.addressHome}</td>
+                <td>{h.categorie}</td>
+                <td>{h.projectId?.name}</td>
+                <td>
+                  {h.dateArchived
+                    ? new Date(h.dateArchived).toLocaleDateString("fr-FR")
+                    : "—"}
+                </td>
+                <td>
+                  <Link to={`/detailArchivedHome/${h._id}`}>
+                    <button className="btn-details">Détails</button>
+                  </Link>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      {totalPages > 1 && (
+        <Pagination page={page} totalPages={totalPages} setPage={setPage} />
+      )}
+    </div>
+  );
+}
+
+function TableProjects({ data, total, page, setPage }) {
+  const totalPages = Math.ceil(total / 15);
+
+  return (
+    <div>
+      <table>
+        <thead>
+          <tr>
+            <th>Projet</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Archivé le</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {data.length === 0 ? (
+            <tr>
+              <td colSpan="5" style={{ textAlign: "center" }}>
+                Aucun projet archivé
+              </td>
+            </tr>
+          ) : (
+            data.map((p) => (
+              <tr key={p._id}>
+                <td>{p.name}</td>
+                <td>{p.type}</td>
+                <td>{p.description}</td>
+                <td>
+                  {p.archivedAt
+                    ? new Date(p.archivedAt).toLocaleDateString("fr-FR")
+                    : "—"}
+                </td>
+                <td>
+                  <Link to={`/detailProjectArchived/${p._id}`}>
+                    <button className="btn-details">Détails</button>
+                  </Link>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      {totalPages > 1 && (
+        <Pagination page={page} totalPages={totalPages} setPage={setPage} />
+      )}
+    </div>
+  );
+}
+
+function Pagination({ page, totalPages, setPage }) {
+  return (
+    <div style={{ display: "flex", gap: "1rem", justifyContent: "center", marginTop: "1rem" }}>
+      <button onClick={() => setPage(Math.max(1, page - 1))}>◀</button>
+      <span>
+        {page} / {totalPages}
+      </span>
+      <button onClick={() => setPage(Math.min(totalPages, page + 1))}>▶</button>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 
 export default function Tracabilite() {
-  const { user } = useUserContext();
+  const { user ,getAuthHeaders} = useUserContext();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +28,7 @@ export default function Tracabilite() {
       setLoading(true);
       try {
         const res = await fetch("https://backend-ged-immo.onrender.com/actions", {
-          headers: { Authorization: `Bearer ${user.token}` },
+          headers: getAuthHeaders(),
         });
         const data = await res.json();
         if (data.success) setLogs(data.traces);

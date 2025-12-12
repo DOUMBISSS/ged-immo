@@ -66,11 +66,13 @@ import AdminsGED from './Pages/Plateforme/AdminsGED';
 import DetailEntrepot from './Pages/Entrepot/DetailEntrepot';
 import DetailBureau from './Pages/Bureau/DetailBureau';
 import GedNotifications from './Pages/Plateforme/GedNotifications';
+import DetailProjectArchived from './Pages/DetailProjectArchived';
+import SessionExpiryModal from './Pages/SessionExpiryModal';
 
 // ✅ Wrapper pour accéder à UserContext
 function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
-  const { user } = useUserContext();
-  const currentAdminId = user?.adminId || user?._id || null;
+  const { showSessionWarning, countdown, logout } = useUserContext();
+  
 
   // useEffect(() => {
   //   // 🔒 Interception globale des erreurs fetch
@@ -103,30 +105,33 @@ function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
 
   return (
     <>
+     {showSessionWarning && (
+        <SessionExpiryModal countdown={countdown} onLogout={logout} />
+      )}
       <Routes>
 
         <Route path="/login/ged/admin" element={<LoginGED />} />
         <Route path="/ged/register" element={<RegisterGED />} />
         <Route path="/ged/admin/:id" element={<DetailAdminGed />} />
-            <Route path="/ged/admins" element={<AdminsGED />} />
-                <Route path="/ged/notifications/fr/" element={<GedNotifications />} />
+        <Route path="/ged/admins" element={<AdminsGED />} />
+        <Route path="/ged/notifications/fr/" element={<GedNotifications />} />
         {/* --- ROUTES PUBLIQUES --- */}
-        <Route path="/" element={<Home />} />
+        {/* <Route path="/" element={<Home />} /> */}
         <Route path="/confirm/:token" element={<ConfirmEmail />} />
         <Route path="/reset/:token" element={<ResetPasswords />} />
-        <Route path="/receiptPage/:token" element={<ReceiptPage />} />
-        <Route path="/new__inscription" element={<Inscription />} />
+        <Route path="/receiptPage/:id" element={<ReceiptPage />} />
+        {/* <Route path="/new__inscription" element={<Inscription />} /> */}
 
         {/* --- CONNEXION PROPRIÉTAIRE MAGASIN --- */}
-        <Route path="/login-magasin" element={<LoginMagasin />} />
+        {/* <Route path="/login-magasin" element={<LoginMagasin />} />
         <Route path="/home-magasin" element={<HomeMagasin />} />
         <Route path="/register__proprio" element={<RegisterMagasin />} />
-        <Route path="/My__dash" element={<DashMagasin />} />
+        <Route path="/My__dash" element={<DashMagasin />} /> */}
        
-        <Route path="/Mon/profil" element={<ProfilOwner />} />
+        {/* <Route path="/Mon/profil" element={<ProfilOwner />} /> */}
         {/* <Route path="/Mon__recu/fr/:id" element={<ReceiptMagasin />} /> */}
         {/* <Route path="/detailProject/fr/:id" element={<DetailProjectMagasin />} /> */}
-        <Route path="/liste/fr/" element={<ListeMagasin />} />
+        {/* <Route path="/liste/fr/" element={<ListeMagasin />} /> */}
         <Route path="/detailEntrepot/:id" element={<DetailEntrepot />} />
          <Route path="/DetailMagasin/:id" element={<DetailMagasin />} />
           <Route path="/detailBureau/:id" element={<DetailBureau />} />
@@ -137,6 +142,8 @@ function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
         <Route path="/Mon__recu/fr/:rentId" element={<ReceiptLocataire />} />
 
         {/* --- ROUTES PROTÉGÉES --- */}
+        <Route path="/" element={<ProtectedRoute redirectIfAuthenticated={true} authRequired={false} ><Home /></ProtectedRoute>} />
+        <Route path="/new__inscription" element={<ProtectedRoute redirectIfAuthenticated={true} authRequired={false} ><Home /></ProtectedRoute>} />
         <Route path="/Accueil" element={<ProtectedRoute authRequired={true}><Accueil /></ProtectedRoute>} />
         <Route path="/DetailMagasin/:id" element={<ProtectedRoute authRequired={true}><DetailMagasin /></ProtectedRoute>} />
         <Route path="/Actions" element={<ProtectedRoute authRequired={true}><Tracabilite /></ProtectedRoute>} />
@@ -154,9 +161,10 @@ function AppRoutes({ setShowPermissionModal, setPermissionMessage }) {
         <Route path="/Mes__archives" element={<ProtectedRoute authRequired={true}><Archives /></ProtectedRoute>} />
         <Route path="/detailArchivedUser/:id" element={<ProtectedRoute authRequired={true}><DetailArchivedUser /></ProtectedRoute>} />
         <Route path="/detailArchivedHome/:id" element={<ProtectedRoute authRequired={true}><DetailArchivedHome /></ProtectedRoute>} />
+        <Route path="/detailProjectArchived/:id" element={<ProtectedRoute authRequired={true}><DetailProjectArchived /></ProtectedRoute>} />
         <Route path="/Notifications" element={<ProtectedRoute authRequired={true}><Notifications /></ProtectedRoute>} />
         <Route path="/archivedetail/:id" element={<ProtectedRoute authRequired={true}><ArchivesDetail /></ProtectedRoute>} />
-        <Route path="/administrator" element={<ProtectedRoute authRequired={true} roles={["admin"]}><Administrator /></ProtectedRoute>} />
+        <Route path="/administrator" element={<ProtectedRoute authRequired={true}><Administrator /></ProtectedRoute>} />
         <Route path="/Ma__comptabilite" element={<ProtectedRoute authRequired={true}><Comptabilite /></ProtectedRoute>} />
 
         {/* --- PAGE 404 --- */}

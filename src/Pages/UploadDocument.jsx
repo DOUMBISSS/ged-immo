@@ -4,7 +4,7 @@ import { useUserContext } from "../contexts/UserContext";
 import { SUBSCRIPTION_LIMITS } from "../subscriptionLimits";
 
 export default function UploadDocumentModal({ personId, onClose }) {
-  const { user } = useUserContext();
+  const { user,getAuthHeaders } = useUserContext();
   const planType = user?.subscriptionType?.toLowerCase() || "gratuit";
   const uploadLimit = SUBSCRIPTION_LIMITS[planType]?.uploadDocument || 1;
 
@@ -23,7 +23,7 @@ export default function UploadDocumentModal({ personId, onClose }) {
       }
 
       const res = await fetch(`https://backend-ged-immo.onrender.com/locataire/${personId}/documents`, {
-        headers: { "Authorization": `Bearer ${user.token}` },
+        headers: getAuthHeaders(),
       });
 
       const data = await res.json();
@@ -64,7 +64,7 @@ export default function UploadDocumentModal({ personId, onClose }) {
     try {
       const res = await fetch(`https://backend-ged-immo.onrender.com/UploadDocument/${personId}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${user.token}` },
+        headers: getAuthHeaders(),
         body: formData,
       });
 
@@ -114,7 +114,7 @@ export default function UploadDocumentModal({ personId, onClose }) {
 
                 const res = await fetch(`https://backend-ged-immo.onrender.com/Document/${docId}`, {
                   method: "DELETE",
-                  headers: { Authorization: `Bearer ${user.token}` },
+                  headers: getAuthHeaders(),
                 });
 
                 const data = await res.json();

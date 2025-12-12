@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 
 export default function Notifications() {
-  const { user } = useUserContext();
+  const { user,getAuthHeaders } = useUserContext();
   const [repairRequests, setRepairRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("tous");
@@ -26,10 +26,7 @@ export default function Notifications() {
 
       const res = await fetch(`https://backend-ged-immo.onrender.com/works/admin/${adminId}`, {
         method: "GET",
-        headers: {
-          "Authorization": `Bearer ${user.token}`,
-          "Content-Type": "application/json",
-        },
+        headers: getAuthHeaders(),
       });
 
       const data = await res.json();

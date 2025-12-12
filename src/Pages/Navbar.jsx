@@ -186,9 +186,9 @@ const handleLoginSubmit = async (e) => {
       </header>
 
       <nav className="navbar-menu">
-        {/* <NavLink to="/Accueil" className={({ isActive }) => isActive ? 'active' : ''}>
+        <NavLink to="/Accueil" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-boxes-stacked me-2"></i> Accueil
-        </NavLink> */}
+        </NavLink>
         <NavLink to="/Mes__projet/fr/" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-house"></i> Mes propriétés
         </NavLink>
@@ -198,15 +198,18 @@ const handleLoginSubmit = async (e) => {
         <NavLink to="/statistiques" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-chart-line"></i> Statistiques
         </NavLink>
-        <NavLink to="/Mes__archives" className={({ isActive }) => isActive ? 'active' : ''}>
-          <i className="fa-solid fa-box-archive"></i> Archives
-        </NavLink>
+       
          <NavLink to="/Ma__comptabilite" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-calculator"></i> Ma comptabilité
         </NavLink>
           <NavLink to="/Notifications" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-box-archive"></i> Notifications
         </NavLink>
+
+         <NavLink to="/Mes__archives" className={({ isActive }) => isActive ? 'active' : ''}>
+          <i className="fa-solid fa-box-archive"></i> Archives
+        </NavLink>
+        
         {/* <NavLink to="/mon-profil" className={({ isActive }) => isActive ? 'active' : ''}>
           <i className="fa-solid fa-user"></i> Profil
         </NavLink> */}

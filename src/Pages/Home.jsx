@@ -8,7 +8,7 @@ export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const { token: activationToken } = useParams();
-  const { login } = useUserContext();
+  const { login ,getAuthHeaders} = useUserContext();
 
   // === Mode affiché : login ou register ===
   const [mode, setMode] = useState("login");
@@ -55,7 +55,7 @@ const [sending, setSending] = useState(false);
   // === Activation & Reset token depuis URL ===
   useEffect(() => {
     if (activationToken) {
-      fetch(`https://backend-ged-immo.onrender.com/confirm/${activationToken}`)
+      fetch(`http://localhost:4000/confirm/${activationToken}`)
         .then(res => res.json())
         .then(data => {
           if (data.success) {
@@ -76,52 +76,64 @@ const [sending, setSending] = useState(false);
     }
   }, [activationToken, location, navigate]);
 
-  // === LOGIN ===
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const endpoint =
-        role === "admin"
-          ? "https://backend-ged-immo.onrender.com/admin/login"
-          : "https://backend-ged-immo.onrender.com/user/login";
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-      const body =
-        role === "admin"
-          ? { email: emailOrUsername.trim(), password: password.trim(), role }
-          : { username: emailOrUsername.trim(), password: password.trim(), role };
+  try {
+    const endpoint =
+      role === "admin" || role === "manager"
+        ? "http://localhost:4000/admin/login"
+        : "http://localhost:4000/user/login";
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+    const body =
+      role === "admin" || role === "manager"
+        ? { email: emailOrUsername.trim(), password: password.trim() }
+        : { username: emailOrUsername.trim(), password: password.trim() };
 
-      const data = await response.json();
-      if (!response.ok) return toast.error(data.message || "Identifiants incorrects");
-      if (!data.user || !data.token)
-        return toast.error("Impossible de récupérer les informations utilisateur");
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body),
+    });
 
-      const userData = {
-        ...data.user,
-        token: data.token,
-        isAdmin: role === "admin",
-        adminId: role === "admin" ? data.user._id : data.user.adminId || null,
-        userId: role !== "admin" ? data.user._id : null,
-        role: role,
-      };
+    const data = await response.json();
+    console.log("✅ DATA BACKEND LOGIN :", data);
 
-      login(userData);
-      toast.success(`Bienvenue, ${data.user.fullname || "Utilisateur"} 👋`);
-      navigate(role === "admin" ? "/users" : "/users");
-    } catch (err) {
-      console.error(err);
-      toast.error("Erreur serveur");
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      toast.error(data.message || "Identifiants incorrects");
+      return;
     }
-  };
 
+    // 🔹 Vérifie si user existe dans la réponse
+    if (!data.user || !data.token || !data.user.sessionToken) {
+      toast.error("Impossible de récupérer les informations utilisateur");
+      return;
+    }
+
+    const userData = {
+      ...data.user,
+      isAdmin: role === "admin" || role === "manager",
+      adminId: role === "admin" || role === "manager" ? data.user._id : data.user.adminId || null,
+      userId: role !== "admin" && role !== "manager" ? data.user._id : null,
+      role: role,
+    };
+
+    login(userData, data.token, data.user.sessionToken);
+
+    toast.success(`Bienvenue, ${data.user.fullname || "Utilisateur"} 👋`);
+
+    if (role === "admin") navigate("/Accueil");
+    else if (role === "user") navigate("/Accueil");
+    else navigate("/");
+
+  } catch (err) {
+    console.error("Erreur handleLogin :", err);
+    toast.error("Erreur serveur, réessayez plus tard");
+  } finally {
+    setLoading(false);
+  }
+};
   // === REGISTER ===
 const handleRegister = async (e) => {
   e.preventDefault();
@@ -155,7 +167,7 @@ const handleRegister = async (e) => {
       if (logo) formData.append("logo", logo);
     }
 
-    const res = await fetch("https://backend-ged-immo.onrender.com/admin/register", {
+    const res = await fetch("http://localhost:4000/admin/register", {
       method: "POST",
       body: formData,
     });
@@ -179,7 +191,7 @@ const resendLink = async () => {
   if (!emailOrUsername) return toast.error("Veuillez entrer votre email");
   setResendLoading(true);
   try {
-    const res = await fetch("https://backend-ged-immo.onrender.com/resend-confirmation", {
+    const res = await fetch("http://localhost:4000/resend-confirmation", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: emailOrUsername }),

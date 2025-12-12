@@ -18,7 +18,7 @@ export default function DetailHome() {
   const [selectedImage, setSelectedImage] = useState(null);
    const [showUpdateModal, setShowUpdateModal] = useState(false);
    const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-     const { user ,hasFeature } = useUserContext(); // ✅ récupération de l’admin connecté
+     const { user ,hasFeature ,getAuthHeaders} = useUserContext(); // ✅ récupération de l’admin connecté
        const [showIncreaseHistory, setShowIncreaseHistory] = useState(false);
 
      const [pendingRentUpdate, setPendingRentUpdate] = useState(null);
@@ -82,12 +82,9 @@ const handleArchive = () => {
           }}
           onClick={async () => {
             try {
-              const res = await fetch(`https://backend-ged-immo.onrender.com/homes/${id}/archive`, {
+              const res = await fetch(`http://localhost:4000/homes/${id}/archive`, {
                 method: "PATCH",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${user.token}`,
-                },
+                headers: getAuthHeaders(),
               });
 
               const data = await res.json();
@@ -378,61 +375,84 @@ const handleDuppliquer = async () => {
   </div>
 </div>
 
-{/* ===== Détails de la maison ===== */}
 <div style={styles.detailsSection}>
   <h2>Détails du bien</h2>
+
+  {/* ===================== 1️⃣ INFOS GÉNÉRALES ===================== */}
+  <h3 style={{ marginTop: "1rem" }}>Informations générales</h3>
   <div style={styles.detailsGrid}>
     <p><strong>Nom :</strong> {rentHome.nameHome || "N/A"}</p>
     <p><strong>Type :</strong> {rentHome.nameHomeType || "N/A"}</p>
     <p><strong>Catégorie :</strong> {rentHome.categorie || "N/A"}</p>
-    <p><strong>Référence ou N°Porte :</strong> {rentHome.reference || "N/A"}</p>
-    <p><strong>Loyer :</strong> {(rentHome.currentRent ?? rentHome.rent ?? "N/A")} FCFA</p>
-    {/* <p><strong>Prix :</strong> {rentHome.price ? `${rentHome.price} FCFA` : "N/A"}</p> */}
+    <p><strong>Sous-catégorie :</strong> {rentHome.sousCategorie || "N/A"}</p>
+    <p><strong>Référence :</strong> {rentHome.reference || "N/A"}</p>
     <p><strong>Adresse :</strong> {rentHome.addressHome || "N/A"}</p>
     <p><strong>Ville :</strong> {rentHome.city || "N/A"}</p>
     <p><strong>Quartier :</strong> {rentHome.quarter || "N/A"}</p>
-    <p><strong>Zone :</strong> {rentHome.zone || "N/A"}</p>
+    <p><strong>Code postal :</strong> {rentHome.codePostal || "N/A"}</p>
     <p><strong>Nombre de pièces :</strong> {rentHome.NmbrePieces || "N/A"}</p>
-    <p><strong>Description :</strong> {rentHome.description || "Aucune description"}</p>
+    <p><strong>Nombre de clés :</strong> {rentHome.nombreCles || "N/A"}</p>
+    <p><strong>Étage :</strong> {rentHome.etage || "N/A"}</p>
+    <p><strong>Loyer :</strong> {(rentHome.currentRent ?? rentHome.rent) + " FCFA"}</p>
     <p><strong>Caution :</strong> {rentHome.guarantee || "N/A"} FCFA</p>
     <p><strong>Charges :</strong> {rentHome.charges || "N/A"}</p>
     <p><strong>État :</strong> {rentHome.state || "N/A"}</p>
-
-    {/* Spécifiques selon le type */}
-    {rentHome.nameHomeType === "Bureau" && (
-      <>
-        <p><strong>Surface bureau :</strong> {rentHome.surfaceBureau || "N/A"}m²</p>
-        <p><strong>Nombre de bureaux :</strong> {rentHome.NmbreBureaux || "N/A"}</p>
-        <p><strong>Salle de réunion :</strong> {rentHome.salleReunion ? "Oui" : "Non"}</p>
-        <p><strong>Climatisation :</strong> {rentHome.climatisation ? "Oui" : "Non"}</p>
-        <p><strong>Fibre optique :</strong> {rentHome.fibreOptique ? "Oui" : "Non"}</p>
-        <p><strong>Parking :</strong> {rentHome.parking ? "Oui" : "Non"}</p>
-        <p><strong>Ascenseur :</strong> {rentHome.ascenseur ? "Oui" : "Non"}</p>
-      </>
-    )}
-
-    {rentHome.nameHomeType === "Magasin" && (
-      <>
-        <p><strong>Surface magasin :</strong> {rentHome.surfaceMagasin || "N/A"}m²</p>
-        <p><strong>Vitrine :</strong> {rentHome.vitrine ? "Oui" : "Non"}</p>
-        <p><strong>Stock disponible :</strong> {rentHome.stockDisponible ? "Oui" : "Non"}</p>
-        <p><strong>Mezanine :</strong> {rentHome.mezanine ? "Oui" : "Non"}</p>
-        <p><strong>Zone commerciale :</strong> {rentHome.zoneCommerciale ? "Oui" : "Non"}</p>
-      </>
-    )}
-
-    {rentHome.nameHomeType === "Entrepôt" && (
-      <>
-        <p><strong>Surface entrepôt :</strong> {rentHome.surfaceEntrepot || "N/A"} m</p>
-        <p><strong>Hauteur sous plafond :</strong> {rentHome.hauteurSousPlafond || "N/A"}</p>
-        <p><strong>Capacité de stockage :</strong> {rentHome.capaciteStockage || "N/A"}</p>
-        <p><strong>Quai de chargement :</strong> {rentHome.quaiChargement ? "Oui" : "Non"}</p>
-        <p><strong>Sécurité :</strong> {rentHome.securite ? "Oui" : "Non"}</p>
-        <p><strong>Accès camion :</strong> {rentHome.accesCamion ? "Oui" : "Non"}</p>
-        <p><strong>Ventilation :</strong> {rentHome.ventilation ? "Oui" : "Non"}</p>
-      </>
-    )}
+    <p><strong>Description :</strong> {rentHome.description || "—"}</p>
+    <p><strong>Observations :</strong> {rentHome.observations || "—"}</p>
   </div>
+
+  {/* ===================== 2️⃣ ÉQUIPEMENTS / OUI-NON ===================== */}
+  <h3 style={{ marginTop: "2rem" }}>Équipements & Options</h3>
+  <div style={styles.booleanGrid}>
+    <p><strong>Ascenseur :</strong> {rentHome.ascenseur ? "Oui" : "Non"}</p>
+    <p><strong>Service sécurité :</strong> {rentHome.serviceSecurite ? "Oui" : "Non"}</p>
+    <p><strong>Climatisation :</strong> {rentHome.climatisation ? "Oui" : "Non"}</p>
+    <p><strong>Fibre optique :</strong> {rentHome.fibreOptique ? "Oui" : "Non"}</p>
+    <p><strong>Jardin :</strong> {rentHome.jardin ? "Oui" : "Non"}</p>
+    <p><strong>Balcon :</strong> {rentHome.balcon ? "Oui" : "Non"}</p>
+    <p><strong>Piscine :</strong> {rentHome.piscine ? "Oui" : "Non"}</p>
+    <p><strong>Garage :</strong> {rentHome.garage ? "Oui" : "Non"}</p>
+    <p><strong>Mezzanine :</strong> {rentHome.mezanine ? "Oui" : "Non"}</p>
+    <p><strong>Vitrine :</strong> {rentHome.vitrine ? "Oui" : "Non"}</p>
+    <p><strong>Stock disponible :</strong> {rentHome.stockDisponible ? "Oui" : "Non"}</p>
+    <p><strong>Zone commerciale :</strong> {rentHome.zoneCommerciale ? "Oui" : "Non"}</p>
+    <p><strong>Parking :</strong> {rentHome.parking ? "Oui" : "Non"}</p>
+  </div>
+
+  {/* ===================== 3️⃣ SPÉCIFIQUE AU TYPE ===================== */}
+  {rentHome.nameHomeType === "Bureau" && (
+    <>
+      <h3 style={{ marginTop: "2rem" }}>Informations bureau</h3>
+      <div style={styles.detailsGrid}>
+        <p><strong>Surface bureau :</strong> {rentHome.surfaceBureau || "N/A"} m²</p>
+        <p><strong>Nombre de bureaux :</strong> {rentHome.NmbrePieces || "N/A"}</p>
+        <p><strong>Salle de réunion :</strong> {rentHome.salleReunion ? "Oui" : "Non"}</p>
+        <p><strong>Accès Internet :</strong> {rentHome.accesInternet ? "Oui" : "Non"}</p>
+      </div>
+    </>
+  )}
+
+  {rentHome.nameHomeType === "Magasin" && (
+    <>
+      <h3 style={{ marginTop: "2rem" }}>Informations magasin</h3>
+      <div style={styles.detailsGrid}>
+        <p><strong>Surface magasin :</strong> {rentHome.surfaceMagasin || "N/A"} m²</p>
+        <p><strong>Accès routier :</strong> {rentHome.accesRoutier || "N/A"}</p>
+      </div>
+    </>
+  )}
+
+  {rentHome.nameHomeType === "Entrepôt" && (
+    <>
+      <h3 style={{ marginTop: "2rem" }}>Informations entrepôt</h3>
+      <div style={styles.detailsGrid}>
+        <p><strong>Surface entrepôt :</strong> {rentHome.surfaceEntrepot || "N/A"} m²</p>
+        <p><strong>Hauteur sous plafond :</strong> {rentHome.hauteurSousPlafond || "N/A"}</p>
+        <p><strong>Capacité stockage :</strong> {rentHome.capaciteStockage || "N/A"}</p>
+        <p><strong>Ventilation :</strong> {rentHome.ventilation ? "Oui" : "Non"}</p>
+      </div>
+    </>
+  )}
 </div>
 
 <div style={{ 
@@ -516,6 +536,35 @@ const handleDuppliquer = async () => {
             </div>
           ) : <p>Aucun locataire pour cette maison</p>}
         </div>
+
+        {/* ========= HISTORIQUE DES LOCATAIRES ========= */}
+<div style={styles.historySection}>
+  <h2>Historique des locataires</h2>
+
+  {rentHome.tenantHistory && rentHome.tenantHistory.length > 0 ? (
+    <div style={styles.historyList}>
+      <ul style={{ listStyle: "none", padding: 0 }}>
+        {rentHome.tenantHistory.map((h, idx) => (
+          <li key={idx} style={styles.historyItem}>
+            <div>
+              <strong>{h.name} {h.lastname}</strong>
+              <p style={{ margin: "4px 0", color: "#475569" }}>
+                📅 Du <strong>{new Date(h.startDate).toLocaleDateString("fr-FR")}</strong>  
+                &nbsp;au&nbsp;
+                <strong>{new Date(h.endDate).toLocaleDateString("fr-FR")}</strong>
+              </p>
+              <p style={{ color: "#64748b", fontSize: "0.85rem" }}>
+                Téléphone : {h.tel}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ) : (
+    <p style={{ color: "#6b7280" }}>Aucun locataire n’a encore habité ce bien.</p>
+  )}
+</div>
       </div>
 
       {showDuplicateModal && (
@@ -541,14 +590,17 @@ const handleDuppliquer = async () => {
         />
       )}
 
-{showIncreaseHistory && (
-  <IncreaseHistoryModal
-    homeId={rentHome._id}
-    history={rentHome?.rentIncreaseHistory || []}
-    onClose={() => setShowIncreaseHistory(false)}
-    onRentUpdated={(updatedHome) => setTimeout(() => setPendingRentUpdate(updatedHome), 0)}
-  />
-)}
+   {showIncreaseHistory && (
+        <IncreaseHistoryModal
+          homeId={rentHome._id}
+          history={rentHome.rentIncreaseHistory || []}
+          onClose={() => setShowIncreaseHistory(false)}
+          onRentUpdated={(updatedHome) => {
+            // 🔹 Garantir que la mise à jour se fait après le rendu
+            setTimeout(() => setRentHome(updatedHome), 0);
+          }}
+        />
+      )}
 
       <Footer />
 
@@ -568,6 +620,25 @@ const handleDuppliquer = async () => {
   border-radius: 6px;
   font-weight: 500;
   cursor: pointer;
+}
+  historySection: {
+  marginTop: "2rem",
+  backgroundColor: "#fff",
+  padding: "1.5rem",
+  borderRadius: "12px",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
+},
+
+historyList: {
+  marginTop: "1rem"
+},
+
+historyItem: {
+  background: "#f8fafc",
+  padding: "1rem",
+  borderRadius: "8px",
+  marginBottom: "0.8rem",
+  border: "1px solid #e2e8f0"
 }
   .percentage-input {
   width: 200px;
@@ -722,6 +793,16 @@ const handleDuppliquer = async () => {
 .confirm-no:hover {
   background: #b91c1c;
 }
+  booleanGrid: {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, 1fr)",
+  gap: "0.8rem",
+  background: "#f9fafb",
+  padding: "1rem",
+  borderRadius: "10px",
+  border: "1px solid #e5e7eb",
+  marginBottom: "1rem",
+},
         ${Object.entries(styles).map(([k, v]) => `.${k} { ${Object.entries(v).map(([prop, val]) => `${prop}: ${val};`).join(' ')} }`).join(' ')}
       `}</style>
     </div>

@@ -7,8 +7,13 @@ import { Blocks } from "react-loader-spinner";
 import { toast } from "react-toastify";
 
 export default function User() {
+  
   const navigate = useNavigate();
-  const { user, clearUser } = useUserContext();
+  const { user, clearUser ,getAuthHeaders } = useUserContext();
+  // 🟦 DEBUG CONTEXTE
+console.log("🟨 DEBUG :: USER =", user);
+console.log("🟨 DEBUG :: Active session token =", user?.sessionToken);
+console.log("🟨 DEBUG :: Headers générés =", getAuthHeaders());
 
   const [persons, setPersons] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -55,42 +60,59 @@ export default function User() {
   useEffect(() => { localStorage.setItem("search", search); }, [search]);
   useEffect(() => { localStorage.setItem("currentPage", currentPage); }, [currentPage]);
 
+  
+
   // 🔹 Récupération unifiée (Admin ou User)
   useEffect(() => {
     if (!user?._id || !user?.token) return;
 
-    const fetchAllData = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`http://localhost:4000/data/${user._id}`, {
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${user.token}`,
-          },
-        });
+   const fetchAllData = async () => {
+  setLoading(true);
 
-        const data = await res.json();
+  try {
+    const url = `http://localhost:4000/data/${user._id}`;
+    const headers = getAuthHeaders();
 
-        if (!res.ok) {
-          toast.error(data.message || "Erreur lors de la récupération des données.");
-          return;
-        }
+    console.log("🟦 FETCH DATA =>", url);
+    console.log("🟦 FETCH HEADERS =>", headers);
 
-        if (data.success) {
-          setProjects(data.projects || []);
-          setPersons(data.persons || []);
-        } else {
-          toast.error(data.message || "Aucune donnée trouvée.");
-        }
-      } catch (err) {
-        toast.error("Erreur serveur : " + err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const res = await fetch(url, { headers });
+
+    console.log("🟥 HTTP STATUS =", res.status);
+
+    let body = null;
+    try {
+      body = await res.json();
+      console.log("🟦 RESPONSE BODY =", body);
+    } catch (err) {
+      console.log("❌ Impossible de parser JSON :", err);
+    }
+
+    if (!res.ok) {
+      toast.error(body?.message || `Erreur HTTP ${res.status}`);
+      return;
+    }
+
+    if (body?.success) {
+      console.log("🟩 DATA PROJECTS =", body.projects);
+      console.log("🟩 DATA PERSONS =", body.persons);
+      setProjects(body.projects || []);
+      setPersons(body.persons || []);
+    } else {
+      toast.error(body?.message || "Aucune donnée trouvée.");
+    }
+  } catch (err) {
+    console.error("🔥 ERREUR RESEAU :", err);
+    toast.error("Erreur serveur : " + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
     fetchAllData();
   }, [user]);
+
+  
 
   // 🔹 Déterminer les types de projet disponibles
   useEffect(() => {
@@ -110,11 +132,7 @@ export default function User() {
     const fetchHomes = async () => {
       try {
         const res = await fetch(`http://localhost:4000/projects/${selectedProject}/homes`, {
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${user?.token}`,
-            
-          },
+           headers: getAuthHeaders()
         });
 
         const data = await res.json();
@@ -241,10 +259,7 @@ export default function User() {
 
       const res = await fetch("http://localhost:4000/New/Locataire", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${user?.token}`,
-        },
+         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
@@ -259,7 +274,7 @@ export default function User() {
       setShowAddModal(false);
 
       const refresh = await fetch(`http://localhost:4000/data/${adminId}`, {
-        headers: { "Authorization": `Bearer ${user?.token}` },
+         headers: getAuthHeaders()
       });
 
       const refreshData = await refresh.json();
@@ -278,6 +293,16 @@ export default function User() {
   useEffect(() => {
     resetForm();
   }, [user]);
+
+  console.log("🎯 FINAL RENDER DATA =>", {
+  user,
+  personsCount: persons.length,
+  projectsCount: projects.length,
+  homesCount: homes.length,
+  loading,
+  selectedProject,
+  searchProject
+});
 
   return (
     <div>
@@ -344,13 +369,21 @@ export default function User() {
                   </tr>
                 </thead>
                 <tbody>
-                  {!searchProject ? (
-                    <tr>
-                      <td colSpan="7" style={{ textAlign: "center", fontStyle: "italic" }}>
-                        Veuillez sélectionner une propriété pour voir les locataires
-                      </td>
-                    </tr>
-                  ) : currentUsers.length > 0 ? (
+                   {!searchProject ? (
+    <tr>
+      <td colSpan="7">
+        <div className="empty-state">
+          <img
+            src="/rtz.png"
+            alt="Aucun projet sélectionné"
+            className="empty-illustration"
+          />
+          <h3>Veuillez sélectionner un projet</h3>
+          <p>Filtrez un projet ou un type pour afficher les locataires.</p>
+        </div>
+      </td>
+    </tr>
+  ): currentUsers.length > 0 ? (
                     currentUsers.map((person) => (
                       <tr key={person._id}>
                         <td>{person.name}</td>
@@ -789,6 +822,21 @@ export default function User() {
 
 .badge-societe {
   background-color: #2563eb; /* bleu */
+}
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 20px;
+  text-align: center;
+}
+
+.empty-illustration {
+  width: 320px; /* ← tu peux augmenter ici */
+  max-width: 100%;
+  margin-bottom: 20px;
+  object-fit: contain;
 }
       `}</style>
 

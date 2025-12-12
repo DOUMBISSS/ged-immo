@@ -13,7 +13,7 @@ import UpdateProfilModal from "./Locataires/UpdateProfilModal";
 
 
 export default function DetailUser() {
-  const { user,clearUser,hasFeature } = useUserContext();
+  const { user,clearUser,hasFeature,getAuthHeaders } = useUserContext();
   const { id } = useParams();
   const [person, setPerson] = useState({ home_id: [], rentals: [] });
  const [documents, setDocuments] = useState({});
@@ -197,10 +197,7 @@ const handleArchive = async (id) => {
       try {
         const res = await fetch(`https://backend-ged-immo.onrender.com/locataire/${id}/archive`, {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${user.token}`,
-          },
+          headers: getAuthHeaders(),
         });
 
         let data;
@@ -238,10 +235,7 @@ const deleteRent = async (rentId) => {
   try {
     const res = await fetch(`https://backend-ged-immo.onrender.com/rents/${rentId}`, {
       method: "DELETE",
-      headers: {
-        "Authorization": `Bearer ${user.token}`,
-        "Content-Type": "application/json",
-      },
+      headers: getAuthHeaders(),
     });
 
     const result = await res.json();
@@ -315,10 +309,7 @@ const handleAdd = async () => {
     // 🔹 Appel API sécurisé avec token
     const res = await fetch("https://backend-ged-immo.onrender.com/NewRents", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${user?.token}`,
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(dataForm),
     });
 
@@ -807,96 +798,127 @@ const toggleYear = (year) => {
                 </div>
 
                   {/* Logement */}
-                <div className="tenant-section">
-          <h3 className="section-title">Logement attribué</h3>
+{/* ================= LOGEMENT ATTRIBUÉ ================= */}
+<div className="tenant-section">
+  <h3 className="section-title">Logement attribué</h3>
+
   {person.homeId ? (
-    <div className="home-card">
-      {/* Images */}
-      <div className="home-images" style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+    <div className="home-card" style={{ display: "flex", flexWrap: "wrap", gap: "2rem" }}>
+      {/* 🖼️ IMAGES */}
+      <div className="home-images" style={{ flex: "1 1 250px", display: "flex", flexWrap: "wrap", gap: "10px" }}>
+        {/* Image principale */}
         {person.homeId.img && (
           <img
-            src={person.homeId.img.startsWith("http") ? person.homeId.img : `https://backend-ged-immo.onrender.com/${person.homeId.img}`}
+            src={
+              person.homeId.img.startsWith("http")
+                ? person.homeId.img
+                : `https://backend-ged-immo.onrender.com/${person.homeId.img}`
+            }
             alt="Principal"
-            className="home-image"
-            style={{ width: "150px", height: "150px", objectFit: "cover" }}
+            style={{
+              width: "200px",
+              height: "200px",
+              objectFit: "cover",
+              borderRadius: "10px",
+              cursor: "pointer",
+              border: "2px solid #2563eb",
+            }}
+            onClick={() =>
+              window.open(
+                person.homeId.img.startsWith("http")
+                  ? person.homeId.img
+                  : `https://backend-ged-immo.onrender.com/${person.homeId.img}`,
+                "_blank"
+              )
+            }
           />
         )}
-        {Array.isArray(person.homeId.images) && person.homeId.images.length > 0 && person.homeId.images.map((url, idx) => (
-          <img
-            key={idx}
-            src={url.startsWith("http") ? url : `https://backend-ged-immo.onrender.com/${url}`}
-            alt={`Secondaire ${idx}`}
-            className="home-image"
-            style={{ width: "150px", height: "150px", objectFit: "cover" }}
-          />
-        ))}
-        {!person.homeId.img && (!person.homeId.images || person.homeId.images.length === 0) && (
-          <p>Aucune image disponible</p>
+
+        {/* Images secondaires */}
+        {Array.isArray(person.homeId.images) &&
+          person.homeId.images.map((img, idx) => (
+            <img
+              key={idx}
+              src={img.startsWith("http") ? img : `https://backend-ged-immo.onrender.com/${img}`}
+              alt={`Secondaire ${idx}`}
+              style={{
+                width: "100px",
+                height: "100px",
+                objectFit: "cover",
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+                cursor: "pointer",
+              }}
+              onClick={() => window.open(img.startsWith("http") ? img : `https://backend-ged-immo.onrender.com/${img}`, "_blank")}
+            />
+          ))}
+      </div>
+
+      {/* 📌 DÉTAILS DU LOGEMENT */}
+      <div className="home-info" style={{ flex: "2 1 400px", backgroundColor: "#fff", padding: "1.5rem", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+        {/* Informations générales */}
+        <h4>Informations générales</h4>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <p><strong>Nom :</strong> {person.homeId.nameHome || "N/A"}</p>
+          <p><strong>Type :</strong> {person.homeId.nameHomeType || "N/A"}</p>
+          <p><strong>Référence :</strong> {person.homeId.reference || "N/A"}</p>
+          <p><strong>Catégorie :</strong> {person.homeId.categorie || "N/A"}</p>
+          <p><strong>Sous-catégorie :</strong> {person.homeId.sousCategorie || "N/A"}</p>
+          <p><strong>Adresse :</strong> {person.homeId.addressHome || "N/A"}</p>
+          <p><strong>Ville :</strong> {person.homeId.city || "N/A"}</p>
+          <p><strong>Quartier :</strong> {person.homeId.quarter || "N/A"}</p>
+          <p><strong>Description :</strong> {person.homeId.description || "—"}</p>
+          <p><strong>Loyer :</strong> {Number(person.homeId.rent).toLocaleString()} FCFA</p>
+          <p><strong>Caution :</strong> {Number(person.homeId.guarantee).toLocaleString()} FCFA</p>
+          <p><strong>Charges :</strong> {person.homeId.charges || "N/A"}</p>
+          <p><strong>Statut :</strong> {person.homeId.state || "Occupé"}</p>
+        </div>
+
+        {/* Équipements / Options */}
+        <h4 style={{ marginTop: "1rem" }}>Équipements & Options</h4>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.8rem", background: "#f9fafb", padding: "1rem", borderRadius: "10px", border: "1px solid #e5e7eb" }}>
+          <p><strong>Terrasse :</strong> {person.homeId.terrasse ? "Oui" : "Non"}</p>
+          <p><strong>Jardin :</strong> {person.homeId.jardin ? "Oui" : "Non"}</p>
+          <p><strong>Balcon :</strong> {person.homeId.balcon ? "Oui" : "Non"}</p>
+          <p><strong>Piscine :</strong> {person.homeId.piscine ? "Oui" : "Non"}</p>
+          <p><strong>Garage :</strong> {person.homeId.garage ? "Oui" : "Non"}</p>
+          <p><strong>Service sécurité :</strong> {person.homeId.serviceSecurite ? "Oui" : "Non"}</p>
+        </div>
+
+        {/* Détails spécifiques selon type */}
+        {person.homeId.nameHomeType === "Bureau" && (
+          <div style={{ marginTop: "1rem" }}>
+            <h4>Informations Bureau</h4>
+            <p><strong>Surface :</strong> {person.homeId.surfaceBureau} m²</p>
+            <p><strong>Salle de réunion :</strong> {person.homeId.salleReunion ? "Oui" : "Non"}</p>
+            <p><strong>Climatisation :</strong> {person.homeId.climatisation ? "Oui" : "Non"}</p>
+            <p><strong>Fibre optique :</strong> {person.homeId.fibreOptique ? "Oui" : "Non"}</p>
+          </div>
+        )}
+
+        {person.homeId.nameHomeType === "Magasin" && (
+          <div style={{ marginTop: "1rem" }}>
+            <h4>Informations Magasin</h4>
+            <p><strong>Surface :</strong> {person.homeId.surfaceMagasin} m²</p>
+            <p><strong>Vitrine :</strong> {person.homeId.vitrine ? "Oui" : "Non"}</p>
+            <p><strong>Mezzanine :</strong> {person.homeId.mezanine ? "Oui" : "Non"}</p>
+            <p><strong>Parking :</strong> {person.homeId.parking ? "Oui" : "Non"}</p>
+          </div>
+        )}
+
+        {person.homeId.nameHomeType === "Entrepôt" && (
+          <div style={{ marginTop: "1rem" }}>
+            <h4>Informations Entrepôt</h4>
+            <p><strong>Surface :</strong> {person.homeId.surfaceEntrepot} m²</p>
+            <p><strong>Hauteur sous plafond :</strong> {person.homeId.hauteurSousPlafond} m</p>
+            <p><strong>Capacité stockage :</strong> {person.homeId.capaciteStockage} m³</p>
+            <p><strong>Ventilation :</strong> {person.homeId.ventilation ? "Oui" : "Non"}</p>
+          </div>
         )}
       </div>
-
-      {/* Infos communes */}
-      <div className="home-info">
-        <p><span>Nom :</span> {person.homeId.nameHome || "N/A"}</p>
-        <p><span>Type :</span> {person.homeId.nameHomeType || "N/A"}</p>
-        <p><span>Référence :</span> {person.homeId.reference || "N/A"}</p>
-        <p><span>Categorie :</span> {person.homeId.categorie || "N/A"}</p>
-        <p><span>Sous-catégorie :</span> {person.homeId.sousCategorie || "N/A"}</p>
-        <p><span>Adresse :</span> {person.homeId.addressHome || "N/A"}</p>
-        <p><span>Ville :</span> {person.homeId.city || "N/A"}</p>
-        <p><span>Quartier :</span> {person.homeId.quarter || "N/A"}</p>
-        <p><span>Description :</span> {person.homeId.description || "Aucune description"}</p>
-        <p><span>Loyer :</span> {person.homeId.rent ? Number(person.homeId.rent).toLocaleString() + " FCFA" : "N/A"}</p>
-        <p><span>Prix :</span> {person.homeId.price ? Number(person.homeId.price).toLocaleString() + " FCFA" : "N/A"}</p>
-        <p><span>Caution :</span> {person.homeId.guarantee ? Number(person.homeId.guarantee).toLocaleString() + " FCFA" : "N/A"}</p>
-        {/* <p><span>Charges :</span> {person.homeId.charges || "N/A"}</p> */}
-        <p><span>Statut :</span> {person.homeId.state || "Occupé"}</p>
-      </div>
-
-      {/* Infos spécifiques selon type */}
-      {person.homeId.nameHomeType === "Appartement" || person.homeId.nameHomeType === "Maison" ? (
-        <div className="home-specific">
-          <p><span>Nombre de pièces :</span> {person.homeId.NmbrePieces || "N/A"}</p>
-        </div>
-      ) : null}
-
-      {person.homeId.nameHomeType === "Bureau" && (
-        <div className="bureau-info">
-          <p><span>Surface :</span> {person.homeId.surfaceBureau || "N/A"} m²</p>
-          <p><span>Nombre de bureaux :</span> {person.homeId.NmbreBureaux || "N/A"}</p>
-          <p><span>Salle de réunion :</span> {person.homeId.salleReunion ? "Oui" : "Non"}</p>
-          <p><span>Climatisation :</span> {person.homeId.climatisation ? "Oui" : "Non"}</p>
-          <p><span>Fibre optique :</span> {person.homeId.fibreOptique ? "Oui" : "Non"}</p>
-          <p><span>Parking :</span> {person.homeId.parking ? "Oui" : "Non"}</p>
-          <p><span>Ascenseur :</span> {person.homeId.ascenseur ? "Oui" : "Non"}</p>
-          <p><span>Mezzanine :</span> {person.homeId.mezanine ? "Oui" : "Non"}</p>
-        </div>
-      )}
-
-      {person.homeId.nameHomeType === "Magasin" && (
-        <div className="magasin-info">
-          <p><span>Surface :</span> {person.homeId.surfaceMagasin || "N/A"} m²</p>
-          <p><span>Vitrine :</span> {person.homeId.vitrine ? "Oui" : "Non"}</p>
-          <p><span>Stock disponible :</span> {person.homeId.stockDisponible ? "Oui" : "Non"}</p>
-          <p><span>Accès routier :</span> {person.homeId.accesRoutier || "N/A"}</p>
-          <p><span>Zone commerciale :</span> {person.homeId.zoneCommerciale ? "Oui" : "Non"}</p>
-        </div>
-      )}
-
-      {person.homeId.nameHomeType === "Entrepôt" && (
-        <div className="entrepot-info">
-          <p><span>Surface :</span> {person.homeId.surfaceEntrepot || "N/A"} m²</p>
-          <p><span>Hauteur sous plafond :</span> {person.homeId.hauteurSousPlafond || "N/A"} m</p>
-          <p><span>Capacité de stockage :</span> {person.homeId.capaciteStockage || "N/A"}</p>
-          <p><span>Quai de chargement :</span> {person.homeId.quaiChargement ? "Oui" : "Non"}</p>
-          <p><span>Sécurité :</span> {person.homeId.securite ? "Oui" : "Non"}</p>
-          <p><span>Accès camion :</span> {person.homeId.accesCamion ? "Oui" : "Non"}</p>
-          <p><span>Ventilation :</span> {person.homeId.ventilation ? "Oui" : "Non"}</p>
-        </div>
-      )}
     </div>
   ) : (
-    <p className="no-home">Aucun logement attribué</p>
+    <p>Aucun logement attribué</p>
   )}
 </div>
 

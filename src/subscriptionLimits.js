@@ -18,7 +18,7 @@ export const SUBSCRIPTION_LIMITS = {
     archives: true, // ❌ pas d’archives
     duplicateHomes: true,
     uploadDocument:3,
-    sendEmail:true
+     sendEmailWhatsAppSms:true,
      // ✅ duplication autorisée
   },
   premium: {
@@ -29,7 +29,7 @@ export const SUBSCRIPTION_LIMITS = {
     exportAllowed: true,
     archives: true,
     duplicateHomes: true,
-      uploadDocument:3,
-      sendEmail:true
+    uploadDocument:3,
+    sendEmailWhatsAppSms:true,
   },
 };
