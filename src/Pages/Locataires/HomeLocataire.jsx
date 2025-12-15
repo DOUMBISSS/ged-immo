@@ -70,73 +70,107 @@ export default function HomeLocataire() {
         <p>Email : doumbia77fode@gmail.com</p>
       </div>
 
-      <div className="container-locataire">
-        <div className="card-locataire">
-          <h2>Connexion Locataire</h2>
-          <form onSubmit={handleSubmit} className="form-locataire">
-            <div className="form-group">
-              <label>Nom d'utilisateur</label>
-              <input
-                type="text"
-                placeholder="Votre nom d'utilisateur"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
+    <div className="container-locataire">
+  <div className="card-locataire">
 
-            <div className="form-group">
-              <label>Mot de passe</label>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Votre mot de passe"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  style={{ flex: 1 }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    marginLeft: "0.5rem",
-                    padding: "0.3rem 0.5rem",
-                    cursor: "pointer",
-                    borderRadius: "0.3rem",
-                    border: "1px solid #ccc",
-                    background: "#f0f0f0",
-                  }}
-                >
-                  {showPassword ? "Cacher" : "Voir"}
-                </button>
-              </div>
-            </div>
+    {/* 🏢 LOGO GED */}
+    <div
+      className="logo-ged"
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        marginBottom: "1rem",
+      }}
+    >
+      <img
+        src="/logo4 copie.jpg"
+        alt="GED IMMO"
+        style={{
+          height: "70px",
+          objectFit: "contain",
+        }}
+      />
+    </div>
 
-            <button
-              type="submit"
-              className="btn-locataire"
-              disabled={loading}
-              style={{
-                opacity: loading ? 0.7 : 1,
-                cursor: loading ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-            >
-              {loading ? (
-                <>
-                  <span className="spinner"></span> Connexion…
-                </>
-              ) : (
-                "Se connecter"
-              )}
-            </button>
-          </form>
+    <h2>Connexion Locataire</h2>
+
+    <form onSubmit={handleSubmit} className="form-locataire">
+      <div className="form-group">
+        <label>Nom d'utilisateur</label>
+        <input
+          type="text"
+          placeholder="Votre nom d'utilisateur"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Mot de passe</label>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Votre mot de passe"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            style={{ flex: 1 }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            style={{
+              marginLeft: "0.5rem",
+              padding: "0.3rem 0.5rem",
+              cursor: "pointer",
+              borderRadius: "0.3rem",
+              border: "1px solid #ccc",
+              background: "#f0f0f0",
+            }}
+          >
+            {showPassword ? "Cacher" : "Voir"}
+          </button>
         </div>
       </div>
+
+      <button
+        type="submit"
+        className="btn-locataire"
+        disabled={loading}
+        style={{
+          opacity: loading ? 0.7 : 1,
+          cursor: loading ? "not-allowed" : "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "8px",
+        }}
+      >
+        {loading ? (
+          <>
+            <span className="spinner"></span> Connexion…
+          </>
+        ) : (
+          "Se connecter"
+        )}
+      </button>
+    </form>
+
+    {/* 🔹 Signature GED */}
+    <p
+      style={{
+        textAlign: "center",
+        marginTop: "1rem",
+        fontSize: "0.85rem",
+        color: "#6b7280",
+      }}
+    >
+      © {new Date().getFullYear()} GED IMMO – Plateforme de gestion immobilière
+    </p>
+
+  </div>
+</div>
 
       {/* 🔹 Petit style intégré pour le spinner */}
       <style>{`

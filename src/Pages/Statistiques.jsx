@@ -7,6 +7,15 @@ import Footer from "./Footer";
 import toast, { Toaster } from "react-hot-toast";
 import { useUserContext } from "../contexts/UserContext";
 
+
+function isProjectActiveDuringPeriod(project, periodStart, periodEnd) {
+  return project.periods?.some(p => {
+    const start = new Date(p.start);
+    const end = p.end ? new Date(p.end) : new Date(9999, 11, 31);
+    return start <= periodEnd && end >= periodStart;
+  });
+}
+
 export default function Statistiques() {
   const { user, hasFeature, getAuthHeaders } = useUserContext();
 
@@ -22,6 +31,9 @@ export default function Statistiques() {
   const [currentPage, setCurrentPage] = useState(Number(localStorage.getItem("currentPage")) || 1);
   const itemsPerPage = 15;
   const [loading, setLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
+  const FAR_FUTURE_DATE = new Date(9999, 11, 31, 23, 59, 59, 999);
+  
 
   // -------------------------------------------------------------
   // 🔥 ID ADMIN RÉEL (fix)
@@ -76,84 +88,131 @@ useEffect(() => {
   fetchData();
 }, [adminId]);
 
-  // -------------------------------------------------------------
-  // 🔥 Déterminer les types de projet
-  // -------------------------------------------------------------
-  useEffect(() => {
-    if (projects.length > 0) {
-      const types = [...new Set(projects.map(p => p.categorie || p.type || "autre"))];
-      setProjectTypes(types);
-    }
-  }, [projects]);
+// -------------------------------------------------------------
+// 🔥 Toggle pour afficher les projets archivés (par défaut false)
+// -------------------------------------------------------------
 
-  // -------------------------------------------------------------
-  // 🔥 Filtrage des projets
-  // -------------------------------------------------------------
-  const filteredProjects = selectedType
-    ? projects.filter(p => (p.categorie || p.type || "autre").toLowerCase() === selectedType.toLowerCase())
-    : projects;
+// -------------------------------------------------------------
+// 🔥 Filtrer les projets en fonction du type et du toggle
+// -------------------------------------------------------------
+const filteredProjects = useMemo(() => {
+  return projects
+    .filter(p => showArchived || !p.archived) // Exclure les projets archivés si showArchived = false
+    .filter(p => selectedType ? (p.categorie || p.type || "autre").toLowerCase() === selectedType.toLowerCase() : true);
+}, [projects, selectedType, showArchived]);
+
+// -------------------------------------------------------------
+// 🔥 Déterminer les types de projet à partir des projets filtrés
+// -------------------------------------------------------------
+useEffect(() => {
+  if (projects.length > 0) {
+    const activeTypes = projects
+      .filter(p => showArchived || !p.archived)
+      .map(p => p.categorie || p.type || "autre");
+    setProjectTypes([...new Set(activeTypes)]);
+  }
+}, [projects, showArchived]);
+
 
   // -------------------------------------------------------------
   // 🔥 Filtrage locataires (Robuste)
   // -------------------------------------------------------------
-  const filteredPersons = useMemo(() => {
-    if (!persons || persons.length === 0) return [];
+// 🔥 Filtrage locataires (Robuste) avec exclusion des projets archivés
+const filteredPersons = useMemo(() => {
+  if (!Array.isArray(persons) || !Array.isArray(projects)) return [];
 
-    const [year, month] = (searchMonth || new Date().toISOString().slice(0, 7)).split("-");
-    const monthStart = new Date(Number(year), Number(month) - 1, 1, 0, 0, 0, 0);
-    const monthEnd = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
+  const [year, month] = searchMonth.split("-");
+  const monthStart = new Date(Number(year), Number(month) - 1, 1, 0, 0, 0, 0);
+  const monthEnd = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
 
-    return persons
-      .filter(p => {
-        let start =
-          p.periodStart ? new Date(p.periodStart) :
-            p.date_entrance ? new Date(p.date_entrance) :
-              p.dateEntrance ? new Date(p.dateEntrance) :
-                p.createdAt ? new Date(p.createdAt) :
-                  new Date(0);
+  return persons
+    .filter(p => {
+      // --------------------------------------------------
+      // 🔹 1. VALIDITÉ TEMPORELLE DU LOCATAIRE
+      // --------------------------------------------------
+      let tenantStart =
+        p.periodStart ||
+        p.date_entrance ||
+        p.dateEntrance ||
+        p.createdAt;
 
-        let end =
-          p.periodEnd ? new Date(p.periodEnd) :
-            p.dateArchived ? new Date(p.dateArchived) :
-              p.release_date ? new Date(p.release_date) :
-                (p.archived ? (p.updatedAt ? new Date(p.updatedAt) : new Date()) : null);
+      let tenantEnd =
+        p.periodEnd ||
+        p.release_date ||
+        p.dateArchived ||
+        (p.archived ? p.updatedAt : null);
 
-        if (!end) end = new Date(9999, 11, 31, 23, 59, 59, 999);
+      const start = tenantStart ? new Date(tenantStart) : new Date(0);
+      const end = tenantEnd ? new Date(tenantEnd) : new Date(9999, 11, 31);
 
-        if (isNaN(start.getTime())) start = new Date(0);
-        if (isNaN(end.getTime())) end = new Date(9999, 11, 31, 23, 59, 59, 999);
+      if (start > monthEnd || end < monthStart) return false;
 
-        return start <= monthEnd && end >= monthStart;
-      })
-      .filter(p => {
-        const matchProject = !searchProject || String(p.projectId) === String(searchProject);
-        const projectOfPerson = projects.find(pr => String(pr._id) === String(p.projectId));
-        const matchType = !selectedType || (projectOfPerson && ((projectOfPerson.categorie || projectOfPerson.type || "").toLowerCase() === selectedType.toLowerCase()));
+      // --------------------------------------------------
+      // 🔹 2. PROJET ASSOCIÉ
+      // --------------------------------------------------
+      const project = projects.find(pr => String(pr._id) === String(p.projectId));
+      if (!project) return false;
 
-        return matchProject && matchType;
-      })
-      .filter(p => {
-        if (!searchTerm) return true;
-        const full = `${p.name || ""} ${p.lastname || ""}`.toLowerCase();
-        return full.includes(searchTerm.toLowerCase());
-      })
-      .map(p => {
-        const homesArray = Array.isArray(p.homes) ? p.homes.filter(Boolean) : (p.homeId ? [p.homeId] : []);
+      const projectArchivedAt = project.archivedAt
+        ? new Date(project.archivedAt)
+        : project.updatedAt
+        ? new Date(project.updatedAt)
+        : null;
 
-        const rentalForMonth = (p.rentalIds || []).find(rent => {
-          if (!rent) return false;
-          let rentMonthStr = null;
+      if (project.archived) {
+        // ❌ jamais après archivage
+        if (projectArchivedAt && projectArchivedAt < monthStart) return false;
 
-          if (typeof rent.month === "string") rentMonthStr = rent.month.slice(0, 7);
-          else if (rent.month instanceof Date) rentMonthStr = rent.month.toISOString().slice(0, 7);
-          else if (rent.month?.$date) rentMonthStr = new Date(rent.month.$date).toISOString().slice(0, 7);
+        // ❌ caché si toggle OFF
+        if (!showArchived) return false;
+      }
 
-          return rentMonthStr === searchMonth;
-        });
+      // --------------------------------------------------
+      // 🔹 3. FILTRES UI
+      // --------------------------------------------------
+      if (searchProject && String(p.projectId) !== String(searchProject)) return false;
 
-        return { ...p, rentalForMonth, homesArray };
+      if (
+        selectedType &&
+        (project.categorie || project.type || "").toLowerCase() !== selectedType.toLowerCase()
+      ) {
+        return false;
+      }
+
+      if (searchTerm) {
+        const fullName = `${p.name || ""} ${p.lastname || ""}`.toLowerCase();
+        if (!fullName.includes(searchTerm.toLowerCase())) return false;
+      }
+
+      return true;
+    })
+    .map(p => {
+      const homesArray = Array.isArray(p.homes)
+        ? p.homes.filter(Boolean)
+        : p.homeId
+        ? [p.homeId]
+        : [];
+
+      const rentalForMonth = (p.rentalIds || []).find(r => {
+        if (!r?.month) return false;
+        const m =
+          typeof r.month === "string"
+            ? r.month.slice(0, 7)
+            : new Date(r.month).toISOString().slice(0, 7);
+        return m === searchMonth;
       });
-  }, [persons, projects, searchProject, selectedType, searchTerm, searchMonth]);
+
+      return { ...p, homesArray, rentalForMonth: rentalForMonth || null };
+    });
+}, [
+  persons,
+  projects,
+  searchProject,
+  selectedType,
+  searchTerm,
+  searchMonth,
+  showArchived,
+]);
 
   const montantTotalImpayé = filteredPersons.reduce(
   (acc, p) =>
@@ -254,6 +313,29 @@ useEffect(() => {
   // -------------------------------------------------------------
   // 🔥 UI
   // -------------------------------------------------------------
+
+
+  // -------------------------------------------------------------
+// 🔥 Toggle pour afficher les projets archivés (par défaut false)
+// -------------------------------------------------------------
+
+
+// -------------------------------------------------------------
+// 🔥 Filtrer les projets en fonction du toggle
+// -------------------------------------------------------------
+
+
+// -------------------------------------------------------------
+// 🔥 Déterminer les types de projet à partir des projets filtrés
+// -------------------------------------------------------------
+useEffect(() => {
+  if (projects.length > 0) {
+    const activeTypes = projects
+      .filter(p => showArchived || !p.archived)
+      .map(p => p.categorie || p.type || "autre");
+    setProjectTypes([...new Set(activeTypes)]);
+  }
+}, [projects, showArchived]);
   return (
     <div>
       <Navbar />
@@ -286,6 +368,20 @@ useEffect(() => {
 
             {/* FILTRES */}
             <div className="filter-section">
+
+                   <div className="archive-toggle">
+                    <span className="toggle-label">Afficher projets archivés</span>
+
+                    <label className="switch">
+                      <input
+                        type="checkbox"
+                        checked={showArchived}
+                        onChange={() => setShowArchived(!showArchived)}
+                      />
+                      <span className="slider" />
+                    </label>
+                  </div>
+
               <select
                 className="select-field"
                 value={selectedType}
@@ -334,6 +430,8 @@ useEffect(() => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+
+
             </div>
 
             {/* STATISTIQUES */}
@@ -529,6 +627,69 @@ button.export-excel.disabled {
   color: #666;
   cursor: not-allowed;
   opacity: 0.6;
+}
+  .archive-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+}
+
+.toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+}
+
+/* Switch container */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 22px;
+}
+
+/* Hide default checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #cbd5e1;
+  transition: 0.25s ease;
+  border-radius: 999px;
+}
+
+/* Knob */
+.slider::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  top: 2px;
+  background-color: #fff;
+  transition: 0.25s ease;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Checked state */
+.switch input:checked + .slider {
+  background-color: #2563eb; /* bleu SaaS */
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(20px);
 }
 
       `}</style>

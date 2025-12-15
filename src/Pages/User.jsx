@@ -6,6 +6,16 @@ import Footer from "./Footer";
 import { Blocks } from "react-loader-spinner";
 import { toast } from "react-toastify";
 
+export function isProjectActiveDuringPeriod(project, periodStart, periodEnd) {
+  return project.periods?.some(p => {
+    const start = new Date(p.start);
+    const end = p.end ? new Date(p.end) : new Date(9999, 11, 31);
+
+    return start <= periodEnd && end >= periodStart;
+  });
+}
+
+
 export default function User() {
   
   const navigate = useNavigate();
@@ -26,8 +36,11 @@ console.log("🟨 DEBUG :: Headers générés =", getAuthHeaders());
   const [selectedHome, setSelectedHome] = useState(null);
   const [countryCode, setCountryCode] = useState("+225");
   const [projectTypes, setProjectTypes] = useState([]);
-  const [searchType, setSearchType] = useState(""); // Filtre par type de projet
+const [searchType, setSearchType] = useState(() => localStorage.getItem("searchType") || "");
   const [typePersonne, setTypePersonne] = useState("particulier");
+
+
+
 
   // Champs formulaire locataire
   const [name, setFullName] = useState("");
@@ -57,6 +70,7 @@ console.log("🟨 DEBUG :: Headers générés =", getAuthHeaders());
 
   // Sauvegarde automatique dans localStorage
   useEffect(() => { localStorage.setItem("searchProject", searchProject); }, [searchProject]);
+    useEffect(() => { localStorage.setItem("searchType", searchType); }, [searchType]);
   useEffect(() => { localStorage.setItem("search", search); }, [search]);
   useEffect(() => { localStorage.setItem("currentPage", currentPage); }, [currentPage]);
 
@@ -113,14 +127,17 @@ console.log("🟨 DEBUG :: Headers générés =", getAuthHeaders());
   }, [user]);
 
   
+  const activeProjects = projects.filter(p => !p.archived); // ignore les archivés
+// 🔹 Déterminer les types de projet disponibles (uniquement non archivés)
+useEffect(() => {
 
-  // 🔹 Déterminer les types de projet disponibles
-  useEffect(() => {
-    if (projects.length > 0) {
-      const types = [...new Set(projects.map(p => p.categorie || p.type || "autre"))];
-      setProjectTypes(types);
-    }
-  }, [projects]);
+  if (activeProjects.length > 0) {
+    const types = [...new Set(activeProjects.map(p => p.categorie || p.type || "autre"))];
+    setProjectTypes(types);
+  } else {
+    setProjectTypes([]);
+  }
+}, [projects]);
 
   // 🔹 Récupération des biens disponibles pour le projet sélectionné
   useEffect(() => {
@@ -154,9 +171,10 @@ console.log("🟨 DEBUG :: Headers générés =", getAuthHeaders());
   }, [selectedProject, user?.token]);
 
   // 🔹 Projets filtrés selon le type sélectionné
-  const filteredProjects = searchType
-    ? projects.filter((p) => (p.categorie || p.type || "").toLowerCase() === searchType.toLowerCase())
-    : projects;
+const filteredProjects = (searchType
+  ? projects.filter(p => (p.categorie || p.type || "").toLowerCase() === searchType.toLowerCase())
+  : projects
+).filter(p => !p.archived); // <-- ignore les projets archivés
 
   const handleSearch = (event) => { setSearch(event.target.value); setCurrentPage(1); };
   const logoutHandler = () => { clearUser(); navigate("/"); };
@@ -304,6 +322,9 @@ console.log("🟨 DEBUG :: Headers générés =", getAuthHeaders());
   searchProject
 });
 
+
+
+
   return (
     <div>
       <Navbar logoutHandler={logoutHandler} />
@@ -320,15 +341,23 @@ console.log("🟨 DEBUG :: Headers générés =", getAuthHeaders());
           <div className="filter-section">
             {/* Filtrer par type de projet */}
             <select
-              value={searchType}
-              onChange={(e) => { setSearchType(e.target.value); setSearchProject(""); setSelectedProject(""); setCurrentPage(1); }}
-              className="select-field"
-            >
-              <option value="">Tous les types</option>
-              {projectTypes.map((type, idx) => (
-                <option key={idx} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-              ))}
-            </select>
+  value={searchType}
+  onChange={(e) => {
+    const type = e.target.value;
+    setSearchType(type); 
+    setSearchProject(""); 
+    setSelectedProject(""); 
+    setCurrentPage(1);
+  }}
+  className="select-field"
+>
+  <option value="">Tous les types</option>
+  {projectTypes.map((type, idx) => (
+    <option key={idx} value={type}>
+      {type.charAt(0).toUpperCase() + type.slice(1)}
+    </option>
+  ))}
+</select>
 
             {/* Projets filtrés selon le type choisi */}
             <select
@@ -685,15 +714,15 @@ console.log("🟨 DEBUG :: Headers générés =", getAuthHeaders());
     className="select-field"
   >
     <option value="">Sélectionner un projet</option>
-    {projects
-      .filter((proj) =>
-        searchType ? (proj.categorie || proj.type) === searchType : true
-      )
-      .map((proj) => (
-        <option key={proj._id} value={proj._id}>
-          {proj.name}
-        </option>
-      ))}
+   {activeProjects
+  .filter(proj =>
+    searchType ? (proj.categorie || proj.type) === searchType : true
+  )
+  .map(proj => (
+    <option key={proj._id} value={proj._id}>
+      {proj.name}
+    </option>
+))}
   </select>
 </div>
 

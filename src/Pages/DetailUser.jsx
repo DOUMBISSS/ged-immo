@@ -797,8 +797,6 @@ const toggleYear = (year) => {
                   </div>
                 </div>
 
-                  {/* Logement */}
-{/* ================= LOGEMENT ATTRIBUÉ ================= */}
 <div className="tenant-section">
   <h3 className="section-title">Logement attribué</h3>
 

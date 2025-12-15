@@ -11,7 +11,7 @@
     "chart.js": "^4.5.0",
     "classnames": "^2.5.1",
     "framer-motion": "^12.23.24",
-    "jspdf": "^3.0.3",
+    "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
     "print-js": "^1.6.0",
     "qrcode.react": "^4.2.0",

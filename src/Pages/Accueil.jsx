@@ -34,6 +34,14 @@ ChartJS.register(
   Legend
 );
 
+function isProjectActiveDuringPeriod(project, periodStart, periodEnd) {
+  return project.periods?.some(p => {
+    const start = new Date(p.start);
+    const end = p.end ? new Date(p.end) : new Date(9999, 11, 31);
+    return start <= periodEnd && end >= periodStart;
+  });
+}
+
 export default function Accueil() {
   const { user, hasFeature, getAuthHeaders } = useUserContext();
   const [projects, setProjects] = useState([]);
@@ -42,49 +50,18 @@ export default function Accueil() {
 const [searchMonth, setSearchMonth] = useState(localStorage.getItem("searchMonth") || new Date().toISOString().slice(0, 7));
   const [selectedType, setSelectedType] = useState(localStorage.getItem("selectedType") || "");
   const [projectTypes, setProjectTypes] = useState([]);
-const [currentMonth, setCurrentMonth] = useState(() => {
-  const now = new Date();
-  return now.toISOString().slice(0, 7); // format "YYYY-MM"
-});
+// const [currentMonth, setCurrentMonth] = useState(() => {const now = new Date();return now.toISOString().slice(0, 7);});
+const currentMonth = "2025-12";
+const [year, month] = currentMonth.split("-");
+const periodStart = new Date(Number(year), Number(month) - 1, 1);
+const periodEnd = new Date(Number(year), Number(month), 0, 23, 59, 59);
 const currentMonthLabel = new Date(currentMonth + "-01").toLocaleString("fr-FR", { month: "long", year: "numeric" });
 
-  const adminId = user?.role === "admin" ? user._id : user?.adminId;
-
-  useEffect(() => { localStorage.setItem("searchMonth", searchMonth); }, [searchMonth]);
-  useEffect(() => { localStorage.setItem("selectedType", selectedType); }, [selectedType]);
-
-  // 🔹 Récupération des données
-useEffect(() => {
-  if (!adminId) return;
-  setLoading(true);
-
-  const fetchData = async () => {
-    try {
-      const res = await fetch(`http://localhost:4000/data/${adminId}`, { headers: getAuthHeaders() });
-      const data = await res.json();
-      if (!data.success) { 
-        toast.error(data.message || "Erreur chargement données"); 
-        return; 
-      }
-      setProjects(data.projects || []);
-      setPersons(data.persons || []);
-    } catch (err) { 
-      toast.error("Erreur serveur : " + err.message); 
-    } finally { 
-      setLoading(false); 
-    }
-  };
-
-  fetchData();
-}, [adminId]);
-
-  // 🔹 Types de projet
-  useEffect(() => {
-    if (projects.length > 0) {
-      const types = [...new Set(projects.map(p => p.type || p.categorie || "autre"))];
-      setProjectTypes(types);
-    }
-  }, [projects]);
+const activeProjects = useMemo(() => {
+  return projects.filter(project =>
+    isProjectActiveDuringPeriod(project, periodStart, periodEnd)
+  );
+}, [projects, periodStart, periodEnd]);
 
 // 🔹 Filtrage locataires pour le mois (VERSION ROBUSTE)
 const filteredPersons = useMemo(() => {
@@ -120,6 +97,61 @@ const filteredPersons = useMemo(() => {
     });
 }, [persons, currentMonth]);
 
+
+const activeProjectIds = useMemo(
+  () => activeProjects.map(p => String(p._id)),
+  [activeProjects]
+);
+  const filteredPersonsActiveProjects = useMemo(() => {
+  return filteredPersons.filter(p =>
+    activeProjectIds.includes(String(p.projectId))
+  );
+}, [filteredPersons, activeProjectIds]);
+
+
+
+
+
+  const adminId = user?.role === "admin" ? user._id : user?.adminId;
+  useEffect(() => { localStorage.setItem("searchMonth", searchMonth); }, [searchMonth]);
+  useEffect(() => { localStorage.setItem("selectedType", selectedType); }, [selectedType]);
+
+  // 🔹 Récupération des données
+useEffect(() => {
+  if (!adminId) return;
+  setLoading(true);
+
+  const fetchData = async () => {
+    try {
+      const res = await fetch(`http://localhost:4000/data/${adminId}`, { headers: getAuthHeaders() });
+      const data = await res.json();
+      if (!data.success) { 
+        toast.error(data.message || "Erreur chargement données"); 
+        return; 
+      }
+      setProjects(data.projects || []);
+      setPersons(data.persons || []);
+    } catch (err) { 
+      toast.error("Erreur serveur : " + err.message); 
+    } finally { 
+      setLoading(false); 
+    }
+  };
+
+  fetchData();
+}, [adminId]);
+
+  // 🔹 Types de projet
+  useEffect(() => {
+    if (projects.length > 0) {
+      const types = [...new Set(projects.map(p => p.type || p.categorie || "autre"))];
+      setProjectTypes(types);
+    }
+  }, [projects]);
+  
+
+
+
 function getMontantLoyer(p) {
   // 1️⃣ Si snapshot existe (locataire a déjà payé un jour)
   if (p.rentalForMonth?.amount !== undefined) {
@@ -138,54 +170,71 @@ function getMontantLoyer(p) {
 }
 
  // 🔹 KPI principaux
-const totalLocataires = filteredPersons.length;
+const totalLocataires = filteredPersonsActiveProjects.length;
 
-const totalLoyersPayes = filteredPersons.filter(p => p.rentalForMonth?.status === "Payé").length;
-const totalLoyersImpayesCount = filteredPersons.filter(p => !p.rentalForMonth || p.rentalForMonth.status !== "Payé").length;
+const totalLoyersPayes = filteredPersonsActiveProjects.filter(p => p.rentalForMonth?.status === "Payé").length;
+const totalLoyersImpayesCount =
+  filteredPersonsActiveProjects.filter(
+    p => !p.rentalForMonth || p.rentalForMonth.status !== "Payé"
+  ).length;
 
-const montantTotalPaye = filteredPersons.reduce((acc, p) => {
+const montantTotalPaye = filteredPersonsActiveProjects.reduce((acc, p) => {
   const rent = p.rentalForMonth;
-  if (rent?.status === "Payé" && typeof rent.amount === "number") {
-    return acc + rent.amount;
-  }
+  if (rent?.status === "Payé") acc += Number(rent.amount || 0);
   return acc;
 }, 0);
 
 // 🔹 Montant IMPAYÉ du mois (FIXÉ)
-const montantTotalImpayes = filteredPersons.reduce((acc, p) => {
+const montantTotalImpayes = filteredPersonsActiveProjects.reduce((acc, p) => {
   if (p.rentalForMonth?.status === "Payé") return acc;
-
-  return acc + getMontantLoyer(p);  // 🔥 MAGIE ICI
+  return acc + getMontantLoyer(p);
 }, 0);
-
 const montantTotalLoyers = montantTotalPaye + montantTotalImpayes;
 
 const tauxPaiement = totalLocataires ? ((totalLoyersPayes / totalLocataires) * 100).toFixed(1) : 0;
 const pourcentageImpayes = montantTotalLoyers ? ((montantTotalImpayes / montantTotalLoyers) * 100).toFixed(1) : 0;
 const loyerMoyenPayes = totalLoyersPayes ? (montantTotalPaye / totalLoyersPayes).toFixed(0) : 0;
 const loyerMoyenTotal = totalLocataires ? (montantTotalLoyers / totalLocataires).toFixed(0) : 0;
-  const nbProjetsActifs = projects.length;
+ const nbProjetsActifs = activeProjects.length;
   // On parcourt tous les locataires de tous les projets
 const montantGlobalTousProjets = persons.reduce((acc, p) => {
   const loyersPayes = (p.rentalIds || [])
-    .filter(r => r.status === "Payé")
+    .filter(r => r.status === "Payé") // on prend tous les paiements
     .reduce((sum, r) => sum + Number(r.amount || 0), 0);
   return acc + loyersPayes;
 }, 0);
+
+// 🔹 Montants globaux actualisés pour le mois courant
+const montantTotalLoyersGlobal = persons.reduce((acc, p) => {
+  const loyersAttendus = (p.rentalIds || [])
+    .filter(r => r?.month?.slice(0,7) === currentMonth)
+    .reduce((sum, r) => sum + Number(r.amount || getMontantLoyer(p) || 0), 0);
+  return acc + loyersAttendus;
+}, 0);
+
+const montantTotalPayeGlobal = montantGlobalTousProjets; // déjà calculé
+
+const tauxPaiementGlobal = montantTotalLoyersGlobal
+  ? ((montantTotalPayeGlobal / montantTotalLoyersGlobal) * 100).toFixed(1)
+  : 0;
+
+
 
 // console.log("Montant global de tous les loyers payés:", montantGlobalTousProjets);
 
   // Locataires par type de projet
   const locsByType = {};
-  projects.forEach(p => {
+  activeProjects.forEach(p => {
     const locsCount = filteredPersons.filter(per => String(per.projectId) === String(p._id)).length;
     const type = p.type || "Autre";
     locsByType[type] = (locsByType[type] || 0) + locsCount;
   });
 
 
+
+
 const projectStats = useMemo(() => {
-  return projects.map(p => {
+  return activeProjects.map(p => {
     const locs = filteredPersons.filter(per => String(per.projectId) === String(p._id));
 
     const payes = locs.filter(l => l.rentalForMonth?.status === "Payé").length;
@@ -219,7 +268,7 @@ const projectStats = useMemo(() => {
       loyerMoyenProjet
     };
   });
-}, [projects, filteredPersons]);
+}, [activeProjects, filteredPersons]);
 
 
   // 🔹 Chart combiné Bar + Line
@@ -296,7 +345,7 @@ const lastPayments = useMemo(() => {
   const payments = filteredPersons
     .map(p => ({
       name: `${p.name} ${p.lastname}`,
-      project: projects.find(pr => String(pr._id) === String(p.projectId))?.name || "N/A",
+      project: activeProjects.find(pr => String(pr._id) === String(p.projectId))?.name || "N/A",
       status: p.rentalForMonth?.status || "Impayé",
       amount: Number(p.rentalForMonth?.amount || p.loyer || 0),
       date: p.rentalForMonth?.updatedAt || p.rentalForMonth?.date || null
@@ -380,16 +429,16 @@ const lastPayments = useMemo(() => {
     </div>
 
     {/* Carte Taux paiement Global */}
-    <div style={{ marginTop: "1rem", width: "100%" }}>
+    {/* <div style={{ marginTop: "1rem", width: "100%" }}>
       <div className="card card-info" style={{ width: "100%" }}>
         <div className="card-header">Taux paiement Global</div>
-        <span>{tauxPaiement}%</span>
+        <span>{tauxPaiementGlobal}%</span>
       </div>
-    </div>
+    </div> */}
     <div style={{ marginTop: "1rem", width: "100%" }}>
       <div className="card card-info" style={{ width: "100%" }}>
        <div className="card-header">Montant total global</div>
-  <span>{montantGlobalTousProjets.toLocaleString("fr-FR")} FCFA</span>
+  <span>{montantTotalPayeGlobal.toLocaleString("fr-FR")} FCFA</span>
 </div>
     </div>
   </div>
